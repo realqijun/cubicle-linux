@@ -49,6 +49,13 @@ authenticated bearer channel. Missing/invalid responses and transport loss close
 the channel; ordinary denials fail the operation. There are no worker-facing
 approval, policy installation, or recovery routes.
 
+Unsupported plugin paths send a metadata-only `bridge.denial` before refusing:
+unsupported tools/transports, unreviewed plugins, missing context mappings, and
+native compaction windows therefore appear in decision history. Raw names,
+frames, and bodies are not sent with these refusal records. If the channel is
+already unavailable, execution still blocks even though that channel cannot
+deliver another audit record.
+
 The initial `hello` reports the exact release and the hooks that actually
 registered successfully. The Python broker requires all 17 names in
 `REQUIRED_HOOKS`, then binds exactly one root session to the worker. Native
@@ -153,7 +160,7 @@ comparisons or OS confinement tests.
 
 The latest recorded local attempt passes all four cases with the bridge active
 and every observed provider request admitted. The denied-write case also
-completes its permitted continuation. Six attempts are retained, including the
+completes its permitted continuation. All attempts are retained, including the
 handshake mismatch and SDK response-shape failures that stricter checks exposed.
 The final attempt records stable hashes for the bridge, runner, connector,
 supervisor, broker transport, mediation, context, and provenance modules.

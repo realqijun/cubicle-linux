@@ -145,6 +145,41 @@ class BridgeTests(unittest.TestCase):
         """)
         self.assertEqual(result["env"], {"PATH": "/usr/bin"})
 
+    def test_unsupported_transport_is_audited_without_frame_bytes_and_stays_blocked(self):
+        result = self.run_js("""
+          const seen=[];let effect=false;
+          await install(ctx,async(session,route,payload)=>{
+            seen.push({route,payload});return {allowed:true,receipt:'r'};
+          });
+          await hooks.get('session.prompt')({sessionID:'s',messageID:'m',prompt:{text:'fixture'}});
+          try {
+            await hooks.get('session.experimental.ws.send')({sessionID:'s',frame:'DUMMY_SECRET_FRAME'});
+            effect=true;
+          } catch {}
+          console.log(JSON.stringify({seen,effect}));
+        """)
+        self.assertFalse(result["effect"])
+        refusal = next(item for item in result["seen"] if item["route"] == "bridge.denial")
+        self.assertEqual(refusal["payload"], {"code": "unsupported_websocket"})
+        self.assertNotIn("DUMMY_SECRET_FRAME", json.dumps(result))
+
+    def test_oversized_payload_is_audited_without_losing_sequence(self):
+        result = self.run_js("""
+          const sent=[];
+          const channel=createChannel({endpoint:'http://127.0.0.1:12345/admit',token:'a'.repeat(32),maxBytes:256},
+            async(url,options)=>{
+              const envelope=JSON.parse(options.body);sent.push(envelope);
+              return new Response(JSON.stringify({allowed:envelope.route!=='bridge.denial'}));
+            });
+          const results=await Promise.allSettled([
+            channel('s','context',{text:'DUMMY_SECRET'.repeat(100)}),channel('s','context',{})]);
+          console.log(JSON.stringify({sent,status:results.map(result=>result.status)}));
+        """)
+        self.assertEqual(result["status"], ["rejected", "fulfilled"])
+        self.assertEqual([item["sequence"] for item in result["sent"]], [1, 2])
+        self.assertEqual(result["sent"][0]["route"], "bridge.denial")
+        self.assertNotIn("DUMMY_SECRET", json.dumps(result))
+
 
 if __name__ == "__main__":
     unittest.main()

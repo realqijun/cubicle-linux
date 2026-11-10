@@ -21,7 +21,7 @@ class BrokerServer:
         self.endpoint = ""
         self._factory, self._limit, self._timeout = factory, max_request_bytes, timeout_seconds
         self._ready = threading.Event()
-        self._server: HTTPServer | None = None
+        self._stopping = threading.Event()
         self._thread: threading.Thread | None = None
         self._failed = False
 
@@ -44,6 +44,10 @@ class BrokerServer:
             # SQLite and all context state stay on this single serving thread.
             with self._factory() as broker:
                 class Handler(BaseHTTPRequestHandler):
+                    def setup(self) -> None:
+                        self.request.settimeout(owner._timeout)
+                        super().setup()
+
                     def log_message(self, format: str, *args: Any) -> None:
                         pass  # Request bodies, tokens, and provider errors are not ordinary logs.
 
@@ -82,21 +86,18 @@ class BrokerServer:
                         self.end_headers()
                         self.wfile.write(response)
 
-                class ReadyServer(HTTPServer):
-                    def service_actions(self) -> None:
-                        owner._ready.set()
-
-                with ReadyServer(("127.0.0.1", 0), Handler) as server:
-                    self._server = server
+                with HTTPServer(("127.0.0.1", 0), Handler) as server:
                     self.endpoint = f"http://127.0.0.1:{server.server_port}/admit"
-                    server.serve_forever(poll_interval=min(self._timeout, 0.1))
+                    server.timeout = min(self._timeout, 0.1)
+                    self._ready.set()
+                    while not self._stopping.is_set():
+                        server.handle_request()
         except Exception:
             self._failed = True
             self._ready.set()
 
     def close(self) -> None:
-        if self._server is not None:
-            self._server.shutdown()
+        self._stopping.set()
         if self._thread is not None:
             self._thread.join(self._timeout)
             if self._thread.is_alive():

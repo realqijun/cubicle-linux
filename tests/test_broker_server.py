@@ -1,10 +1,12 @@
 from contextlib import contextmanager
 import json
+import socket
 from pathlib import Path
 import tempfile
 import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
 
 from planner.broker_server import BrokerServer
 from planner.connector import REQUIRED_HOOKS
@@ -42,12 +44,17 @@ class BrokerServerTests(unittest.TestCase):
                     store.close()
                     supervisor.close()
 
-            with BrokerServer(factory, max_request_bytes=1024) as server:
+            with BrokerServer(factory, max_request_bytes=1024, timeout_seconds=1) as server:
                 body = json.dumps({"protocol": 1, "sequence": 1, "route": "hello", "session_id": None,
                                    "payload": {"release": "2.2.5", "registered": list(REQUIRED_HOOKS)}}).encode()
                 wrong = Request(server.endpoint, body, headers={"Authorization": "Bearer wrong", "Content-Type": "application/json"})
-                with self.assertRaises(HTTPError) as denied:
-                    urlopen(wrong, timeout=3)
+                address = urlsplit(server.endpoint)
+                with socket.create_connection((address.hostname, address.port), timeout=3) as stalled:
+                    stalled.sendall(b"POST /admit HTTP/1.1\r\n")
+                    # Incomplete unauthenticated headers must not occupy the
+                    # single serving thread indefinitely.
+                    with self.assertRaises(HTTPError) as denied:
+                        urlopen(wrong, timeout=3)
                 self.assertEqual(denied.exception.code, 403)
                 denied.exception.close()
                 valid = Request(server.endpoint, body, headers={"Authorization": f"Bearer {server.token}", "Content-Type": "application/json"})

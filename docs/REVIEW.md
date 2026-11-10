@@ -82,3 +82,68 @@ Browser visual verification was blocked by the browser tool's local-file URL
 policy. No alternate transport was used to bypass that restriction. The report's
 metadata generation, escaping, and JavaScript syntax are checked, but browser
 rendering remains unverified.
+
+## Continuation review: Standards
+
+Fixed point: `2fc47eed4231ca1e8942b50cb0379400e8213e10`; initial continuation
+commit: `aea4301`. The user explicitly deferred OS acceptance to Ubuntu while
+requesting the remaining software implementation.
+
+One documented correctness finding:
+
+- **P1 — Apply the timeout before parsing HTTP headers.** The broker set its
+  socket timeout inside `do_POST`, after the standard handler reads request
+  lines and headers. An incomplete unauthenticated request could occupy the
+  single serving thread indefinitely. Blocking `HTTPServer.shutdown()` could
+  then hang teardown before the timed join. This contradicted the documented
+  configurable request-time limits.
+
+**Fixed and rechecked:** timeout setup now precedes HTTP parsing. The serving
+loop uses a stop event and bounded join rather than an unbounded shutdown call.
+A real partial-header socket test passes and confirms that the next request is
+served. A stuck serving thread is reported, not claimed cleaned up. No further
+Standards changes were requested; no additional actionable smells were found.
+
+## Continuation review: Spec
+
+One confirmed finding:
+
+- **P2 — Persist mediation refusals in decision history.** The spec requires
+  mediated decisions and attempted operations to be recorded. Unsupported
+  tools, unreviewed provider origins, replay, and other protocol refusals
+  returned a denial without durable evidence. The reproduced unsupported-tool
+  refusal left both history and provenance empty.
+
+**Fixed and rechecked:** non-filesystem denials now enter supervisor decision
+history with sanitized protocol route and fixed reason codes. JavaScript early
+guards send metadata-only refusal events before blocking; oversized envelopes
+use a compact denial without raw bytes or a sequence gap. Unknown route strings
+are not persisted. A restart test verifies durable history and absence of dummy
+secret payloads. No further confirmed core Spec bugs were found.
+
+Continuation totals: Standards one finding, resolved; Spec one finding, resolved.
+The Ubuntu acceptance work remains explicitly deferred, rather than counted as
+a newly introduced core defect or a completed security guarantee.
+
+## Continuation validation
+
+- Planner discovery: **124 tests, 109 pass, 15 skip**, including the real
+  loopback transport regression. The fourteen macOS probes remain opt-in and
+  the oracle acceptance requires a verified backend; neither is counted as a
+  new passing confinement result.
+- Strict mypy: **18 production source files pass**. Compilation, bridge
+  JavaScript syntax, and whitespace checks pass.
+- Actual OpenCode 2.2.5 + supervisor/broker + fixed local provider:
+  **four of four cases pass**. Permitted reads/writes work; the identical denied
+  write has no write effect and the model can continue; an unreviewed provider
+  receives no requests. Every observed fixture provider request is admitted by
+  the bridge. Seven attempts, including failures, are retained in
+  [`opencode-http-fixture.json`](../evidence/opencode-http-fixture.json), with
+  source hashes stable across the final attempt.
+- `artifact/` remains unchanged from the continuation baseline. Its previously
+  recorded two collector-test failures remain separate from the planner suite.
+
+These checks validate the implementation boundaries and fixed integration
+fixtures. They do not establish OS confinement, complete real-provider coverage,
+safe harness persistence, or matched autonomous-agent comparisons. See
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the accepted Ubuntu retest plan.

@@ -17,6 +17,10 @@ from .provenance import Note, Provenance
 from .records import Action, Decision, Operation
 from .supervisor import Supervisor
 
+ROUTES = frozenset(("hello", "session.bind", "prompt", "tool.before", "tool.after", "permission.evaluate",
+                   "shell.before", "context", "compaction", "generate", "title", "model.request",
+                   "provider.http.request", "provider.http.response", "bridge.denial"))
+
 
 class MediationDenied(PermissionError):
     """A fixed reason code suitable for worker responses and ordinary logs."""
@@ -170,6 +174,8 @@ class WorkerBroker:
                 return {"allowed": True, "reason": "bridge_registered"}
             if not self._hello:
                 raise MediationDenied("bridge_not_registered")
+            if route == "bridge.denial":
+                raise MediationDenied("unsupported_connector_path")
             session = envelope["session_id"]
             if route == "session.bind":
                 if not isinstance(session, str) or not session or self._session not in (None, session):
@@ -180,13 +186,26 @@ class WorkerBroker:
                 raise MediationDenied("unassigned_session")
             receipt = self._route(route, payload)
             return {"allowed": True, "reason": "admitted", **({"receipt": receipt} if receipt else {})}
-        except (MediationDenied, PermissionError):
-            return {"allowed": False, "reason": "mediation_denied"}
+        except MediationDenied as error:
+            return self._record_denial(envelope, str(error))
+        except PermissionError:
+            return self._record_denial(envelope, "context_unavailable")
         except (ValueError, TypeError, KeyError):
-            return {"allowed": False, "reason": "invalid_request"}
+            return self._record_denial(envelope, "invalid_request")
         except (sqlite3.Error, OSError, RuntimeError):
             self.close()
             return {"allowed": False, "reason": "protection_unavailable"}
+
+    def _record_denial(self, envelope: dict[str, Any], reason: str) -> dict[str, Any]:
+        route = envelope.get("route")
+        # The route itself is worker-controlled. Persist only known protocol names.
+        safe_route = route if isinstance(route, str) and route in ROUTES else "unsupported_route"
+        try:
+            self.supervisor.record_mediation_denial(self.task_id, self.worker_id, safe_route, reason)
+        except (sqlite3.Error, OSError, ValueError):
+            self.close()
+            return {"allowed": False, "reason": "protection_unavailable"}
+        return {"allowed": False, "reason": reason}
 
     def _route(self, route: str, payload: dict[str, Any]) -> str | None:
         if route == "tool.before":

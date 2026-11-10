@@ -74,13 +74,21 @@ requires an exact version and successfully registered hook inventory, one bound
 session, and monotonically increasing sequence numbers. Foreign sessions, replay,
 unknown routes, malformed bodies, and missing receipts are rejected.
 
-Only `POST /admit` with JSON is accepted. Body-size and request-time limits are
-configurable; request logging is disabled and responses use `no-store`. Token
+Only `POST /admit` with JSON is accepted. Body size, socket inactivity timeout
+(including request lines/headers), and shutdown wait are configurable. Shutdown
+uses a bounded join and reports failure if the serving thread does not stop;
+it never claims that a stuck thread was cleaned up. Request logging is disabled
+and responses use `no-store`. Token
 authentication does not itself establish OS separation: the confined worker
 must not inspect the supervisor/plugin process or steal another worker's token.
 The plugin removes broker credentials from its environment and strips configured
 provider credential variables from shell children. Parent-process/handle/control
 channel isolation remains part of Ubuntu acceptance.
+
+Non-filesystem refusals also enter durable decision history with sanitized route
+and reason codes. Unsupported connector paths report metadata-only denials;
+raw request bodies, frames, arbitrary route strings, and credential bytes are
+excluded from those records.
 
 ## Validation
 

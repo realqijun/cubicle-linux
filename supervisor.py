@@ -572,6 +572,13 @@ class Supervisor:
         return [dict(row) for row in self.db.execute(
             "SELECT * FROM decisions WHERE task=? ORDER BY id", (task_id,))]
 
+    def record_mediation_denial(self, task_id: str, worker_id: str, route: str, reason: str) -> None:
+        """Trusted broker records sanitized non-filesystem refusals, without payload bytes."""
+        with self.db:
+            self.status(task_id)
+            self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,?,?,?,0,?,NULL,?,NULL)",
+                            (task_id, worker_id, "mediation", route, "opencode", reason, self.clock()))
+
     def access_requests(self, task_id: str) -> list[dict[str, Any]]:
         self.status(task_id)
         return [{**dict(row), "resources": json.loads(row["resources"])} for row in self.db.execute(

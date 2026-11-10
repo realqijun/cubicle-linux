@@ -164,6 +164,21 @@ class MediationTests(unittest.TestCase):
                             "result": {"type": "error", "value": "Supervisor denied operation"}}]}]})
         self.assertTrue(self.broker.handle_request(envelope)["allowed"])
 
+    def test_non_file_refusals_survive_restart_without_persisting_payloads(self):
+        hello = {"protocol": 1, "sequence": 1, "route": "hello", "session_id": None,
+                 "payload": {"release": "2.2.5", "registered": list(REQUIRED_HOOKS)}}
+        self.assertTrue(self.broker.handle_request(hello)["allowed"])
+        bind = {**hello, "sequence": 2, "route": "session.bind", "session_id": "session", "payload": {}}
+        self.assertTrue(self.broker.handle_request(bind)["allowed"])
+        self.assertFalse(self.broker.handle_request({**bind, "sequence": 3, "route": "DUMMY_SECRET",
+                                                     "payload": {"raw": "DUMMY_SECRET"}})["allowed"])
+        restored = Supervisor(self.control.path)
+        self.addCleanup(restored.close)
+        history = restored.history(self.task)
+        self.assertEqual(history[0]["operation"], "mediation")
+        self.assertEqual(history[0]["resource"], "unsupported_route")
+        self.assertNotIn("DUMMY_SECRET", json.dumps(history))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,8 +20,8 @@ admitted sources. References must be resource IDs or paths, not source contents.
   returns content to the trusted connector. Both reject foreign, expired, and
   deleted-note-derived handles.
 - `admit(handles, kind="model_call")` records a derivation before handing its
-  exact ordered input tuple to the caller as `AdmittedCall.inputs`. This is the
-  linearization point for admission. A request's `repr` excludes its input text.
+  exact ordered input tuple to the caller as `AdmittedCall.inputs`. The record
+  is durable before transport. A request's `repr` excludes its input text.
 - `complete(call, output, kind="model_output")` creates an output handle with
   the call's union of origins and sensitivity. Each admitted call can complete
   only once; a reconstructed object with the same ID is rejected.
@@ -33,6 +33,9 @@ admitted sources. References must be resource IDs or paths, not source contents.
   the failed-call metadata remains.
 - `retrieve_note(project_id, note_id)` loads a current project note into a new
   handle with its original origins. Cross-project retrieval remains forbidden.
+  Uses that start after deletion are rejected. An overlapping admission that
+  already checked a live note may finish; deletion cannot recall input copies
+  already admitted or held by a caller/provider.
 - `save_note(project_id, handle)` saves only the handle's actual text, with its
   observed lineage. Sensitive inputs and all their derivatives are rejected by
   the provenance store before any note text is persisted.
