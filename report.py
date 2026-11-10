@@ -70,10 +70,19 @@ def generate(data: dict[str, Any], output: Path) -> None:
                       "worker": str(approval["worker"]), "kind": "approval",
                       "label": f"{approval['operation']} {approval['resource']}",
                       "status": str(approval["state"]), "time": None, "details": details})
+        sources = approval.get("sources")
+        if isinstance(sources, str):
+            try:
+                sources = json.loads(sources)
+            except json.JSONDecodeError:
+                pass
+        if sources:
+            missing.append(f"Approval {approval['id']} source provenance is unverified; claimed references remain details only.")
     approvals = {str(item["id"]): item for item in data.get("approvals", [])}
+    workers = {(str(item["task"]), str(item["id"])): item for item in data.get("workers", [])}
     for decision in data.get("decisions", []):
         details = {key: decision[key] for key in ("id", "task", "worker", "operation", "resource", "tool",
-                   "allowed", "reason", "approval", "created") if key in decision}
+                   "allowed", "reason", "approval", "created", "grant_revision") if key in decision}
         node_id = f"decision:{decision['task']}:{decision['id']}"
         nodes.append({"id": node_id, "task": str(decision["task"]), "worker": str(decision["worker"]),
                       "kind": "decision", "label": f"{decision['operation']} {decision['resource']}",
@@ -88,6 +97,18 @@ def generate(data: dict[str, Any], output: Path) -> None:
                               "kind": "authorization"})
             else:
                 missing.append(f"Approval mismatch or missing record for decision {node_id}")
+        elif decision["allowed"]:
+            worker = workers.get((str(decision["task"]), str(decision["worker"])))
+            grant_revision = decision.get("grant_revision")
+            revision = revisions.get((str(decision["task"]), grant_revision))
+            exact = (worker is not None and grant_revision is not None
+                     and worker.get("revision") == grant_revision
+                     and revision is not None and revision.get("approved") is not None)
+            if exact:
+                edges.append({"source": f"worker:{decision['task']}:{decision['worker']}",
+                              "target": node_id, "kind": "authorization"})
+            else:
+                missing.append(f"Installed grant revision missing or mismatched for decision {node_id}")
     edges.extend({"source": str(edge["source"]), "target": str(edge["target"]), "kind": "information"}
                  for edge in provenance.get("edges", []))
     identifiers = {node["id"] for node in nodes}

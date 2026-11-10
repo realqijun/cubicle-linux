@@ -126,6 +126,51 @@ class ReportTests(unittest.TestCase):
             self.assertEqual(first_policy["time"], 2)
             self.assertEqual(first_policy["details"]["approved"], 3)
 
+    def test_ordinary_allowed_decision_links_to_its_recorded_installed_grant(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "report.html"
+            generate({"tasks": [{"id": "task-1", "revision": 1, "state": "approved"}],
+                      "policy_revisions": [{"task": "task-1", "revision": 1, "policy": {},
+                                            "created": 1, "approved": 2}],
+                      "workers": [{"task": "task-1", "id": "worker-1", "state": "active",
+                                   "revision": 1, "grant": {"write": ["src/**"]}}],
+                      "decisions": [{"id": 1, "task": "task-1", "worker": "worker-1", "operation": "write",
+                                     "resource": "src/refunds.py", "tool": "file", "allowed": True,
+                                     "grant_revision": 1, "created": 3}]}, output)
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', output.read_text(), re.S)
+            data = json.loads(embedded.group(1))
+            self.assertIn({"source": "worker:task-1:worker-1", "target": "decision:task-1:1",
+                           "kind": "authorization"}, data["edges"])
+
+    def test_mismatched_and_legacy_decision_revisions_do_not_invent_grant_edges(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "report.html"
+            for decision_revision in (None, 2):
+                with self.subTest(grant_revision=decision_revision):
+                    generate({"policy_revisions": [{"task": "task-1", "revision": 1, "policy": {},
+                                                    "created": 1, "approved": 2}],
+                              "workers": [{"task": "task-1", "id": "worker-1", "state": "active",
+                                           "revision": 1, "grant": {}}],
+                              "decisions": [{"id": 1, "task": "task-1", "worker": "worker-1", "operation": "write",
+                                             "resource": "src/refunds.py", "tool": "file", "allowed": True,
+                                             "grant_revision": decision_revision}]}, output)
+                    embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', output.read_text(), re.S)
+                    data = json.loads(embedded.group(1))
+                    self.assertFalse(any(edge["target"] == "decision:task-1:1" for edge in data["edges"]))
+                    self.assertTrue(any("grant revision missing or mismatched" in text for text in data["missing"]))
+
+    def test_claimed_approval_sources_are_not_promoted_to_information_edges(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "report.html"
+            generate({"approvals": [{"id": "approval-1", "task": "task-1", "worker": "worker-1",
+                                     "operation": "write", "resource": "tests/file.py", "tool": "file",
+                                     "state": "requested", "sources": '["claimed-source"]'}]}, output)
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', output.read_text(), re.S)
+            data = json.loads(embedded.group(1))
+            self.assertEqual(data["edges"], [])
+            self.assertIn("claimed-source", data["nodes"][0]["details"]["sources"])
+            self.assertTrue(any("source provenance" in text for text in data["missing"]))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -120,6 +120,9 @@ not be reported as coverage of model inputs.
 generates a local report from those records and task-filtered provenance. Note
 text is excluded. Decisions are labeled separately from executed effects;
 information edges mean observed exposure/derivation, not proven causation.
+For a model-free report from real disposable fixture API calls, run
+`python3 -m planner.demo /tmp/planner-records.html`. This does not represent an
+agent run or model-input interception coverage.
 
 ## Configuration
 
@@ -165,6 +168,11 @@ effects. No matched model results have been collected.
 5. Visually verify the offline report in an allowed browser environment. Its
    Python output and embedded JavaScript syntax are checked; browser rendering
    was not established in this session.
+
+Independent review and known validation limits are recorded in
+[REVIEW.md](docs/REVIEW.md). The unchanged artifact helper suite currently has
+two legacy collector failures; the copy-only preparation path used here passes
+its checks.
 
 The security claim remains limited to declared access and installed permissions.
 Authorized edits can still be wrong. Underlying OS isolation and permission

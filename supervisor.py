@@ -19,6 +19,12 @@ from .connector import Connector, ConnectorConfig
 from .enforcement import Backend, ProtectionUnavailable
 
 
+def _decode_grant(encoded: str) -> Grant:
+    item = json.loads(encoded)
+    return Grant(item["task_id"], item["worker_id"], tuple(item["read"]),
+                 tuple(item["write"]), tuple(item["tools"]), item["parent_id"])
+
+
 class Supervisor:
     def __init__(self, path: Path, *, clock: Callable[[], float] = time.time,
                  task_seconds: float = 3600, denial_limit: int = 3) -> None:
@@ -46,7 +52,7 @@ class Supervisor:
                 id INTEGER PRIMARY KEY, task TEXT NOT NULL, worker TEXT NOT NULL,
                 operation TEXT NOT NULL, resource TEXT NOT NULL, tool TEXT NOT NULL,
                 allowed INTEGER NOT NULL, reason TEXT NOT NULL, approval TEXT,
-                created REAL NOT NULL);
+                created REAL NOT NULL, grant_revision INTEGER);
             CREATE TABLE IF NOT EXISTS approvals (
                 id TEXT PRIMARY KEY, task TEXT NOT NULL REFERENCES tasks(id),
                 worker TEXT NOT NULL, operation TEXT NOT NULL, resource TEXT NOT NULL,
@@ -54,6 +60,12 @@ class Supervisor:
                 state TEXT NOT NULL, sensitive INTEGER NOT NULL, identity TEXT NOT NULL,
                 revision INTEGER NOT NULL, sources TEXT NOT NULL);
         """)
+        # Preserve earlier records without inventing historic grant evidence.
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            columns = {row["name"] for row in self.db.execute("PRAGMA table_info(decisions)")}
+            if "grant_revision" not in columns:
+                self.db.execute("ALTER TABLE decisions ADD COLUMN grant_revision INTEGER")
 
     def close(self) -> None:
         self.db.close()
@@ -128,9 +140,7 @@ class Supervisor:
                               (task_id, worker_id)).fetchone()
         if row is None or row["state"] != "active":
             raise ValueError("Worker has no active grant")
-        item = json.loads(row["grant_json"])
-        return Grant(item["task_id"], item["worker_id"], tuple(item["read"]),
-                     tuple(item["write"]), tuple(item["tools"]), item["parent_id"])
+        return _decode_grant(row["grant_json"])
 
     def approve_worker(self, grant: Grant) -> None:
         """User-approved exact assignment; worker text cannot invoke this channel."""
@@ -236,16 +246,19 @@ class Supervisor:
             if item["lifetime"] == "once":
                 self.db.execute("UPDATE approvals SET state='consumed' WHERE id=?", (item["id"],))
             return Decision(True, "Exact user-approved exception", str(path),
-                            decision.sensitive, item["id"])
+                            decision.sensitive or bool(item["sensitive"]), item["id"])
         return decision
 
     def authorize(self, action: Action) -> Decision:
         # Serialize checking, single-use consumption, and the decision record.
         self.db.execute("BEGIN IMMEDIATE")
         try:
+            grant_revision = None
             try:
                 self._active(action.task_id)
                 grant = self.grant(action.task_id, action.worker_id)
+                grant_revision = self.db.execute("SELECT revision FROM workers WHERE task=? AND id=?",
+                                                  (action.task_id, action.worker_id)).fetchone()[0]
                 policy = self.policy(action.task_id)
                 decision = policy.decide(action, grant)
                 path, _ = policy.normalize(action.resource)
@@ -255,10 +268,10 @@ class Supervisor:
                     decision = self._use_exception(action, decision)
             except (ValueError, OSError, RuntimeError) as error:
                 decision = Decision(False, str(error), action.resource)
-            self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,?,?,?,?,?,?,?)",
+            self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,?,?,?,?,?,?,?,?)",
                             (action.task_id, action.worker_id, action.operation, decision.resource,
                              action.tool, decision.allowed, decision.reason, decision.approval_id,
-                             self.clock()))
+                             self.clock(), grant_revision))
             if not decision.allowed:
                 last = self.db.execute("""SELECT allowed,operation,resource,tool FROM decisions
                     WHERE task=? AND worker=? ORDER BY id DESC LIMIT ?""",
@@ -317,9 +330,7 @@ class Supervisor:
                               (task_id, worker_id)).fetchone()
         if row is None or row["state"] == "revoked":
             raise ValueError("Worker grant was revoked or is missing")
-        item = json.loads(row["grant_json"])
-        grant = Grant(item["task_id"], item["worker_id"], tuple(item["read"]),
-                      tuple(item["write"]), tuple(item["tools"]), item["parent_id"])
+        grant = _decode_grant(row["grant_json"])
         policy = self.policy(task_id)
         for status in (Backend().check(policy, grant), Connector(ConnectorConfig(model)).check()):
             if not status.available or not status.verified:

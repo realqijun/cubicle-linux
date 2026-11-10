@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime, timezone
 import json
+import hashlib
 import os
 from pathlib import Path
 import platform
@@ -10,7 +11,6 @@ import subprocess
 import sys
 import unittest
 from typing import Any
-from collections.abc import Sequence
 import re
 import tempfile
 
@@ -102,6 +102,10 @@ class MacOSFixture:
         for operation, patterns in (("file-read*", policy.deny_read), ("file-write*", policy.deny_write)):
             for pattern in patterns:
                 profile.append(f"(deny {operation} {selector('regex', _macos_glob(policy.root, pattern, ancestors=True))})")
+        # Conservative diagnostic restriction: a read-denied inode cannot be
+        # moved to an allowed name. This is stricter than the policy write scope.
+        for pattern in policy.deny_read:
+            profile.append(f"(deny file-write-unlink {selector('regex', _macos_glob(policy.root, pattern, ancestors=True))})")
         profile += ["(deny file-link)", "(deny mach-lookup)", "(deny network*)",
                     "(deny process-info* (target others))", "(deny signal (target others))",
                     "(deny appleevent-send)", "(deny authorization-right-obtain)"]
@@ -138,6 +142,9 @@ def main() -> None:
                  "machine": platform.machine(), "macos_version": platform.mac_ver()[0],
                  "build": subprocess.check_output(["/usr/bin/sw_vers", "-buildVersion"], text=True).strip()},
         "candidate": "private/deprecated sandbox-exec SBPL diagnostic",
+        "candidate_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "tests_sha256": hashlib.sha256((Path(__file__).parents[1] / "tests/test_enforcement.py").read_bytes()).hexdigest(),
+        "python_version": platform.python_version(),
         "production_backend": "blocked; candidate is not enabled",
         "command": "python3 -m planner.native.macos_contract --output planner/evidence/macos-candidate.json",
         "results": [

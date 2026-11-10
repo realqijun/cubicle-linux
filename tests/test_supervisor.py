@@ -34,6 +34,7 @@ class SupervisorTests(unittest.TestCase):
         decision = self.supervisor.authorize(Action(task, "worker", "read", "README.md"))
         self.assertTrue(decision.allowed)
         self.assertEqual(self.supervisor.status(task)["state"], "approved")
+        self.assertEqual(self.supervisor.history(task)[0]["grant_revision"], 1)
 
     def test_sensitive_exception_is_exact_single_use_and_does_not_remove_denial(self):
         task = self.active_worker()
@@ -47,6 +48,27 @@ class SupervisorTests(unittest.TestCase):
         self.assertFalse(self.supervisor.authorize(Action(task, "worker", "read", ".env")).allowed)
         self.assertFalse(self.supervisor.policy(task).decide(
             Action(task, "worker", "read", ".env"), self.supervisor.grant(task, "worker")).allowed)
+
+    def test_sensitive_hardlink_approval_remains_sensitive_for_provenance(self):
+        import os
+        from planner.provenance import Provenance
+
+        task = self.active_worker()
+        (self.root / ".env").write_text("DUMMY_SECRET")
+        os.link(self.root / ".env", self.root / "alias")
+        action = Action(task, "worker", "read", "alias")
+        request = self.supervisor.request_exception(action)
+        self.assertTrue(self.supervisor.exception(request)["sensitive"])
+        self.supervisor.approve_exception(request, disclose_sensitive=True)
+        decision = self.supervisor.authorize(action)
+        self.assertTrue(decision.allowed)
+        self.assertTrue(decision.sensitive)
+        memory = Provenance(self.supervisor.path.with_suffix(".memory.sqlite"))
+        self.addCleanup(memory.close)
+        memory.register_task(task, str(self.root))
+        source = memory.record_input(task, "worker", "file", decision.resource, decision.sensitive)
+        with self.assertRaises(PermissionError):
+            memory.add_note(str(self.root), task, "worker", "DUMMY_SECRET", [source.id])
 
     def test_denial_retry_limit_suspends_worker_until_review(self):
         task = self.active_worker()
@@ -125,6 +147,25 @@ class SupervisorTests(unittest.TestCase):
         self.root.rename(self.root.with_name("original-project"))
         self.root.mkdir()
         self.assertFalse(self.supervisor.authorize(Action(task, "worker", "read", "README.md")).allowed)
+
+    def test_earlier_decision_storage_remains_usable_after_restart(self):
+        import sqlite3
+        from contextlib import closing
+
+        path = self.supervisor.path.with_name("earlier.sqlite")
+        with closing(sqlite3.connect(path)) as legacy:
+            legacy.execute("""CREATE TABLE decisions (
+                id INTEGER PRIMARY KEY, task TEXT NOT NULL, worker TEXT NOT NULL,
+                operation TEXT NOT NULL, resource TEXT NOT NULL, tool TEXT NOT NULL,
+                allowed INTEGER NOT NULL, reason TEXT NOT NULL, approval TEXT,
+                created REAL NOT NULL)""")
+        restored = Supervisor(path)
+        self.addCleanup(restored.close)
+        task = restored.propose(self.policy)
+        restored.approve_task(task)
+        restored.approve_worker(Grant(task, "worker", read=("**",)))
+        self.assertTrue(restored.authorize(Action(task, "worker", "read", "README.md")).allowed)
+        self.assertEqual(restored.history(task)[0]["grant_revision"], 1)
 
 
 if __name__ == "__main__":

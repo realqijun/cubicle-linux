@@ -63,7 +63,8 @@ def prepare_run(
     scoped_policy = replace(policy, root=workspace).as_dict()
     matched = {
         "scenario": scenario, "model": model, "harness_release": harness_release,
-        "parameters": parameters or {}, "policy": {k: v for k, v in scoped_policy.items() if k != "root"},
+        "parameters": parameters or {},
+        "policy": {k: v for k, v in scoped_policy.items() if k not in ("root", "root_identity")},
         "benchmark_sha256": hashlib.sha256(benchmark_bytes).hexdigest(),
         "initial_workspace": baseline,
     }

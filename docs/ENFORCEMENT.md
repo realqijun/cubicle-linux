@@ -1,7 +1,8 @@
 # OS enforcement status
 
-The launch gate is implemented. OS confinement is **not implemented or validated**
-on any platform. `Backend.check(policy, grant)` returns a structured blocking
+The launch gate is implemented. Production OS confinement is **not validated**
+on any platform. A real macOS candidate has been built and tested locally, and
+fails required contract cases described below. `Backend.check(policy, grant)` returns a structured blocking
 status; `Backend.run(...)` raises `ProtectionUnavailable` before spawning the
 command. This also applies to evaluators that execute generated source. There is
 no permissive development mode, environment override, startup-scan fallback, or
@@ -18,7 +19,7 @@ Diagnostics on 10 November 2026 found:
 | Resource | Observed result | Meaning |
 | --- | --- | --- |
 | Host | Darwin 27.0.0, ARM64 | Only this host was available for inspection. |
-| Ubuntu SSH forwarding at localhost:2222 | Connection refused | No Linux kernel enforcement tests ran. |
+| Ubuntu SSH forwarding at localhost:2222 | Initially refused; after the user started the VM, key login failed for both documented and host usernames | The user then selected host-only testing; no Linux enforcement tests ran. |
 | UTM `utmctl list` | OSStatus -1743; Automation authorization unavailable | VM inventory could not be established. |
 | macOS `sandbox-exec` | Present; nested invocation denied; escalated allow-default/read-only profile ran `/usr/bin/true` | The executable exists and one permissive diagnostic ran. This does not validate the policy contract. |
 | macOS deny-default diagnostic | `/usr/bin/true` aborted, exit 134 | Even basic legitimate execution was not established for this candidate profile. |
@@ -68,3 +69,69 @@ effects, including confidential reads and transient writes.
 The current test proves only that the gate blocks a command before its visible
 effect. The same fixture command runs as a positive control outside the gate.
 It does not establish that any OS filesystem confinement mechanism works.
+
+## Local macOS candidate and actual evidence
+
+At the user's request, further testing used this host only; no VM was used.
+`planner/native/macos_contract.py` contains the disposable Seatbelt prototype and
+the fixed diagnostic runner. The fixture creates its own temporary project. It
+accepts no actual task policy, grant, project, executable or runtime mounts.
+Production `Backend.run` never calls it. The prototype is not a supported backend.
+
+The candidate uses Python-generated SBPL regex rules for component `*`, `?` and
+`**` globs. Bracket globs are refused. It continuously applies name denials,
+limits read/write resources, denies new hardlinks, closes inherited file
+descriptors, and denies Mach lookup, network connections, other-process signals,
+other-process information, Apple Events and authorization-right requests.
+Runtime reads are explicit system directories plus the executing Python prefix
+and its Homebrew gettext library if present. Runtime aliases and canonical paths
+are both included. A startup check refuses preexisting multiply linked project
+files. That scan is supplementary and cannot establish continuous inode safety.
+
+The initial deny-default profile aborted even on `/usr/bin/true`. An inverted
+filesystem allowlist worked after including the root and device-directory
+runtime reads. This is an experiment with a private/deprecated interface, not a
+stable cross-release security contract.
+
+Run the actual local diagnostics in an environment allowed to create a nested
+Seatbelt sandbox:
+
+```sh
+python3 -m planner.native.macos_contract --output planner/evidence/macos-candidate.json
+```
+
+The runner enables only the fixed dummy-data tests, appends sanitized evidence,
+and returns nonzero when the candidate violates its contract. No raw tool output,
+secret bytes or traceback messages are saved. Ordinary unit discovery skips the
+host probes because the desktop workspace sandbox prevents nested confinement.
+Those skips are separate from the explicitly executed host diagnostics.
+
+The actual host was macOS 27.0.1, build 26A434, Darwin 27.0.0, ARM64. The final
+recorded attempt ran fourteen tests: twelve passed and two failed. The evidence
+file preserves earlier unsuccessful attempts too.
+
+Passing cases covered legitimate reads/writes, protected writes/rename/unlink/
+truncation, existing sensitive paths, traversal and symlinks, case aliases,
+newly created matching sensitive files, permitted source replacement, children
+and grandchildren, inherited descriptor closure, parent-process and Unix control
+socket denial, sensitive symlink names, worker hardlink creation denial, and
+startup refusal of preexisting hardlinks.
+
+An earlier attempt exposed another dummy secret by renaming `src/.env.movable`
+to `src/visible` and reading it. The final candidate conservatively denies
+`file-write-unlink` on read-denied names, so that rename is now blocked. This
+extra restriction is stricter than the independent read/write scopes in the
+policy; it is a diagnostic safety restriction, not a change to production policy
+semantics. The unsuccessful earlier attempt remains in the evidence file.
+
+Required failures remain:
+
+1. An independent process can create a hardlink to `.env` under an allowed name
+   after the startup scan. The worker reads the dummy bytes through that alias.
+2. A worker forks a child that creates a new session and closes inherited output
+   pipes. After its owner exits, the detached child retains its sandbox grant and
+   performs an authorized write. Process-tree expiry/cleanup is not established.
+
+These failures prevent acceptance and keep normal execution blocked. Startup
+scans, successful individual path tests and an interface that launches correctly
+must not be substituted for complete continuous enforcement and lifecycle tests.
