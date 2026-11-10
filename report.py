@@ -4,10 +4,38 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .policy import covered
+
 
 def _policy_metadata(policy: dict[str, Any]) -> dict[str, Any]:
     return {key: policy[key] for key in ("root", "read", "write", "deny_read", "deny_write", "tools", "external_inputs")
             if key in policy}
+
+
+def _grant_metadata(grant: dict[str, Any]) -> dict[str, Any]:
+    return {key: grant[key] for key in ("task_id", "worker_id", "read", "write", "tools", "parent_id")
+            if key in grant}
+
+
+def _subset(grant: dict[str, Any], ceiling: dict[str, Any]) -> bool:
+    return (covered(tuple(grant.get("read", [])), tuple(ceiling.get("read", [])))
+            and covered(tuple(grant.get("write", [])), tuple(ceiling.get("write", [])))
+            and set(grant.get("tools", [])) <= set(ceiling.get("tools", [])))
+
+
+def _attempt_metadata(attempt: dict[str, Any]) -> dict[str, Any]:
+    details: dict[str, Any] = {key: attempt[key] for key in ("id", "task", "worker", "attempt", "revision", "expires",
+               "state", "reason", "created", "updated", "cleanup_verified") if key in attempt}
+    details["checks"] = [{key: check[key] for key in ("backend", "available", "verified") if key in check}
+                         for check in attempt.get("checks", [])]
+    if "grant" in attempt:
+        details["grant"] = _grant_metadata(attempt["grant"])
+    return details
+
+
+def _attempt_status(attempt: dict[str, Any]) -> str:
+    cleanup = "cleanup evidence recorded" if attempt.get("cleanup_verified") else "cleanup unverified"
+    return f"{attempt['state']}; {cleanup}"
 
 
 def generate(data: dict[str, Any], output: Path) -> None:
@@ -47,12 +75,39 @@ def generate(data: dict[str, Any], output: Path) -> None:
                       "label": f"Policy r{revision['revision']}",
                       "status": "approved" if revision.get("approved") is not None else "proposed",
                       "time": revision.get("created"), "details": details})
+    workers = {(str(item["task"]), str(item["id"])): item for item in data.get("workers", [])}
+    templates = {(str(item["task"]), item["revision"], str(item["name"])): item
+                 for item in data.get("delegation_templates", [])}
+    valid_templates = set()
+    for key, preset in templates.items():
+        node_id = f"template:{preset['task']}:{preset['revision']}:{preset['name']}"
+        details = {name: preset[name] for name in ("task", "name", "parent", "revision", "state", "created")
+                   if name in preset}
+        details["grant"] = _grant_metadata(preset.get("grant", {}))
+        nodes.append({"id": node_id, "task": str(preset["task"]), "worker": str(preset["parent"]),
+                      "kind": "delegation_template", "label": f"Delegation preset {preset['name']}",
+                      "status": f"user-approved preset; {preset['state']}",
+                      "time": preset.get("created"), "details": details})
+        revision = revisions.get((str(preset["task"]), preset["revision"]))
+        parent = workers.get((str(preset["task"]), str(preset["parent"])))
+        exact = (revision is not None and revision.get("approved") is not None
+                 and parent is not None and parent.get("revision") == preset["revision"]
+                 and preset.get("grant", {}).get("parent_id") == preset["parent"]
+                 and _subset(preset.get("grant", {}), parent.get("grant", {})))
+        if exact:
+            valid_templates.add(key)
+            edges.append({"source": f"policy:{preset['task']}:{preset['revision']}",
+                          "target": node_id, "kind": "authorization"})
+            edges.append({"source": f"worker:{preset['task']}:{preset['parent']}",
+                          "target": node_id, "kind": "authorization"})
+        else:
+            missing.append(f"Delegation template policy or parent mismatch for {node_id}")
     for worker in data.get("workers", []):
         grant = worker.get("grant", {})
-        details = {key: grant[key] for key in ("task_id", "worker_id", "read", "write", "tools", "parent_id")
-                   if key in grant}
+        details = _grant_metadata(grant)
         details["state"] = worker["state"]
         details["revision"] = worker.get("revision")
+        details["template"] = worker.get("template")
         node_id = f"worker:{worker['task']}:{worker['id']}"
         nodes.append({"id": node_id, "task": str(worker["task"]), "worker": str(worker["id"]),
                       "kind": "grant", "label": f"Worker {worker['id']}",
@@ -63,6 +118,49 @@ def generate(data: dict[str, Any], output: Path) -> None:
                           "target": node_id, "kind": "authorization"})
         else:
             missing.append(f"No approved policy revision established for installed grant {node_id}")
+        if worker.get("template"):
+            key = (str(worker["task"]), worker.get("revision"), str(worker["template"]))
+            preset = templates.get(key)
+            exact = (key in valid_templates and preset is not None
+                     and grant.get("task_id") == worker["task"] and grant.get("worker_id") == worker["id"]
+                     and grant.get("parent_id") == preset["parent"]
+                     and _subset(grant, preset.get("grant", {})))
+            if exact:
+                edges.append({"source": f"template:{worker['task']}:{worker['revision']}:{worker['template']}",
+                              "target": node_id, "kind": "authorization"})
+            else:
+                missing.append(f"Delegation template binding missing or mismatched for installed grant {node_id}")
+    for attempt in data.get("attempts", []):
+        node_id = f"attempt:{attempt['id']}"
+        nodes.append({"id": node_id, "task": str(attempt["task"]), "worker": str(attempt["worker"]),
+                      "kind": "attempt", "label": f"Attempt snapshot {attempt['id']}",
+                      "status": _attempt_status(attempt), "time": attempt.get("updated"),
+                      "details": _attempt_metadata(attempt)})
+        worker = workers.get((str(attempt["task"]), str(attempt["worker"])))
+        snapshot = attempt.get("grant", {})
+        revision = revisions.get((str(attempt["task"]), attempt.get("revision")))
+        exact = (worker is not None and worker.get("revision") == attempt.get("revision")
+                 and revision is not None and revision.get("approved") is not None
+                 and snapshot.get("task_id") == attempt["task"]
+                 and snapshot.get("worker_id") == attempt["worker"]
+                 and _grant_metadata(snapshot) == _grant_metadata(worker.get("grant", {})))
+        if exact:
+            edges.append({"source": f"worker:{attempt['task']}:{attempt['worker']}",
+                          "target": node_id, "kind": "authorization"})
+        else:
+            missing.append(f"Execution attempt grant snapshot missing or mismatched for {node_id}")
+        previous = node_id
+        for event in attempt.get("events", []):
+            event_id = f"attempt-event:{attempt['id']}:{event['id']}"
+            nodes.append({"id": event_id, "task": str(attempt["task"]), "worker": str(attempt["worker"]),
+                          "kind": "attempt_event", "label": f"Attempt transition · {event['state']}",
+                          "status": _attempt_status(event), "time": event.get("created"),
+                          "details": _attempt_metadata(event)})
+            if event.get("attempt") == attempt["id"]:
+                edges.append({"source": previous, "target": event_id, "kind": "lifecycle"})
+                previous = event_id
+            else:
+                missing.append(f"Lifecycle event attempt binding mismatch for {event_id}")
     for approval in data.get("approvals", []):
         details = {key: approval[key] for key in ("id", "task", "worker", "operation", "resource", "tool",
                    "lifetime", "expires", "state", "sensitive", "revision", "sources") if key in approval}
@@ -79,7 +177,6 @@ def generate(data: dict[str, Any], output: Path) -> None:
         if sources:
             missing.append(f"Approval {approval['id']} source provenance is unverified; claimed references remain details only.")
     approvals = {str(item["id"]): item for item in data.get("approvals", [])}
-    workers = {(str(item["task"]), str(item["id"])): item for item in data.get("workers", [])}
     for decision in data.get("decisions", []):
         details = {key: decision[key] for key in ("id", "task", "worker", "operation", "resource", "tool",
                    "allowed", "reason", "approval", "created", "grant_revision") if key in decision}

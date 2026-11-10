@@ -8,9 +8,117 @@ import unittest
 
 from planner.provenance import Provenance
 from planner.report import generate
+from planner.policy import Policy
+from planner.records import Grant, ProtectionStatus
+from planner.supervisor import Supervisor
+from planner.context import ModelContext
 
 
 class ReportTests(unittest.TestCase):
+    def test_actual_context_and_transport_failure_records_keep_lineage_without_text(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            store = Provenance(root / "provenance.sqlite")
+            self.addCleanup(store.close)
+            store.register_task("task", "project")
+            context = ModelContext(store, "task", "worker")
+            self.addCleanup(context.close)
+            source = context.observe("DO-NOT-EMBED-MODEL-BYTES", "tool_result", ".env", sensitive=True)
+            admitted = context.admit([source], kind="provider_call")
+            failed = context.fail(admitted)
+            output = root / "report.html"
+            generate({"provenance": store.export()}, output)
+            html = output.read_text()
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', html, re.S)
+            rendered = json.loads(embedded.group(1))
+            self.assertIn({"source": source.record_id, "target": admitted.record_id,
+                           "kind": "information"}, rendered["edges"])
+            self.assertIn({"source": admitted.record_id, "target": failed.id,
+                           "kind": "information"}, rendered["edges"])
+            failure = next(node for node in rendered["nodes"] if node["id"] == failed.id)
+            self.assertEqual(failure["kind"], "model_call_failed")
+            self.assertTrue(failure["details"]["sensitive"])
+            self.assertNotIn("DO-NOT-EMBED-MODEL-BYTES", html)
+
+    def test_attempt_timeline_uses_real_transitions_without_claiming_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "project"
+            project.mkdir()
+            supervisor = Supervisor(root / "control.sqlite")
+            self.addCleanup(supervisor.close)
+            task = supervisor.propose(Policy(project, read=("**",)))
+            supervisor.approve_task(task)
+            supervisor.approve_worker(Grant(task, "worker", read=("**",)))
+            attempt = supervisor.prepare_attempt(task, "worker")
+            fixture = ProtectionStatus(True, "fixture-only", "Not OS evidence", verified=True)
+            supervisor.verify_attempt(attempt["id"], fixture, fixture)
+            supervisor.start_attempt(attempt["id"])
+            supervisor.reconcile(task)
+            data = supervisor.export(task)
+            for event in data["attempts"][0]["events"]:
+                event["raw_body"] = "DO-NOT-EMBED-LIFECYCLE-BODY"
+            output = root / "report.html"
+            generate(data, output)
+            html = output.read_text()
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', html, re.S)
+            rendered = json.loads(embedded.group(1))
+            events = [node for node in rendered["nodes"] if node["kind"] == "attempt_event"]
+            self.assertEqual([node["details"]["state"] for node in events],
+                             ["prepared", "verified", "running", "interrupted"])
+            self.assertTrue(all("cleanup unverified" in node["status"] for node in events))
+            self.assertTrue(all(node["time"] is not None for node in events))
+            snapshot = next(node for node in rendered["nodes"] if node["id"] == f"attempt:{attempt['id']}")
+            self.assertEqual(snapshot["time"], data["attempts"][0]["updated"])
+            self.assertEqual(len([edge for edge in rendered["edges"] if edge["kind"] == "lifecycle"]), 4)
+            self.assertNotIn("DO-NOT-EMBED-LIFECYCLE-BODY", html)
+            self.assertIn("Recorded lifecycle", html)
+
+    def test_mismatched_attempt_and_event_bindings_are_not_linked(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "report.html"
+            generate({"attempts": [{"id": "attempt-1", "task": "task-1", "worker": "worker-1",
+                                    "revision": 2, "grant": {}, "state": "interrupted",
+                                    "cleanup_verified": False, "events": [
+                                        {"id": 1, "attempt": "other-attempt", "state": "running",
+                                         "created": 1, "checks": [], "cleanup_verified": False}]}]}, output)
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', output.read_text(), re.S)
+            rendered = json.loads(embedded.group(1))
+            self.assertEqual(rendered["edges"], [])
+            self.assertTrue(any("grant snapshot missing or mismatched" in item for item in rendered["missing"]))
+            self.assertTrue(any("Lifecycle event attempt binding mismatch" in item for item in rendered["missing"]))
+
+    def test_delegated_worker_links_only_to_its_recorded_approved_template(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "project"
+            project.mkdir()
+            supervisor = Supervisor(root / "control.sqlite")
+            self.addCleanup(supervisor.close)
+            task = supervisor.propose(Policy(project, read=("**",), write=("src/**",)))
+            supervisor.approve_task(task)
+            supervisor.approve_worker(Grant(task, "parent", read=("src/**",)))
+            supervisor.approve_delegation_template(task, "reader", "parent", read=("src/**",))
+            supervisor.delegate(Grant(task, "child", read=("src/refunds.py",), parent_id="parent"), "reader")
+            data = supervisor.export(task)
+            data["delegation_templates"][0]["raw_body"] = "DO-NOT-EMBED-TEMPLATE-BODY"
+            output = root / "report.html"
+            generate(data, output)
+            html = output.read_text()
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', html, re.S)
+            rendered = json.loads(embedded.group(1))
+            self.assertIn({"source": f"template:{task}:1:reader", "target": f"worker:{task}:child",
+                           "kind": "authorization"}, rendered["edges"])
+            self.assertNotIn("DO-NOT-EMBED-TEMPLATE-BODY", html)
+            data["delegation_templates"][0]["parent"] = "some-other-parent"
+            generate(data, output)
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', output.read_text(), re.S)
+            rendered = json.loads(embedded.group(1))
+            self.assertFalse(any(edge["source"].startswith("template:") and edge["target"] == f"worker:{task}:child"
+                                 for edge in rendered["edges"]))
+            self.assertTrue(any("template" in message.lower() and "mismatch" in message.lower()
+                                for message in rendered["missing"]))
+
     def test_report_preserves_real_origins_without_embedding_note_text(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

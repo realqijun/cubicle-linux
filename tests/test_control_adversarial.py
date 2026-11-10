@@ -40,6 +40,15 @@ class ControlAdversarialTests(unittest.TestCase):
             return  # Refusing the protected resource before installation is also valid.
         self.assertFalse(self.supervisor.authorize(action).allowed)
 
+    def test_repeated_requests_do_not_downgrade_revocation_to_suspension(self):
+        task = self.supervisor.propose(Policy(self.root, read=("**",)))
+        self.supervisor.approve_task(task)
+        self.supervisor.approve_worker(Grant(task, "worker", read=("**",)))
+        self.supervisor.revoke_worker(task, "worker")
+        for _ in range(3):
+            self.assertFalse(self.supervisor.authorize(Action(task, "worker", "read", "README.md")).allowed)
+        self.assertEqual(self.supervisor.worker_status(task, "worker")["state"], "revoked")
+
     def test_worker_exception_cannot_read_control_state_or_write_code_hardlink(self):
         policy = Policy(self.root, read=("**",), write=("**",), external_inputs=(self.state,))
         task = self.supervisor.propose(policy)

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from planner.connector import Connector, ConnectorConfig
+from planner.connector import BridgeConfig, Connector, ConnectorConfig, ProviderConfig
 
 
 class ConnectorTests(unittest.TestCase):
@@ -61,6 +61,31 @@ class ConnectorTests(unittest.TestCase):
         for values in ({"model": ""}, {"model": "test"}, {"model": "test/model", "timeout_seconds": 0}):
             with self.subTest(values=values), self.assertRaises(ValueError):
                 ConnectorConfig(**values)
+
+    def test_supervised_proposal_installs_bridge_and_only_explicit_provider_credentials(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bridge = BridgeConfig("http://127.0.0.1:12345/admit", "a" * 32)
+            provider = ProviderConfig("https://provider.example/v1", api_key_env="FIXTURE_API_KEY")
+            connector = Connector(ConnectorConfig("fixture/model", executable=sys.executable, provider=provider))
+            launch = connector.prepare(Path(directory), "fixture", bridge=bridge,
+                                       credentials={"FIXTURE_API_KEY": "DUMMY_EXPLICIT_CREDENTIAL"})
+            config = __import__("json").loads(launch.env["OPENCODE_CONFIG_CONTENT"])
+            self.assertEqual(config["providers"]["fixture"]["settings"]["baseURL"], "https://provider.example/v1")
+            self.assertEqual(config["providers"]["fixture"]["env"], ["FIXTURE_API_KEY"])
+            self.assertEqual(launch.env["FIXTURE_API_KEY"], "DUMMY_EXPLICIT_CREDENTIAL")
+            self.assertTrue(config["plugins"][0].endswith("planner/opencode"))
+            self.assertEqual(launch.env["PLANNER_BROKER_URL"], bridge.endpoint)
+            self.assertNotIn("DUMMY_EXPLICIT_CREDENTIAL", repr(launch))
+            self.assertNotIn(bridge.token, repr(bridge))
+
+    def test_server_bootstrap_contains_no_task_prompt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            launch = Connector(ConnectorConfig("fixture/model", executable=sys.executable)).prepare_server(
+                root, project=root, bridge=BridgeConfig("http://127.0.0.1:12345/admit", "a" * 32),
+                server_password="b" * 32)
+            self.assertEqual(launch.argv[1:], ("serve", "--stdio", "--hostname", "127.0.0.1", "--port", "0"))
+            self.assertEqual(launch.env["OPENCODE_PASSWORD"], "b" * 32)
 
 
 if __name__ == "__main__":

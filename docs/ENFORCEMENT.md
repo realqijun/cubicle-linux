@@ -1,5 +1,9 @@
 # OS enforcement status
 
+Further platform acceptance is deferred to Ubuntu by user request. Continue the
+remaining implementation using the [known-limitations and retest plan](KNOWN_LIMITATIONS.md).
+No additional local sandbox experiments are required for that work.
+
 The launch gate is implemented. Production OS confinement is **not validated**
 on any platform. A real macOS candidate has been built and tested locally, and
 fails required contract cases described below. `Backend.check(policy, grant)` returns a structured blocking

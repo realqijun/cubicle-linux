@@ -1,0 +1,624 @@
+{
+  "schema": 1,
+  "attempts": [
+    {
+      "at": "2026-11-10T15:02:26.038429+00:00",
+      "release": "2.2.5",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "bridge.mjs": "5082ef16663a737167586a645d851da4058dafd74d9fd6f21129641b0049140a",
+        "diagnostic.py": "f35a8a53607e75d95e3b52674504166812d16f08210cab2a7da6d1b022271c74"
+      },
+      "results": [
+        {
+          "case": "permitted_read",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": true,
+          "write_effect": false,
+          "denial_observed": false
+        },
+        {
+          "case": "permitted_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": false
+        },
+        {
+          "case": "denied_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true
+        },
+        {
+          "case": "denied_provider",
+          "passed": true,
+          "exit_code": 1,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true
+        }
+      ],
+      "scope": "Pinned binary and fixed loopback dummy provider; not OS confinement or full-route acceptance."
+    },
+    {
+      "at": "2026-11-10T15:05:24.821478+00:00",
+      "release": "2.2.5",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "bridge.mjs": "5082ef16663a737167586a645d851da4058dafd74d9fd6f21129641b0049140a",
+        "diagnostic.py": "d0899ba048fb453091ada0b037a7398e50c28008a347abf9b22f8955dbb59e91"
+      },
+      "results": [
+        {
+          "case": "permitted_read",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": true,
+          "write_effect": false,
+          "denial_observed": false
+        },
+        {
+          "case": "permitted_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": false
+        },
+        {
+          "case": "denied_write",
+          "passed": true,
+          "exit_code": 1,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "context"
+          ],
+          "provider_requests": 2,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true
+        },
+        {
+          "case": "denied_provider",
+          "passed": true,
+          "exit_code": 1,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true
+        }
+      ],
+      "scope": "Pinned binary, actual supervisor/broker, fixed loopback dummy provider; not OS confinement or full-route acceptance."
+    },
+    {
+      "at": "2026-11-10T15:10:26.546762+00:00",
+      "release": "2.2.5",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "bridge.mjs": "9b6966ea538a386d4281236f7be02afea4389da609ba58869a70ec1772de56e3",
+        "diagnostic.py": "a9d895353d5b01d605e95a6d77e9eb942f5fda73d6da40d2972e3edff098639d"
+      },
+      "results": [
+        {
+          "case": "permitted_read",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": true,
+          "write_effect": false,
+          "denial_observed": true
+        },
+        {
+          "case": "permitted_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": true
+        },
+        {
+          "case": "denied_write",
+          "passed": false,
+          "exit_code": 0,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": true
+        },
+        {
+          "case": "denied_provider",
+          "passed": false,
+          "exit_code": 0,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": true
+        }
+      ],
+      "scope": "Pinned binary, actual supervisor/broker, fixed loopback dummy provider; not OS confinement or full-route acceptance."
+    },
+    {
+      "at": "2026-11-10T15:11:51.183992+00:00",
+      "release": "2.2.5",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "bridge.mjs": "cffdeef09d8bcf8f938ba5a31e148a15f8f5cee3bca0aad48dda0f29cec9390f",
+        "diagnostic.py": "43ab16bbf42ee106e5ca5a47c67f48a1579cf8f00099f4539a8d54e37f26ee65"
+      },
+      "results": [
+        {
+          "case": "permitted_read",
+          "passed": false,
+          "exit_code": 1,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": false
+        },
+        {
+          "case": "permitted_write",
+          "passed": false,
+          "exit_code": 1,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": false
+        },
+        {
+          "case": "denied_write",
+          "passed": false,
+          "exit_code": 1,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": false
+        },
+        {
+          "case": "denied_provider",
+          "passed": false,
+          "exit_code": 1,
+          "routes": [
+            "hello"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": false
+        }
+      ],
+      "scope": "Pinned binary, actual supervisor/broker, fixed loopback dummy provider; not OS confinement or full-route acceptance."
+    },
+    {
+      "at": "2026-11-10T15:14:05.712442+00:00",
+      "release": "2.2.5",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "bridge.mjs": "c7f1585b423a613f2d5f115ceae92f50466a41c4a0f2cfd1b671aca2dcaf255e",
+        "diagnostic.py": "43ab16bbf42ee106e5ca5a47c67f48a1579cf8f00099f4539a8d54e37f26ee65"
+      },
+      "results": [
+        {
+          "case": "permitted_read",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": true,
+          "write_effect": false,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "permitted_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "denied_write",
+          "passed": false,
+          "exit_code": 1,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "context"
+          ],
+          "provider_requests": 2,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "denied_provider",
+          "passed": true,
+          "exit_code": 1,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": true
+        }
+      ],
+      "scope": "Pinned binary, actual supervisor/broker, fixed loopback dummy provider; not OS confinement or full-route acceptance."
+    },
+    {
+      "at": "2026-11-10T15:22:04.949515+00:00",
+      "release": "2.2.5",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "bridge.mjs": "c7f1585b423a613f2d5f115ceae92f50466a41c4a0f2cfd1b671aca2dcaf255e",
+        "diagnostic.py": "8ce96700cd8130c8332c1b2e2f286b9b0f40fbcc529c8e0aca0ecb61af36488a",
+        "connector.py": "eeae02e0e47a14518eec536775b2d493cd4215b93da2c9e2520636af924e6317",
+        "mediation.py": "82ff8da0210e7362b49666220305b2951ade5784e9f2e9373a4c96716d5c9308",
+        "broker_server.py": "c0e1d92580b136a37a5cbba7d03d834889a1dd4149ba49420c785abb34820bb8",
+        "context.py": "fd649cf9e08d3a77b7b8ed46381ba24c4060de3d3829f44aa82fa3b2b522c5d3",
+        "supervisor.py": "0f46966826dea38ba358db5775890b7c77d31ff9b5a19f28a168dd72bbe51e72",
+        "provenance.py": "f14d11b32682dbf2333df91d21ffd4a93ae8668133993b66ce82e251af1ccda0"
+      },
+      "sources_stable": true,
+      "results": [
+        {
+          "case": "permitted_read",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": true,
+          "write_effect": false,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "permitted_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "denied_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "denied_provider",
+          "passed": true,
+          "exit_code": 1,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": true
+        }
+      ],
+      "scope": "Pinned binary, actual supervisor/broker, fixed loopback dummy provider; not OS confinement or full-route acceptance."
+    }
+  ]
+}

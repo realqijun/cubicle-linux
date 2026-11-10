@@ -98,6 +98,36 @@ timestamps. Worker grants link to their installed revision, including revoked
 workers, rather than to the task's newest policy. Missing revision evidence
 produces a warning and no invented authorization edge.
 
+Approved delegation presets appear as their own authorization records. A preset
+links to an installed child only when the task, template name, parent, and policy
+revision match; its scope must remain within the recorded parent grant, and the
+child must remain within that preset. Revoked presets remain historical records.
+Mismatched or absent bindings produce evidence warnings rather than inferred
+authorization. Extra template fields are not embedded.
+
+Execution attempts appear as current snapshots plus the actual timestamped
+transition events supplied by the supervisor. Snapshot time uses its recorded
+`updated` value; it does not backdate the latest state to initial preparation.
+Transitions include prepared, verified, running, stopping, interrupted, failed,
+finished, or reconciled states when those events actually exist. A third dotted
+link style, **Recorded lifecycle**, connects these record associations and
+transition order. It does not mean model input exposure or permission approval.
+
+Attempt details include the exact grant snapshot, fixed reason, expiry, verified
+preflight flags, and cleanup-evidence flag. A matching installed worker and
+approved revision are required for its grant edge. Foreign attempt-event
+bindings remain disconnected and are flagged. `cleanup_verified=false` always
+displays **cleanup unverified**; a true value displays **cleanup evidence
+recorded**. Neither the `running` state nor a synthetic test protection status
+establishes real process confinement or file effects. Backend acceptance remains
+deferred to the Ubuntu retest plan.
+
+The report also accepts actual `ModelContext` admission, provider, transformation,
+worker-report, and failure records without raw text. Their existing information
+edges retain sensitivity and origins; model-authored approval claims still do
+not create authorization. See [CONTEXT.md](CONTEXT.md) for the trusted input
+boundary and the distinction between input admission and remote delivery.
+
 Automated checks verify real record IDs and edges, text exclusion, script
 escaping, local assets, exact approval matching and deletion metadata. JavaScript
 syntax is checked separately. Browser screenshot validation was unavailable in

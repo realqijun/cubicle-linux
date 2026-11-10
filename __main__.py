@@ -25,7 +25,7 @@ def parser() -> argparse.ArgumentParser:
     selection = proposal.add_mutually_exclusive_group(required=True)
     selection.add_argument("--policy", type=Path)
     selection.add_argument("--template", choices=("source", "inspection", "tests", "documentation"))
-    for name in ("review", "status", "history", "cancel", "export"):
+    for name in ("review", "status", "history", "cancel", "export", "workers", "templates", "attempts", "reconcile"):
         commands.add_parser(name).add_argument("task")
     approval = commands.add_parser("approve-task")
     approval.add_argument("task")
@@ -40,6 +40,24 @@ def parser() -> argparse.ArgumentParser:
     assignment.add_argument("--read", action="append", default=[])
     assignment.add_argument("--write", action="append", default=[])
     assignment.add_argument("--tool", action="append", default=None)
+    delegation = commands.add_parser("delegate", help="Use a previously user-approved delegation template")
+    delegation.add_argument("task")
+    delegation.add_argument("worker")
+    delegation.add_argument("--parent", required=True)
+    delegation.add_argument("--template", required=True)
+    for scope in ("read", "write", "tool"):
+        delegation.add_argument(f"--{scope}", action="append", default=[])
+    template = commands.add_parser("approve-template", help="Approve a task- and parent-scoped assignment preset")
+    template.add_argument("task")
+    template.add_argument("name")
+    template.add_argument("parent")
+    for scope in ("read", "write", "tool"):
+        template.add_argument(f"--{scope}", action="append", default=[])
+    commands.add_parser("attempt").add_argument("id")
+    for name in ("worker", "prepare-attempt"):
+        inspect = commands.add_parser(name)
+        inspect.add_argument("task")
+        inspect.add_argument("worker")
     for name in ("decide", "request-exception"):
         action = commands.add_parser(name)
         action.add_argument("task")
@@ -61,6 +79,9 @@ def parser() -> argparse.ArgumentParser:
         worker.add_argument("worker")
         if name != "revoke":
             worker.add_argument("--model", required=True, help="Explicit provider/model")
+        if name == "resume":
+            worker.add_argument("--cleanup-verified", action="store_true",
+                                help="Trusted operator confirms previous processes have stopped")
     memory = commands.add_parser("memory", help="Inspect/delete project notes; no implicit authorization")
     memory.add_argument("project", help="Approved absolute project root")
     memory.add_argument("operation", choices=("list", "inspect", "delete"))
@@ -92,6 +113,28 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
                       tuple(args.tool or ["file"]), args.parent)
         supervisor.approve_worker(grant)
         return asdict(grant)
+    if command == "approve-template":
+        return supervisor.approve_delegation_template(args.task, args.name, args.parent,
+                   read=tuple(args.read), write=tuple(args.write), tools=tuple(args.tool or ["file"]))
+    if command == "delegate":
+        grant = Grant(args.task, args.worker, tuple(args.read), tuple(args.write),
+                      tuple(args.tool or ["file"]), args.parent)
+        supervisor.delegate(grant, args.template)
+        return supervisor.worker_status(args.task, args.worker)
+    if command == "workers":
+        return supervisor.workers(args.task)
+    if command == "worker":
+        return supervisor.worker_status(args.task, args.worker)
+    if command == "templates":
+        return supervisor.templates(args.task)
+    if command == "prepare-attempt":
+        return supervisor.prepare_attempt(args.task, args.worker)
+    if command == "attempt":
+        return supervisor.attempt(args.id)
+    if command == "attempts":
+        return supervisor.attempts(args.task)
+    if command == "reconcile":
+        return supervisor.reconcile(args.task)
     if command in ("decide", "request-exception"):
         action = Action(args.task, args.worker, cast(Operation, args.operation), args.resource, args.tool)
         if command == "decide":
@@ -119,7 +162,7 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
         statuses = supervisor.preflight(args.task, args.worker, args.model)
         return {"ready": all(s["available"] and s["verified"] for s in statuses), "checks": statuses}
     if command == "resume":
-        supervisor.resume(args.task, args.worker, args.model)
+        supervisor.resume(args.task, args.worker, args.model, cleanup_verified=args.cleanup_verified)
         return {"state": "resumed"}
     if command == "export":
         return supervisor.export(args.task)
