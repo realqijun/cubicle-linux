@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "attempts": [
+    {
+      "started_at": "2026-11-10T14:31:15.690490+00:00",
+      "finished_at": "2026-11-10T14:31:16.994695+00:00",
+      "host": {
+        "system": "Darwin",
+        "release": "27.0.0",
+        "machine": "arm64",
+        "macos_version": "27.0.1",
+        "build": "26A434"
+      },
+      "candidate": "private/deprecated sandbox-exec SBPL diagnostic",
+      "production_backend": "blocked; candidate is not enabled",
+      "command": "python3 -m planner.native.macos_contract --output planner/evidence/macos-candidate.json",
+      "results": [
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_preexisting_hardlink_alias",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 11,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "scope": "Disposable dummy files only; no raw stdout/stderr or secret contents persisted."
+    },
+    {
+      "started_at": "2026-11-10T14:31:53.106771+00:00",
+      "finished_at": "2026-11-10T14:31:54.686099+00:00",
+      "host": {
+        "system": "Darwin",
+        "release": "27.0.0",
+        "machine": "arm64",
+        "macos_version": "27.0.1",
+        "build": "26A434"
+      },
+      "candidate": "private/deprecated sandbox-exec SBPL diagnostic",
+      "production_backend": "blocked; candidate is not enabled",
+      "command": "python3 -m planner.native.macos_contract --output planner/evidence/macos-candidate.json",
+      "results": [
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_hardlink_created_externally_during_execution",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_symlink_name_to_public_target",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_refuses_startup_with_preexisting_hardlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 13,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "scope": "Disposable dummy files only; no raw stdout/stderr or secret contents persisted."
+    },
+    {
+      "started_at": "2026-11-10T14:32:55.424173+00:00",
+      "finished_at": "2026-11-10T14:32:56.903319+00:00",
+      "host": {
+        "system": "Darwin",
+        "release": "27.0.0",
+        "machine": "arm64",
+        "macos_version": "27.0.1",
+        "build": "26A434"
+      },
+      "candidate": "private/deprecated sandbox-exec SBPL diagnostic",
+      "production_backend": "blocked; candidate is not enabled",
+      "command": "python3 -m planner.native.macos_contract --output planner/evidence/macos-candidate.json",
+      "results": [
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_hardlink_created_externally_during_execution",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_read_after_moving_sensitive_inode_to_allowed_name",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_symlink_name_to_public_target",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_refuses_startup_with_preexisting_hardlinks",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 14,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "scope": "Disposable dummy files only; no raw stdout/stderr or secret contents persisted."
+    }
+  ]
+}

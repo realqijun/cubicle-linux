@@ -1,0 +1,15 @@
+[project]
+name = "planner-supervisor"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "Deterministic filesystem authorization and provenance supervisor"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["planner"]
+exclude = ["planner/tests/"]
+
+[[tool.mypy.overrides]]
+module = ["artifact.scripts.prepare"]
+follow_imports = "skip"

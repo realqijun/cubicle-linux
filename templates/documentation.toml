@@ -1,0 +1,7 @@
+[files]
+read = ["**"]
+write = ["docs/**", "README.md"]
+deny_read = [".env*", "**/.env*", ".git/**"]
+
+[tools]
+allow = ["file", "shell", "search"]

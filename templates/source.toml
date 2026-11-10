@@ -1,0 +1,8 @@
+[files]
+read = ["**"]
+write = ["src/**", "outputs/**"]
+deny_read = [".env*", "**/.env*", ".git/**"]
+deny_write = ["tests/**"]
+
+[tools]
+allow = ["file", "shell", "search"]

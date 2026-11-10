@@ -1,0 +1,173 @@
+"""Trusted terminal interface; supervised workers must never access its state."""
+
+import argparse
+from dataclasses import asdict
+import json
+from pathlib import Path
+import sqlite3
+import sys
+from typing import Any, Sequence, cast
+
+from .policy import Policy
+from .records import Action, Grant, Operation
+from .supervisor import Supervisor
+
+
+def parser() -> argparse.ArgumentParser:
+    cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument("--state", type=Path, required=True, help="Trusted SQLite file outside the project")
+    cli.add_argument("--json", action="store_true", help="Machine-readable results")
+    cli.add_argument("--task-seconds", type=float, default=3600, help="New task lifetime, seconds")
+    cli.add_argument("--denial-limit", type=int, default=3, help="Identical denied attempts before suspension")
+    commands = cli.add_subparsers(dest="command", required=True)
+    proposal = commands.add_parser("propose", help="Create a policy proposal without starting work")
+    proposal.add_argument("project", type=Path)
+    selection = proposal.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--policy", type=Path)
+    selection.add_argument("--template", choices=("source", "inspection", "tests", "documentation"))
+    for name in ("review", "status", "history", "cancel", "export"):
+        commands.add_parser(name).add_argument("task")
+    approval = commands.add_parser("approve-task")
+    approval.add_argument("task")
+    approval.add_argument("--revision", type=int, required=True)
+    revision = commands.add_parser("revise")
+    revision.add_argument("task")
+    revision.add_argument("--policy", type=Path, required=True)
+    assignment = commands.add_parser("assign", help="Approve an exact worker assignment")
+    assignment.add_argument("task")
+    assignment.add_argument("worker")
+    assignment.add_argument("--parent")
+    assignment.add_argument("--read", action="append", default=[])
+    assignment.add_argument("--write", action="append", default=[])
+    assignment.add_argument("--tool", action="append", default=None)
+    for name in ("decide", "request-exception"):
+        action = commands.add_parser(name)
+        action.add_argument("task")
+        action.add_argument("worker")
+        action.add_argument("operation", choices=("read", "write"))
+        action.add_argument("resource")
+        action.add_argument("--tool", default="file")
+        if name == "request-exception":
+            action.add_argument("--lifetime", choices=("once", "task"), default="once")
+            action.add_argument("--source", action="append", default=[])
+    for name in ("exception", "approve-exception", "refuse-exception"):
+        request = commands.add_parser(name)
+        request.add_argument("approval")
+        if name == "approve-exception":
+            request.add_argument("--confirm-sensitive-provider-disclosure", action="store_true")
+    for name in ("preflight", "resume", "revoke"):
+        worker = commands.add_parser(name)
+        worker.add_argument("task")
+        worker.add_argument("worker")
+        if name != "revoke":
+            worker.add_argument("--model", required=True, help="Explicit provider/model")
+    memory = commands.add_parser("memory", help="Inspect/delete project notes; no implicit authorization")
+    memory.add_argument("project", help="Approved absolute project root")
+    memory.add_argument("operation", choices=("list", "inspect", "delete"))
+    memory.add_argument("--note")
+    memory.add_argument("--query", default="")
+    report = commands.add_parser("report")
+    report.add_argument("task")
+    report.add_argument("output", type=Path)
+    return cli
+
+
+def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
+    command = args.command
+    if command == "propose":
+        path = args.policy if args.policy else Path(__file__).parent / "templates" / f"{args.template}.toml"
+        task_id = supervisor.propose(Policy.load(args.project, path))
+        return supervisor.status(task_id)
+    if command in ("review", "status"):
+        return supervisor.status(args.task)
+    if command == "approve-task":
+        supervisor.approve_task(args.task, revision=args.revision)
+        return supervisor.status(args.task)
+    if command == "revise":
+        root = Path(supervisor.status(args.task)["policy"]["root"])
+        supervisor.revise(args.task, Policy.load(root, args.policy))
+        return supervisor.status(args.task)
+    if command == "assign":
+        grant = Grant(args.task, args.worker, tuple(args.read), tuple(args.write),
+                      tuple(args.tool or ["file"]), args.parent)
+        supervisor.approve_worker(grant)
+        return asdict(grant)
+    if command in ("decide", "request-exception"):
+        action = Action(args.task, args.worker, cast(Operation, args.operation), args.resource, args.tool)
+        if command == "decide":
+            return asdict(supervisor.authorize(action))
+        request = supervisor.request_exception(action, lifetime=args.lifetime, sources=tuple(args.source))
+        return supervisor.exception(request)
+    if command == "exception":
+        return supervisor.exception(args.approval)
+    if command == "approve-exception":
+        supervisor.approve_exception(args.approval,
+                                     disclose_sensitive=args.confirm_sensitive_provider_disclosure)
+        return supervisor.exception(args.approval)
+    if command == "refuse-exception":
+        supervisor.refuse_exception(args.approval)
+        return supervisor.exception(args.approval)
+    if command == "history":
+        return supervisor.history(args.task)
+    if command == "cancel":
+        supervisor.cancel(args.task)
+        return supervisor.status(args.task)
+    if command == "revoke":
+        supervisor.revoke_worker(args.task, args.worker)
+        return {"task": args.task, "worker": args.worker, "state": "revoked"}
+    if command == "preflight":
+        statuses = supervisor.preflight(args.task, args.worker, args.model)
+        return {"ready": all(s["available"] and s["verified"] for s in statuses), "checks": statuses}
+    if command == "resume":
+        supervisor.resume(args.task, args.worker, args.model)
+        return {"state": "resumed"}
+    if command == "export":
+        return supervisor.export(args.task)
+    from .provenance import Provenance
+
+    memory = Provenance(supervisor.path.with_suffix(".memory.sqlite"))
+    try:
+        if command == "memory":
+            project = str(Path(args.project).resolve(strict=True))
+            if args.operation == "list":
+                return [asdict(note) for note in memory.list_notes(project, args.query)]
+            if not args.note:
+                raise ValueError("--note is required for inspect/delete")
+            if args.operation == "inspect":
+                return asdict(memory.get_note(project, args.note))
+            memory.delete_note(project, args.note)
+            return {"id": args.note, "state": "deleted"}
+        if command == "report":
+            from .report import generate
+
+            data = supervisor.export(args.task)
+            # Empty provenance is explicit when there have been no admitted calls.
+            root = supervisor.status(args.task)["policy"]["root"]
+            memory.register_task(args.task, root)
+            data["provenance"] = memory.export(args.task)
+            generate(data, args.output)
+            return {"report": str(args.output.resolve())}
+        raise ValueError("Unknown command")
+    finally:
+        memory.close()
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parser().parse_args(argv)
+    supervisor = None
+    try:
+        supervisor = Supervisor(args.state, task_seconds=args.task_seconds, denial_limit=args.denial_limit)
+        result = execute(args, supervisor)
+        print(json.dumps(result, indent=2, ensure_ascii=True) if args.json else json.dumps(result, indent=2))
+        return 2 if isinstance(result, dict) and result.get("ready") is False else 0
+    except (ValueError, KeyError, OSError, RuntimeError, sqlite3.Error) as error:
+        result = {"blocked": True, "reason": str(error)}
+        print(json.dumps(result) if args.json else f"BLOCKED: {error}", file=sys.stderr)
+        return 2
+    finally:
+        if supervisor is not None:
+            supervisor.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,18 @@
+(version 1)
+(allow default)
+(deny file-read-data
+  (require-not
+    (require-any
+      (literal "/")
+      (literal "/dev")
+      (subpath "/usr")
+      (subpath "/System")
+      (subpath "/Library")
+      (subpath "/bin")
+      (subpath "/sbin")
+      (literal "/dev/null"))))
+(deny file-write*)
+(deny mach-lookup)
+(deny network*)
+(deny process-info* (target others))
+(deny signal (target others))
