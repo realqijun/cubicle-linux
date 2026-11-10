@@ -1,0 +1,68 @@
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeCSS: 'text { font-family: Arial, Helvetica, sans-serif !important; }'
+  themeVariables:
+    fontFamily: 'Arial, Helvetica, sans-serif'
+    fontSize: 16px
+    primaryColor: '#eef4f1'
+    primaryTextColor: '#20332e'
+    primaryBorderColor: '#5f8175'
+    lineColor: '#627a72'
+    clusterBkg: '#fafbf9'
+    clusterBorder: '#bfcfc6'
+    edgeLabelBackground: '#ffffff'
+  flowchart:
+    htmlLabels: false
+    curve: basis
+    nodeSpacing: 28
+    rankSpacing: 60
+---
+flowchart TB
+    subgraph operator ["Trusted operator"]
+        cli["Terminal CLI"]
+        policy["Reviewed TOML policy + templates"]
+    end
+
+    subgraph control ["Trusted Python supervisor"]
+        supervisor["Supervisor + policy decisions"]
+        broker["BrokerServer + WorkerBroker"]
+        context["ModelContext admission"]
+        gate["OS launch gate: blocked"]
+    end
+
+    subgraph worker ["Worker runtime: Ubuntu acceptance pending"]
+        opencode["OpenCode 2.2.5 + hook bridge"]
+        tools["Built-in tools + descendants"]
+    end
+
+    subgraph storage ["Protected supervisor storage"]
+        state[("SQLite: policies, grants, approvals, decisions")]
+        provenance[("SQLite: origins + project notes")]
+    end
+
+    provider["Configured model provider"]
+    project["Approved project files"]
+    report["Offline HTML provenance report"]
+
+    cli -->|"Approve and inspect"| supervisor
+    policy -->|"Set authority"| supervisor
+    broker -->|"Check current grants"| supervisor
+    supervisor -->|"Persist control records"| state
+    supervisor -->|"Check protection"| gate
+    gate -.->|"Launch and containment: pending Ubuntu"| opencode
+    opencode <-->|"Blocking hook admission"| broker
+    broker -->|"Admit actual inputs"| context
+    context -->|"Record origins and sensitivity"| provenance
+    opencode -->|"Native HTTP after admission"| provider
+    opencode -->|"Dispatch after admission"| tools
+    tools -->|"Read and write"| project
+    state -->|"Read-only export"| report
+    provenance -->|"Read-only export"| report
+
+    classDef pending fill:#fff5e5,stroke:#b07824,color:#694716,stroke-dasharray:6 4
+    classDef output fill:#f1f3f8,stroke:#7c87a1,color:#29364c
+    class gate pending
+    class provider,project,report output
+    style worker fill:#fffcf6,stroke:#b07824,stroke-dasharray:6 4

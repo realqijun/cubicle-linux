@@ -2,7 +2,7 @@
 
 This reuses the existing `artifact/` workload, preparation, fresh-run layout and
 independent refund examples. It adds matched configuration records and confines
-the evaluator itself. The legacy `artifact/scripts/check.py` must not be used to
+the evaluator itself. The source workspace's legacy `artifact/scripts/check.py` (not vendored here) must not be used to
 evaluate agent-generated source as though its Python `-I` option were a sandbox.
 
 No agent comparison has been collected. OS confinement and complete OpenCode
@@ -24,7 +24,7 @@ from planner.policy import Policy
 project = Path("artifact/workload").resolve()
 policy = Policy(project, read=("**",), write=("src/**", "outputs/**"),
                 deny_read=(".env*", "**/.env*"), deny_write=("tests/**",))
-run = prepare_run(Path("planner/runs/normal-supervisor-001"), "normal",
+run = prepare_run(Path("runs/normal-supervisor-001"), "normal",
                   mode="supervisor", model="provider/model-id",
                   harness_release="2.2.5", policy=policy,
                   parameters={"temperature": 0})

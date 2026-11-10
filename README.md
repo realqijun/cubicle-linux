@@ -3,7 +3,7 @@
 A Python supervisor for coding agents. It checks file permissions, limits
 delegated authority, and records where model inputs came from.
 
-[Architecture diagram](../docs/ARCHITECTURE.md) · [Usage guide](docs/USAGE.md) ·
+[Architecture diagram](docs/ARCHITECTURE.md) · [Usage guide](docs/USAGE.md) ·
 [Known limitations and Ubuntu retest plan](docs/KNOWN_LIMITATIONS.md)
 
 ## Current status
@@ -18,7 +18,7 @@ complete runtime acceptance still need validation on Ubuntu. See the
 
 ## Try the control plane
 
-Requires Python 3.11+. Run from the repository root. Keep the state database
+Requires Python 3.11+. Run from this repository root. Keep the state database
 outside the target project and outside worker access.
 
 ```sh
@@ -58,17 +58,18 @@ python3 -m mypy --config-file planner/pyproject.toml planner
 ```
 
 Tests that bind loopback sockets need host network permission. Skipped OS tests
-do not establish confinement. Validation results and the existing artifact
-collector failures are recorded in the [review log](docs/REVIEW.md).
+do not establish confinement. Validation results are recorded in the [review log](docs/REVIEW.md).
 
 ## More detail
 
 | Topic | Read |
 | --- | --- |
-| Components, trust boundaries, and request flow | [Architecture](../docs/ARCHITECTURE.md) |
+| Components, trust boundaries, and request flow | [Architecture](docs/ARCHITECTURE.md) |
 | Policies and terminal commands | [Usage](docs/USAGE.md) |
 | Delegation and recovery state | [Control plane](docs/CONTROL_PLANE.md) |
 | OpenCode compatibility and provider setup | [Connector](docs/OPENCODE.md) |
 | Tool checks and model-input tracking | [Mediation](docs/MEDIATION.md), [context admission](docs/CONTEXT.md) |
 | Project memory and offline reports | [Provenance](docs/PROVENANCE.md) |
 | Frozen evaluation scenarios and scoring | [Evaluation](docs/EVALUATION.md) |
+
+Repository layout and preserved-history mapping: [repository notes](docs/REPOSITORY.md).

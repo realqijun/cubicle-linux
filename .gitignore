@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.mypy_cache/
+.venv/
+*.egg-info/
+.env
+.env.*
+/runs/
+/artifact/runs/

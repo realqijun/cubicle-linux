@@ -150,7 +150,7 @@ actual effects, successful bridge registration, and admission of every observed
 provider request. This prevents a successful task from masking a missing bridge.
 
 ```sh
-python3 -m planner.opencode.diagnostic --output planner/evidence/opencode-http-fixture.json
+python3 -m planner.opencode.diagnostic --output evidence/opencode-http-fixture.json
 ```
 
 The runner appends sanitized outcomes and source hashes; raw model bodies,

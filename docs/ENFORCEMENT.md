@@ -101,7 +101,7 @@ Run the actual local diagnostics in an environment allowed to create a nested
 Seatbelt sandbox:
 
 ```sh
-python3 -m planner.native.macos_contract --output planner/evidence/macos-candidate.json
+python3 -m planner.native.macos_contract --output evidence/macos-candidate.json
 ```
 
 The runner enables only the fixed dummy-data tests, appends sanitized evidence,

@@ -130,8 +130,9 @@ selects a provider/model, executable, endpoint, explicit credential environment
 name, and finite time/body limits. The harness release is pinned until another
 release's paths are verified. See [OpenCode setup](OPENCODE.md).
 
-The project follows the standard-library `artifact/` preparation and JSON-record
-style. Its legacy unconfined collector/checker is not a supervised executor. The
+The project vendors the standard-library `artifact/` preparation fixtures and
+uses their JSON-record style. The source workspace's unconfined collector/checker
+is not included. The
 intentionally buggy workload is an evaluation fixture, not a green application
 suite. The [evaluation guide](EVALUATION.md) describes independent scoring,
 matched configurations, and which results remain unverified.
