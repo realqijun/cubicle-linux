@@ -1,1 +1,1 @@
-"""Disposable native-backend experiments; not an enabled enforcement backend."""
+"""Native confinement: Ubuntu private-workspace runner and macOS diagnostics."""

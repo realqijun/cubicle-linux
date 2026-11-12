@@ -4,7 +4,7 @@ A Python supervisor for coding agents. It checks file permissions, limits
 delegated authority, and records where model inputs came from.
 
 [Architecture diagram](docs/ARCHITECTURE.md) · [Usage guide](docs/USAGE.md) ·
-[Known limitations and Ubuntu retest plan](docs/KNOWN_LIMITATIONS.md)
+[Ubuntu sandbox](docs/LINUX_SANDBOX.md) · [Known limitations](docs/KNOWN_LIMITATIONS.md)
 
 ## Current status
 
@@ -12,9 +12,10 @@ Policy checks, approvals, delegation, provenance, and recovery records are
 implemented. The OpenCode 2.2.5 bridge passes fixed integration tests with a local
 model-provider fixture.
 
-**Autonomous execution remains gated.** OS confinement, process cleanup, and
-complete runtime acceptance still need validation on Ubuntu. See the
-[limitations](docs/KNOWN_LIMITATIONS.md) before using it with real tasks.
+Ubuntu now has an [offline sandbox runner](docs/LINUX_SANDBOX.md): approved files
+are copied into a private workspace, kernel rules deny protected paths, and edits
+stay separate for review. **The full autonomous-agent launcher remains gated**;
+model-provider integration and live-project execution still need acceptance.
 
 ## Try the control plane
 
@@ -54,7 +55,7 @@ real connector diagnostics require OpenCode **2.2.5**. Mypy is a development too
 
 ```sh
 python3 -m unittest discover -s planner/tests
-python3 -m mypy --config-file planner/pyproject.toml planner
+python3 -m mypy --config-file pyproject.toml planner
 ```
 
 Tests that bind loopback sockets need host network permission. Skipped OS tests

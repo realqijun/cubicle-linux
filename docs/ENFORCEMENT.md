@@ -1,11 +1,14 @@
 # OS enforcement status
 
-Further platform acceptance is deferred to Ubuntu by user request. Continue the
-remaining implementation using the [known-limitations and retest plan](KNOWN_LIMITATIONS.md).
-No additional local sandbox experiments are required for that work.
+Ubuntu testing has resumed on the user-provided VM. The
+[private-workspace runner](LINUX_SANDBOX.md) combines Bubblewrap, AppArmor and
+seccomp, and is separate from the original live-project backend described below.
+It runs offline, retains edits in a copy, and does not enable the complete
+autonomous-agent launcher. Real-process outcomes and source hashes are recorded
+in [Linux evidence](../evidence/linux-private-workspace.json).
 
-The launch gate is implemented. Production OS confinement is **not validated**
-on any platform. A real macOS candidate has been built and tested locally, and
+The live-project launch gate is implemented and remains closed. Its complete
+policy/runtime contract is **not validated** on any platform. A real macOS candidate has been built and tested locally, and
 fails required contract cases described below. `Backend.check(policy, grant)` returns a structured blocking
 status; `Backend.run(...)` raises `ProtectionUnavailable` before spawning the
 command. This also applies to evaluators that execute generated source. There is
@@ -29,7 +32,10 @@ Diagnostics on 10 November 2026 found:
 | macOS deny-default diagnostic | `/usr/bin/true` aborted, exit 134 | Even basic legitimate execution was not established for this candidate profile. |
 | Windows | No execution environment available | No Windows enforcement tests ran. |
 
-These are negative or inconclusive diagnostics, not security acceptance results.
+This table records the earlier investigation. On 13 November the supplied
+password successfully authenticated `user@localhost:2222`; Ubuntu 24.04.3,
+kernel 6.8.0-137-generic x86-64 was available for the private-workspace tests.
+The earlier table entries are negative or inconclusive diagnostics.
 No secret files or provider credentials were used.
 
 ## Backend selection findings

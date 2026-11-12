@@ -32,8 +32,16 @@ confine processes or that Ubuntu will automatically satisfy this contract.
 
 ## Ubuntu retest plan
 
-No VM connection, installation, or new platform validation is required during
-the remaining implementation work. When an Ubuntu machine is available:
+On 13 November 2026 the supplied Ubuntu VM became available via password SSH.
+The [private-workspace runner](LINUX_SANDBOX.md) now implements a narrower,
+offline execution mode with Bubblewrap, AppArmor and seccomp. It copies inputs
+instead of exposing the live project, and keeps edits separate for review.
+Its [real-process evidence](../evidence/linux-private-workspace.json) covers
+confidential reads, continuous name denials, aliases, protected writes and
+descendant cleanup. This does not accept the original live-project backend or
+the full model-connected OpenCode launcher.
+
+The remaining full-runtime acceptance plan is:
 
 1. Record OS release, kernel, architecture, Python, OpenCode release, backend
    version, user-namespace/LSM prerequisites, and the exact policy. Use fresh
@@ -59,9 +67,9 @@ the remaining implementation work. When an Ubuntu machine is available:
    supervised runs only after the required cases pass. Then collect the frozen
    native/OS/supervisor comparisons with matched model and task configuration.
 
-Linux and Windows support remain unverified until their own acceptance results
-exist. Deferring validation changes implementation order; it does not weaken the
-security claim or turn skipped tests into evidence of enforcement.
+The tested Ubuntu private-workspace mode has its own evidence and restrictions.
+Other Linux environments, live-project execution and Windows remain unverified.
+Skipped tests do not establish enforcement.
 
 ## Connector and lifecycle acceptance alongside Ubuntu retesting
 

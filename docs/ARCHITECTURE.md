@@ -12,6 +12,10 @@ show required runtime integration awaiting Ubuntu acceptance. Normal autonomous
 execution remains blocked; this is an architecture view, not a claim of a fully
 confined deployment.
 
+The separate [Ubuntu offline runner](LINUX_SANDBOX.md) now confines commands in a
+private copy with Bubblewrap, AppArmor and seccomp. It does not connect the dashed
+OpenCode/provider launch path shown here; edits remain outside the source project.
+
 ## Request flow
 
 1. The operator reviews a TOML policy and approves exact grants, delegation
@@ -38,6 +42,7 @@ confined deployment.
 | Model context | Actual in-memory inputs, conservative origin/sensitivity propagation, opaque handles | [context](../planner/context.py) |
 | OpenCode connector | Pinned release, private bootstrap proposal, blocking hooks, explicit provider configuration | [connector](../planner/connector.py), [hook bridge](../planner/opencode/bridge.mjs) |
 | OS backend | Launch gate and required filesystem/process containment | [enforcement](../planner/enforcement.py) |
+| Ubuntu offline runner | Private input copy, kernel path rules, detached-descendant cleanup; no model network or automatic merge | [Linux sandbox](../planner/native/linux_sandbox.py) |
 | Persistence and report | SQLite metadata, project memory, inspection and offline visualization | [provenance](../planner/provenance.py), [report](../planner/report.py) |
 | Evaluation | Fresh matched fixtures and independent oracle behind the OS gate | [evaluation](../planner/evaluation.py) |
 
