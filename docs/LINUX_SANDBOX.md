@@ -23,11 +23,14 @@ autonomous-agent acceptance or support on every Linux distribution.
    protected patterns continuously, including files inserted after launch.
    The trusted bootstrap verifies its actual kernel profile is in **enforce**
    mode before executing the command. A missing or complain-mode profile cannot
-   start the command.
-4. Seccomp denies hardlinks, symlinks and cross-process memory/ptrace syscalls.
+   start the command. The profile declares AppArmor ABI 4.0 and explicitly denies
+   networking; relying on a legacy default ABI can silently omit newer mediation.
+4. Seccomp denies hardlinks, symlinks, `io_uring` and cross-process memory/ptrace syscalls.
    AppArmor also denies writing read-denied names, preventing a secret from
-   being renamed into a readable name. These restrictions are intentionally
-   stricter than the general policy interface.
+   being renamed into a readable name. Workspace directory creation, removal
+   and renaming are denied too, so an ancestor rename cannot change a protected
+   file's path. File replacement in existing directories remains available.
+   These restrictions are intentionally stricter than the general policy interface.
 5. A PID namespace contains detached descendants. Owner exit, launcher death,
    timeout or failed authority checks stop execution. The operator CLI checks
    task/worker authority periodically; revocation is detected within the polling
@@ -38,6 +41,9 @@ inject it into the already-created copy. The source tree must be quiescent while
 the snapshot is prepared, and the run directory must remain trusted. This does
 not defend against a hostile host administrator or another malicious process
 with the supervisor's UID that can tamper with the supervisor or private copy.
+Directory prefixes compatible with read/write scopes are copied for navigation;
+wildcards can expose an empty directory skeleton even when no contained file is
+copied. Filename and directory-name confidentiality is not promised.
 
 ## Setup
 
@@ -114,6 +120,9 @@ The runner preserves attempts with source hashes, host/package versions and
 per-test outcomes. It saves no raw command output, dummy secret bytes or failure
 tracebacks. Ordinary test discovery skips real Linux probes unless
 `PLANNER_RUN_LINUX_PROBES=1` is set; skipped tests provide no confinement evidence.
+`PLANNER_PROBE_TIMEOUT` configures the real-process test deadline (default 20
+seconds); the timeout cleanup probe uses half that value after verifying that
+its detached worker reached a checkpoint.
 
 ## Current limits
 
@@ -122,8 +131,9 @@ tracebacks. Ordinary test discovery skips real Linux probes unless
 - Scopes support component `*`, `?` and `**` with ASCII letters, digits, `_`, `.`,
   `/` and `-`. Unsupported syntax, external inputs and missing `shell` authority
   are refused. Linux names remain case-sensitive.
-- Symlinks and hardlinks are unavailable; read-denied paths are also write-denied.
-  Tools relying on these operations need an explicitly reviewed future design.
+- Symlinks, hardlinks, `io_uring` and workspace directory changes are unavailable;
+  read-denied paths are also write-denied. Tools can edit and replace files in
+  existing directories. Additional operations need a reviewed future design.
 - `/usr` is trusted runtime access, outside project path rules. Review installed
   runtime contents. Extra mounts, host networking, credential injection and
   provider access are not supported.

@@ -147,3 +147,62 @@ These checks validate the implementation boundaries and fixed integration
 fixtures. They do not establish OS confinement, complete real-provider coverage,
 safe harness persistence, or matched autonomous-agent comparisons. See
 [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the accepted Ubuntu retest plan.
+
+## Ubuntu private-workspace review: Standards
+
+Fixed point: `89a5581ffa30e8924f921329f90bc4a201d96912`; initial implementation
+commit: `d2cc201`. Two fresh agents reviewed Standards and Spec independently.
+The scoped behavior is documented in [LINUX_SANDBOX.md](LINUX_SANDBOX.md).
+
+- **P2 — Include the referenced Linux evidence.** Documentation linked an
+  artifact that was still being collected. **Resolved and independently
+  rechecked:** [the evidence](../evidence/linux-private-workspace.json) now
+  contains six attempts, including failures, final per-test outcomes and matching
+  source hashes. No other actionable standards findings remain.
+
+## Ubuntu private-workspace review: Spec
+
+- **P1 — Ancestor rename exposes an exact-path denial.** Denying writes to a
+  protected filename did not prevent renaming its permitted parent directory.
+  **Reproduced, fixed and rechecked:** workspace directory writes are denied,
+  preventing creation/removal/rename of directories. Existing-directory file
+  replacement remains available. A real exact-path-secret regression passes.
+- **P2 — `io_uring` bypasses the symlink syscall blacklist.** Asynchronous
+  symlink operations do not enter the blocked `symlink` syscalls. **Reproduced,
+  fixed and rechecked:** all three `io_uring` entry points are denied. The guest
+  can create a ring outside confinement; the same operation is denied inside.
+
+Standards: one finding resolved. Spec: two findings resolved. Both independent
+reviewers report no remaining actionable findings in the final source.
+
+## Ubuntu private-workspace validation, 13 November 2026
+
+- Ubuntu 24.04.3 x86-64, kernel `6.8.0-137-generic`, Python 3.12.3;
+  Bubblewrap `0.9.0-1ubuntu0.3`, AppArmor
+  `4.0.1really4.0.1-0ubuntu0.24.04.4`, libseccomp `2.5.5-1ubuntu3.1`.
+- Final scoped contract: **23 pass, zero failures/errors/skips**: twenty actual
+  process probes and three public snapshot API tests. An additional administrative
+  probe confirms that a complain-mode profile returns 125 before the supplied
+  command can create its marker. Enforcing mode was restored afterward.
+- Complete Ubuntu suite: **147 tests, 121 pass, 26 skip**. macOS-only probes,
+  case-insensitive filesystem probes, unavailable Node bridge checks and the still-gated independent oracle are
+  separate from the passing Linux confinement contract.
+- Complete local macOS suite: **147 tests, 112 pass, 35 skip**. Linux probes are
+  skipped locally, rather than counted as passing. Strict mypy passes all
+  **20 production source files**; whitespace and local documentation links pass.
+- Testing also exposed a trailing-`**` zero-component bug and permitted socket
+  creation under AppArmor's default compatibility ABI. Both are fixed and have
+  real-process regressions. The profile now declares ABI 4.0 and explicitly
+  denies networking. Profile escape, injected unassigned files, new sensitive
+  names, original-project hardlink injection, inherited handles/environment,
+  protected writes, revocation, timeout and launcher-loss cases pass.
+- Slow guest scheduling caused earlier startup deadlines to fail; probe deadlines
+  are now configurable and lifecycle probes synchronize on actual checkpoints.
+  One intermediate SSH wrapper timed out before collecting a complete attempt;
+  no passing result is inferred from that interrupted run. The six completed
+  diagnostic attempts retain their failures without raw worker output.
+
+These results establish the documented **offline private-workspace** mode on
+this guest. They do not enable the live-project `Backend`, provide provider
+network access, integrate model provenance or automatically merge edits. Those
+full-runtime acceptance items remain explicit limitations.

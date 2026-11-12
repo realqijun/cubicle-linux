@@ -45,7 +45,8 @@ def _filter(descriptor: int) -> None:
     if not context:
         raise RuntimeError("Cannot initialize seccomp")
     try:
-        for syscall in ("symlink", "symlinkat", "link", "linkat", "ptrace", "process_vm_readv", "process_vm_writev"):
+        for syscall in ("symlink", "symlinkat", "link", "linkat", "ptrace", "process_vm_readv", "process_vm_writev",
+                        "io_uring_setup", "io_uring_enter", "io_uring_register"):
             number = library.seccomp_syscall_resolve_name(syscall.encode())
             if number >= 0 and library.seccomp_rule_add(context, 0x00050000 | errno.EPERM, number, 0) != 0:
                 raise RuntimeError("Cannot restrict link/process syscalls")
@@ -84,10 +85,10 @@ class LinuxSandbox:
 
     def profile_text(self) -> str:
         """Trusted operator installs this exact profile; workers cannot load it."""
-        rules = [f"profile {self.profile_name} flags=(attach_disconnected,mediate_deleted) {{",
-                 "  /usr/** rix,", "  /workspace/ r,", "  /workspace/**/ r,",
+        rules = ["abi <abi/4.0>,", f"profile {self.profile_name} flags=(attach_disconnected,mediate_deleted) {{",
+                 "  /usr/** rix,", "  /workspace/ r,", "  /workspace/**/ r,", "  deny /workspace/**/ w,",
                  "  /tmp/ r,", "  /tmp/** rw,", "  /dev/null rw,",
-                 "  /dev/urandom r,", "  /dev/random r,", "  /proc/*/attr/current r,",
+                 "  /dev/urandom r,", "  /dev/random r,", "  /proc/*/attr/current r,", "  deny network,",
                  f"  signal (send, receive) peer={self.profile_name},",
                  "  signal (receive) peer=unconfined,"]
         for scopes, permission in ((self.grant.read, "r"), (self.grant.write, "w")):
@@ -113,9 +114,15 @@ class LinuxSandbox:
         self.output.mkdir(mode=0o700)
         self.workspace.mkdir(mode=0o700)
         (self.output / "profile.apparmor").write_text(self.profile_text())
-        for directory, _, names, descriptor in os.fwalk(self.policy.root, follow_symlinks=False):
+        scope_prefixes = tuple("/".join(scope.split("/")[:index])
+                               for scope in (*self.grant.read, *self.grant.write)
+                               for index in range(1, len(scope.split("/")) + 1))
+        for directory, subdirectories, names, descriptor in os.fwalk(self.policy.root, follow_symlinks=False):
             relative = Path(directory).relative_to(self.policy.root)
-            if self.policy.denied((relative.as_posix(),), self.policy.deny_read):
+            name = relative.as_posix()
+            if (self.policy.denied((name,), self.policy.deny_read)
+                    or name != "." and not any(matches(name, scope) for scope in scope_prefixes)):
+                subdirectories.clear()
                 continue
             (self.workspace / relative).mkdir(parents=True, exist_ok=True)
             for name in names:

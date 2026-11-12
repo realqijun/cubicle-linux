@@ -1,0 +1,674 @@
+{
+  "schema": 1,
+  "attempts": [
+    {
+      "started_at": "2026-11-12T16:36:36.573506+00:00",
+      "finished_at": "2026-11-12T16:36:59.840769+00:00",
+      "host": {
+        "system": "Linux",
+        "release": "6.8.0-137-generic",
+        "machine": "x86_64",
+        "python": "3.12.3"
+      },
+      "packages": [
+        "apparmor 4.0.1really4.0.1-0ubuntu0.24.04.4",
+        "bubblewrap 0.9.0-1ubuntu0.3",
+        "libseccomp2 2.5.5-1ubuntu3.1"
+      ],
+      "source_sha256": {
+        "native/linux_sandbox.py": "0303f430ea1b1b6bea51d90ceb4708d4e796d90029ed8751ff2f095aef886401",
+        "native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "tests/test_linux_sandbox.py": "34b2bbb82111a07433181b985719995ae705d5764e069a7e47b2faf89f8137cf",
+        "policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421"
+      },
+      "mode": "offline private workspace; no host-project mounts or automatic merge",
+      "results": [
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_hardlinked_inputs_are_omitted_and_existing_output_is_never_reused",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_only_assigned_regular_inputs_are_copied_and_edits_stay_private",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_unsupported_scope_syntax_is_refused_before_creating_output",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 16,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "scope": "Dummy files only. No raw worker stdout/stderr, secret bytes or tracebacks saved."
+    },
+    {
+      "started_at": "2026-11-12T16:38:13.541171+00:00",
+      "finished_at": "2026-11-12T16:39:16.498340+00:00",
+      "host": {
+        "system": "Linux",
+        "release": "6.8.0-137-generic",
+        "machine": "x86_64",
+        "python": "3.12.3"
+      },
+      "packages": [
+        "apparmor 4.0.1really4.0.1-0ubuntu0.24.04.4",
+        "bubblewrap 0.9.0-1ubuntu0.3",
+        "libseccomp2 2.5.5-1ubuntu3.1"
+      ],
+      "source_sha256": {
+        "native/linux_sandbox.py": "93aa00d2bb6db45f6588dcb845c6f157999f4a029ec80721aa9f6dab86f70bed",
+        "native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "tests/test_linux_sandbox.py": "bb3806bca1f7567255134d2e7111103f5e6157a4c9d3581c7ced3d49de943f57",
+        "policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421"
+      },
+      "mode": "offline private workspace; no host-project mounts or automatic merge",
+      "results": [
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "outcome": "error"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "outcome": "error"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_hardlinked_inputs_are_omitted_and_existing_output_is_never_reused",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_only_assigned_regular_inputs_are_copied_and_edits_stay_private",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_unsupported_scope_syntax_is_refused_before_creating_output",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 16,
+      "failures": 1,
+      "errors": 2,
+      "skipped": 0,
+      "exit_code": 1,
+      "scope": "Dummy files only. No raw worker stdout/stderr, secret bytes or tracebacks saved."
+    },
+    {
+      "started_at": "2026-11-12T16:45:59.167296+00:00",
+      "finished_at": "2026-11-12T16:46:43.003662+00:00",
+      "host": {
+        "system": "Linux",
+        "release": "6.8.0-137-generic",
+        "machine": "x86_64",
+        "python": "3.12.3"
+      },
+      "packages": [
+        "apparmor 4.0.1really4.0.1-0ubuntu0.24.04.4",
+        "bubblewrap 0.9.0-1ubuntu0.3",
+        "libseccomp2 2.5.5-1ubuntu3.1"
+      ],
+      "source_sha256": {
+        "native/linux_sandbox.py": "93aa00d2bb6db45f6588dcb845c6f157999f4a029ec80721aa9f6dab86f70bed",
+        "native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "tests/test_linux_sandbox.py": "f07b0979d147454794adfa4016bb35b1f802a376d8a430b65ea9c0b501198c05",
+        "policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421"
+      },
+      "mode": "offline private workspace; no host-project mounts or automatic merge",
+      "results": [
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile_or_open_network",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_hardlinked_inputs_are_omitted_and_existing_output_is_never_reused",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_only_assigned_regular_inputs_are_copied_and_edits_stay_private",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_unsupported_scope_syntax_is_refused_before_creating_output",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 21,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "scope": "Dummy files only. No raw worker stdout/stderr, secret bytes or tracebacks saved."
+    },
+    {
+      "started_at": "2026-11-12T16:47:26.862847+00:00",
+      "finished_at": "2026-11-12T16:48:03.059125+00:00",
+      "host": {
+        "system": "Linux",
+        "release": "6.8.0-137-generic",
+        "machine": "x86_64",
+        "python": "3.12.3"
+      },
+      "packages": [
+        "apparmor 4.0.1really4.0.1-0ubuntu0.24.04.4",
+        "bubblewrap 0.9.0-1ubuntu0.3",
+        "libseccomp2 2.5.5-1ubuntu3.1"
+      ],
+      "source_sha256": {
+        "native/linux_sandbox.py": "9a1e55911f51b6f1964d171e2aa071950677bbaf07233348241bebf4a68662c1",
+        "native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "tests/test_linux_sandbox.py": "e8e2d4e2c960f6ce21cf1ce776e769ca12634bd95d528c3320908ec67949a78a",
+        "policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421"
+      },
+      "mode": "offline private workspace; no host-project mounts or automatic merge",
+      "results": [
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_existing_file_outside_the_worker_read_grant",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile_or_open_network",
+          "outcome": "failure"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_hardlinked_inputs_are_omitted_and_existing_output_is_never_reused",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_only_assigned_regular_inputs_are_copied_and_edits_stay_private",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_unsupported_scope_syntax_is_refused_before_creating_output",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 22,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "scope": "Dummy files only. No raw worker stdout/stderr, secret bytes or tracebacks saved."
+    },
+    {
+      "started_at": "2026-11-12T16:48:52.373415+00:00",
+      "finished_at": "2026-11-12T16:49:30.313666+00:00",
+      "host": {
+        "system": "Linux",
+        "release": "6.8.0-137-generic",
+        "machine": "x86_64",
+        "python": "3.12.3"
+      },
+      "packages": [
+        "apparmor 4.0.1really4.0.1-0ubuntu0.24.04.4",
+        "bubblewrap 0.9.0-1ubuntu0.3",
+        "libseccomp2 2.5.5-1ubuntu3.1"
+      ],
+      "source_sha256": {
+        "native/linux_sandbox.py": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8",
+        "native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "tests/test_linux_sandbox.py": "2456ac27ff1b8d0ea1617e9cdc25c063a46b5117057a56e554139d7d5685c4a1",
+        "policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421"
+      },
+      "mode": "offline private workspace; no host-project mounts or automatic merge",
+      "results": [
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_existing_file_outside_the_worker_read_grant",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile_or_open_network",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_hardlinked_inputs_are_omitted_and_existing_output_is_never_reused",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_only_assigned_regular_inputs_are_copied_and_edits_stay_private",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_unsupported_scope_syntax_is_refused_before_creating_output",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "scope": "Dummy files only. No raw worker stdout/stderr, secret bytes or tracebacks saved."
+    },
+    {
+      "started_at": "2026-11-12T16:50:24.414612+00:00",
+      "finished_at": "2026-11-12T16:51:00.774289+00:00",
+      "host": {
+        "system": "Linux",
+        "release": "6.8.0-137-generic",
+        "machine": "x86_64",
+        "python": "3.12.3"
+      },
+      "packages": [
+        "apparmor 4.0.1really4.0.1-0ubuntu0.24.04.4",
+        "bubblewrap 0.9.0-1ubuntu0.3",
+        "libseccomp2 2.5.5-1ubuntu3.1"
+      ],
+      "source_sha256": {
+        "native/linux_sandbox.py": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8",
+        "native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "tests/test_linux_sandbox.py": "4f1b7b47f2204751a0b9172d3fcc7779f12aeb89da6ed36685f6a966f30da89f",
+        "policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421"
+      },
+      "mode": "offline private workspace; no host-project mounts or automatic merge",
+      "results": [
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_existing_file_outside_the_worker_read_grant",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_worker_cannot_create_network_sockets",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_hardlinked_inputs_are_omitted_and_existing_output_is_never_reused",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_only_assigned_regular_inputs_are_copied_and_edits_stay_private",
+          "outcome": "passed"
+        },
+        {
+          "test_id": "planner.tests.test_linux_sandbox.WorkspaceTests.test_unsupported_scope_syntax_is_refused_before_creating_output",
+          "outcome": "passed"
+        }
+      ],
+      "tests_run": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "scope": "Dummy files only. No raw worker stdout/stderr, secret bytes or tracebacks saved."
+    }
+  ],
+  "administrative_probes": [
+    {
+      "probe": "complain_mode_refuses_before_command",
+      "time": "2026-11-12T16:51:39.419689+00:00",
+      "outcome": "passed",
+      "command_exit_code": 125,
+      "source_sha256": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8"
+    }
+  ]
+}

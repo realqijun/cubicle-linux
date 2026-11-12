@@ -25,6 +25,7 @@ class WorkspaceTests(unittest.TestCase):
             (project / "src/main.py").write_text("original")
             (project / "src/.env.local").write_text("DUMMY_SECRET")
             (project / "private.txt").write_text("UNASSIGNED")
+            (project / "unassigned/private-directory-name").mkdir(parents=True)
             (project / "src/alias").symlink_to(project / "src/.env.local")
             policy = Policy(project, read=("**",), write=("src/**",),
                             deny_read=("**/.env*",), tools=("shell",))
@@ -34,6 +35,7 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual((sandbox.workspace / "src/main.py").read_text(), "original")
             self.assertFalse((sandbox.workspace / "src/.env.local").exists())
             self.assertFalse((sandbox.workspace / "private.txt").exists())
+            self.assertFalse((sandbox.workspace / "unassigned").exists())
             self.assertFalse((sandbox.workspace / "src/alias").exists())
             (sandbox.workspace / "src/main.py").write_text("edited")
             self.assertEqual((project / "src/main.py").read_text(), "original")
@@ -73,13 +75,16 @@ class LinuxProcessTests(unittest.TestCase):
         self.project = self.base / "project"
         self.project.mkdir()
         (self.project / "src").mkdir()
+        (self.project / "src/nested").mkdir()
         (self.project / "tests").mkdir()
         (self.project / "README.md").write_text("public")
         (self.project / ".env").write_text("DUMMY_SECRET")
         (self.project / "tests/protected.txt").write_text("protected")
         self.policy = Policy(self.project, read=("**",), write=("src/**",),
-                             deny_read=("**/.env*", "blocked/**"), deny_write=("tests/**",), tools=("shell",))
-        grant = Grant("task", "worker", self.policy.read, self.policy.write, self.policy.tools)
+                             deny_read=("**/.env*", "blocked/**", "src/nested/private.txt"),
+                             deny_write=("tests/**",), tools=("shell",))
+        grant = Grant("task", "worker", ("README.md", ".env", "src/**", "tests/**", "blocked"),
+                      self.policy.write, self.policy.tools)
         self.sandbox = LinuxSandbox(self.policy, grant, self.base / "run")
         self.probe_timeout = float(os.environ.get("PLANNER_PROBE_TIMEOUT", "20"))
 
@@ -170,6 +175,31 @@ class LinuxProcessTests(unittest.TestCase):
                             "except PermissionError: pass\nelse: raise AssertionError('tree root readable')\n")
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_kernel_denies_existing_file_outside_the_worker_read_grant(self) -> None:
+        self.sandbox.prepare()
+        (self.sandbox.workspace / "unassigned.txt").write_text("UNASSIGNED_DUMMY")
+        result = self.probe("from pathlib import Path\ntry: Path('unassigned.txt').read_bytes()\n"
+                            "except PermissionError: pass\nelse: raise AssertionError('unassigned input readable')\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_renaming_a_secret_ancestor_cannot_make_it_readable(self) -> None:
+        self.sandbox.prepare()
+        (self.sandbox.workspace / "src/nested/private.txt").write_text("ANCESTOR_DUMMY")
+        result = self.probe("import os\ntry: os.rename('src/nested','src/moved')\n"
+                            "except PermissionError: pass\nelse: raise AssertionError('ancestor rename allowed')\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_io_uring_cannot_bypass_link_syscall_restrictions(self) -> None:
+        setup = ("import ctypes,os\nlib=ctypes.CDLL('libseccomp.so.2')\n"
+                 "number=lib.seccomp_syscall_resolve_name(b'io_uring_setup')\n"
+                 "libc=ctypes.CDLL(None,use_errno=True)\nlibc.syscall.restype=ctypes.c_long\n"
+                 "fd=libc.syscall(number,2,ctypes.byref(ctypes.create_string_buffer(256)))\n")
+        positive = subprocess.run([sys.executable, "-I", "-c", setup + "assert fd>=0,ctypes.get_errno(); os.close(fd)"],
+                                  capture_output=True, text=True, timeout=self.probe_timeout)
+        self.assertEqual(positive.returncode, 0, positive.stderr)
+        result = self.probe(setup + "assert fd==-1 and ctypes.get_errno()==1, 'io_uring not denied'\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_missing_profile_cannot_execute_the_command(self) -> None:
         import uuid
 
@@ -180,15 +210,18 @@ class LinuxProcessTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((sandbox.workspace / "src/effect").exists())
 
-    def test_worker_cannot_leave_its_apparmor_profile_or_open_network(self) -> None:
-        result = self.probe("import subprocess,socket\n"
+    def test_worker_cannot_leave_its_apparmor_profile(self) -> None:
+        result = self.probe("import subprocess\n"
                             "p=subprocess.run(['/usr/bin/aa-exec','-p','unconfined','--',"
                             "'/usr/bin/touch','src/escaped'],capture_output=True)\n"
-                            "assert p.returncode != 0\n"
-                            "try: socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n"
-                            "except PermissionError: pass\nelse: raise AssertionError('network allowed')\n")
+                            "assert p.returncode != 0\n")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.sandbox.workspace / "src/escaped").exists())
+
+    def test_worker_cannot_create_network_sockets(self) -> None:
+        result = self.probe("import socket\ntry: socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n"
+                            "except PermissionError: pass\nelse: raise AssertionError('network allowed')\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_revocation_stops_the_running_process(self) -> None:
         from planner.supervisor import Supervisor
@@ -197,7 +230,7 @@ class LinuxProcessTests(unittest.TestCase):
         self.addCleanup(supervisor.close)
         task = supervisor.propose(self.policy)
         supervisor.approve_task(task, revision=1)
-        supervisor.approve_worker(Grant(task, "worker", self.policy.read, self.policy.write, self.policy.tools))
+        supervisor.approve_worker(Grant(task, "worker", self.sandbox.grant.read, self.policy.write, self.policy.tools))
 
         def authority() -> None:
             if (self.sandbox.workspace / "src/ready").exists():
@@ -220,7 +253,7 @@ class LinuxProcessTests(unittest.TestCase):
         self.addCleanup(supervisor.close)
         task = supervisor.propose(self.policy)
         supervisor.approve_task(task, revision=1)
-        supervisor.approve_worker(Grant(task, "worker", self.policy.read, self.policy.write, self.policy.tools))
+        supervisor.approve_worker(Grant(task, "worker", self.sandbox.grant.read, self.policy.write, self.policy.tools))
         command = [sys.executable, "-m", "planner.native.linux_sandbox", "--state", str(state),
                    "--task", task, "--worker", "worker", "--output", str(self.sandbox.output)]
         profile = subprocess.run([*command, "profile"], capture_output=True, text=True,
@@ -287,9 +320,9 @@ class LinuxProcessTests(unittest.TestCase):
                                 f"for name in [{str(trusted)!r},{str(self.project / '.env')!r}]:\n"
                                 " try: Path(name).read_bytes()\n except OSError: pass\n"
                                 " else: raise AssertionError('host file visible')\n"
-                                "with socket.socket(socket.AF_UNIX) as connection:\n"
-                                f" try: connection.connect({address!r})\n except OSError: pass\n"
-                                " else: raise AssertionError('host socket connected')\n")
+                                "try:\n with socket.socket(socket.AF_UNIX) as connection:\n"
+                                f"  connection.connect({address!r})\nexcept OSError: pass\n"
+                                "else: raise AssertionError('host socket connected')\n")
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_detached_descendant_loses_authority_after_owner_exit(self) -> None:
@@ -329,8 +362,8 @@ class LinuxProcessTests(unittest.TestCase):
                   "from pathlib import Path; from planner.native.linux_sandbox import LinuxSandbox; "
                   "from planner.policy import Policy; from planner.records import Grant; "
                   f"p=Policy(Path({str(self.project)!r}),read=('**',),write=('src/**',),"
-                  "deny_read=('**/.env*','blocked/**'),deny_write=('tests/**',),tools=('shell',)); "
-                  f"s=LinuxSandbox(p,Grant('task','worker',p.read,p.write,p.tools),Path({str(self.sandbox.output)!r})); "
+                  "deny_read=('**/.env*','blocked/**','src/nested/private.txt'),deny_write=('tests/**',),tools=('shell',)); "
+                  f"s=LinuxSandbox(p,Grant('task','worker',{self.sandbox.grant.read!r},p.write,p.tools),Path({str(self.sandbox.output)!r})); "
                   f"s.run(['/usr/bin/python3','-I','-c',{script!r}],timeout={self.probe_timeout!r})")
         with subprocess.Popen([sys.executable, "-I", "-c", driver], stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL) as owner:
