@@ -146,7 +146,7 @@ def main() -> None:
         "tests_sha256": hashlib.sha256((Path(__file__).parents[1] / "tests/test_enforcement.py").read_bytes()).hexdigest(),
         "python_version": platform.python_version(),
         "production_backend": "blocked; candidate is not enabled",
-        "command": "python3 -m planner.native.macos_contract --output planner/evidence/macos-candidate.json",
+        "command": "python3 -m planner.native.macos_contract --output evidence/macos-candidate.json",
         "results": [
             {"test_id": prefix + name,
              "outcome": "failure" if prefix + name in failures else

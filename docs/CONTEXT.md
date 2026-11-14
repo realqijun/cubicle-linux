@@ -77,7 +77,9 @@ not append hidden text in a later transformation. System prompts, tool results,
 worker reports, memories, compaction, retry overlays, and auxiliary inputs all
 need their own actual observations or tracked derivations. This component cannot
 verify an arbitrary callback's implementation; pinned OpenCode hook/transport
-coverage is tested separately and still needs the Ubuntu confinement retest.
+coverage is tested separately; combining it with confinement and provider
+transport still needs acceptance. The offline Ubuntu runner does not mediate
+model inputs.
 
 Run `python3 -m unittest planner.tests.test_context -v`. Tests use actual
 temporary SQLite stores and transport callbacks with independent literal input

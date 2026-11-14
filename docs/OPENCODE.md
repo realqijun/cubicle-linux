@@ -2,8 +2,9 @@
 
 The connector is pinned to **OpenCode 2.2.5**. It now includes an executable V2
 Promise plugin, authenticated worker broker transport, explicit provider setup,
-and no-task private-server bootstrap proposals. OS acceptance remains deferred
-to Ubuntu. `Connector.check()` reports the exact installed release but keeps
+and no-task private-server bootstrap proposals. Integrating it with confinement
+and a model provider remains pending; the [Ubuntu offline runner](LINUX_SANDBOX.md)
+has a separate tested contract. `Connector.check()` reports the exact installed release but keeps
 production acceptance false until the remaining runtime checks pass; it no
 longer represents the connector as merely a version probe.
 
@@ -167,7 +168,7 @@ supervisor, broker transport, mediation, context, and provenance modules.
 
 Production acceptance still requires no-task bootstrap verification, startup
 system/managed configuration isolation, complete auxiliary/retry coverage,
-private stateless-route control, sensitive harness-storage checks, and the Ubuntu
-OS contract. In-memory SQLite alone does not prove that logs, caches, attachments,
+private stateless-route control, sensitive harness-storage checks, and the
+combined connector/confinement contract. In-memory SQLite alone does not prove that logs, caches, attachments,
 truncated shell output, or other artifacts cannot persist sensitive content.
-See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the deferred platform plan.
+See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the remaining integration plan.

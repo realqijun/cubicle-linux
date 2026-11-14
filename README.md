@@ -1,76 +1,64 @@
 # Planner supervisor
 
-A Python supervisor for coding agents. It checks file permissions, limits
-delegated authority, and records where model inputs came from.
+Planner checks coding-agent file permissions, limits delegated authority, and
+records where model inputs came from. Its Ubuntu sandbox runs offline commands
+in a private workspace and keeps edits separate for review.
 
-[Architecture diagram](docs/ARCHITECTURE.md) · [Usage guide](docs/USAGE.md) ·
-[Ubuntu sandbox](docs/LINUX_SANDBOX.md) · [Known limitations](docs/KNOWN_LIMITATIONS.md)
+[Architecture](docs/ARCHITECTURE.md) · [Usage](docs/USAGE.md) ·
+[Ubuntu setup](docs/LINUX_SANDBOX.md) · [Limitations](docs/KNOWN_LIMITATIONS.md)
 
-## Current status
+## What works
 
-Policy checks, approvals, delegation, provenance, and recovery records are
-implemented. The OpenCode 2.2.5 bridge passes fixed integration tests with a local
-model-provider fixture.
+| Area | Status |
+| --- | --- |
+| Policies, approvals, delegation and provenance | Implemented and tested through public APIs |
+| Ubuntu offline sandbox | 23 contract checks pass on the recorded Ubuntu guest |
+| OpenCode 2.2.5 bridge | Four integration fixtures pass with a local provider |
+| Full model-connected launcher and live-project execution | Gated; integration and acceptance remain |
 
-Ubuntu now has an [offline sandbox runner](docs/LINUX_SANDBOX.md): approved files
-are copied into a private workspace, kernel rules deny protected paths, and edits
-stay separate for review. **The full autonomous-agent launcher remains gated**;
-model-provider integration and live-project execution still need acceptance.
+The sandbox uses Bubblewrap, AppArmor and seccomp. It has no provider network
+access or automatic merge. Read the [sandbox restrictions](docs/LINUX_SANDBOX.md)
+before running a task. Recorded results and source hashes are in the
+[review log](docs/REVIEW.md) and [evidence](evidence/linux-private-workspace.json).
 
-## Try the control plane
+## Try it
 
-Requires Python 3.11+. Run from this repository root. Keep the state database
-outside the target project and outside worker access.
+Requires Python 3.11+. Run commands from this repository root. Keep the trusted
+state database outside the target project and outside worker access.
 
 ```sh
 planner_state=/tmp/planner-control/control.sqlite
 
-# Create a proposal. Use the returned task ID in place of TASK below.
+# Create a proposal; replace TASK with the returned ID.
 python3 -m planner --state "$planner_state" propose /absolute/project --template source
 python3 -m planner --state "$planner_state" review TASK
 python3 -m planner --state "$planner_state" approve-task TASK --revision 1
 
-# Assign a worker and check a proposed edit. This does not execute the edit.
+# Approve a worker and check an edit. These commands do not execute the edit.
 python3 -m planner --state "$planner_state" assign TASK worker --read 'src/**' --write 'src/**'
 python3 -m planner --state "$planner_state" decide TASK worker write src/refunds.py
 ```
 
-Use `--policy PATH` instead of `--template` for your own TOML policy. Bundled
-templates cover source edits, inspection, tests, and documentation. The
-[usage guide](docs/USAGE.md) covers exceptions, delegation, recovery, and memory.
+Follow [Ubuntu setup and execution](docs/LINUX_SANDBOX.md) to run a command under
+an approved `shell` grant. The [usage guide](docs/USAGE.md) covers custom TOML
+policies, exceptions, delegation, recovery and memory.
 
-## Inspect a report
-
-```sh
-python3 -m planner.demo /tmp/planner-records.html
-```
-
-Open the generated HTML locally. This demo uses real fixture records without
-calling a model. Reports distinguish recorded decisions from verified effects.
+Generate an example provenance report with
+`python3 -m planner.demo /tmp/planner-records.html`, then open that file locally.
 
 ## Development
 
-The supervisor uses the Python standard library. Connector tests also use Node;
-real connector diagnostics require OpenCode **2.2.5**. Mypy is a development tool.
+Python code uses the standard library. Node runs the bridge tests; mypy is a
+development tool. Real connector diagnostics require OpenCode **2.2.5**.
 
 ```sh
-python3 -m unittest discover -s planner/tests
+python3 -W error::ResourceWarning -m unittest discover -s planner/tests
 python3 -m mypy --config-file pyproject.toml planner
 ```
 
-Tests that bind loopback sockets need host network permission. Skipped OS tests
-do not establish confinement. Validation results are recorded in the [review log](docs/REVIEW.md).
-
-## More detail
-
-| Topic | Read |
-| --- | --- |
-| Components, trust boundaries, and request flow | [Architecture](docs/ARCHITECTURE.md) |
-| Policies and terminal commands | [Usage](docs/USAGE.md) |
-| Delegation and recovery state | [Control plane](docs/CONTROL_PLANE.md) |
-| OpenCode compatibility and provider setup | [Connector](docs/OPENCODE.md) |
-| Tool checks and model-input tracking | [Mediation](docs/MEDIATION.md), [context admission](docs/CONTEXT.md) |
-| Project memory and offline reports | [Provenance](docs/PROVENANCE.md) |
-| Frozen evaluation scenarios and scoring | [Evaluation](docs/EVALUATION.md) |
-
-Repository layout and preserved-history mapping: [repository notes](docs/REPOSITORY.md).
+Loopback tests need permission to bind local sockets. Platform-specific skips
+provide no confinement evidence. See [repository layout](docs/REPOSITORY.md),
+[enforcement status](docs/ENFORCEMENT.md), [connector](docs/OPENCODE.md),
+[control plane](docs/CONTROL_PLANE.md), [mediation](docs/MEDIATION.md),
+[context](docs/CONTEXT.md), [provenance](docs/PROVENANCE.md) and
+[evaluation](docs/EVALUATION.md) for details.

@@ -1,22 +1,30 @@
 # Planner supervisor architecture
 
-The supervisor separates **authorization**, **agent execution**, and **provenance**.
-Python decides permissions; the OpenCode bridge waits for those decisions before
-tools or supported model requests proceed.
+The supervisor owns permissions and provenance. The Ubuntu runner executes
+offline commands in a private workspace. The OpenCode bridge checks tools and
+model inputs in integration fixtures; connecting that path to a complete
+confined launcher remains pending.
 
 ![Planner supervisor components and trust boundaries](diagrams/architecture.svg)
 
-Solid connections show implemented interfaces exercised by deterministic tests
-or fixed OpenCode fixtures. The dashed launch connection and worker boundary
-show required runtime integration awaiting Ubuntu acceptance. Normal autonomous
-execution remains blocked; this is an architecture view, not a claim of a fully
-confined deployment.
+Solid connections show implemented interfaces exercised by tests or fixed
+provider fixtures. The green group is the tested Ubuntu offline path. The
+dashed connection marks the missing full-runtime launch integration; it does
+not connect the offline runner to a model provider.
 
-The separate [Ubuntu offline runner](LINUX_SANDBOX.md) now confines commands in a
-private copy with Bubblewrap, AppArmor and seccomp. It does not connect the dashed
-OpenCode/provider launch path shown here; edits remain outside the source project.
+## Offline command flow
 
-## Request flow
+1. The operator approves a policy and worker with the `shell` tool.
+2. The runner checks current authority and copies permitted regular inputs into
+   a private workspace. The original project is not mounted in the sandbox.
+3. Bubblewrap, AppArmor and seccomp constrain the command and its descendants.
+   The operator runner polls authority and stops on revocation or timeout.
+4. Edits remain in the private copy for review and manual application. This
+   mode does not create model-context or durable attempt records.
+
+See [Ubuntu setup and restrictions](LINUX_SANDBOX.md) for the tested contract.
+
+## Connector flow and remaining integration
 
 1. The operator reviews a TOML policy and approves exact grants, delegation
    templates, or narrow exceptions through the CLI.
@@ -62,7 +70,7 @@ OpenCode/provider launch path shown here; edits remain outside the source projec
   authorization, or lifecycle evidence; they do not prove causal influence or
   executed effects where evidence is absent.
 
-Current platform failures, blocked transports, and the Ubuntu retest checklist are
+Current platform restrictions, blocked transports and the integration checklist are
 in [known limitations](KNOWN_LIMITATIONS.md). Start with the
 [planner README](../README.md) for commands.
 

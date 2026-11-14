@@ -6,8 +6,28 @@ evidence, and evaluation fixtures are in `docs/`, `evidence/`, and `artifact/`.
 No import or symlink depends on the source workspace's parent directory.
 
 The repository has its own `.git` directory and `main` branch. It is not a Git
-submodule or worktree, uses no shared object store, and has no configured remote.
-The source workspace ignores this directory instead of tracking a second copy.
+submodule or worktree and uses no shared object store. Its GitHub remote is
+[realqijun/agent_authorizer](https://github.com/realqijun/agent_authorizer).
+The original source workspace ignores this directory instead of tracking a second copy.
+
+## Why `planner/planner`?
+
+The outer directory is the Git project; the inner directory is the importable
+Python package. From the project root, `python3 -m planner` finds the inner
+package's `__main__.py`.
+
+```text
+planner/               Git repository root
+  README.md
+  pyproject.toml
+  docs/                Guides and architecture
+  evidence/            Sanitized recorded outcomes and source hashes
+  artifact/            Pinned evaluation inputs
+  planner/             Python package
+    __main__.py        Control-plane CLI
+    native/            Ubuntu runner and platform diagnostics
+    tests/             Public-boundary tests
+```
 
 ## Preserved history
 
@@ -36,6 +56,10 @@ local runs, raw sessions, caches, and service configuration were excluded.
 The intentionally failing workload is an evaluation input, not the planner test
 suite. See the [fixture README](../artifact/README.md).
 
-OS validation remains deferred to Ubuntu as described in
-[known limitations](KNOWN_LIMITATIONS.md). Repository extraction does not change
-or strengthen the existing security claims.
+## Validation records
+
+The Ubuntu offline mode has [recorded acceptance](LINUX_SANDBOX.md); the full
+model-connected launcher and live-project backend remain gated. See
+[known limitations](KNOWN_LIMITATIONS.md). Historical evidence is preserved with
+its original source hashes and commit references, rather than rewritten to
+describe newer code. Repository extraction does not strengthen security claims.

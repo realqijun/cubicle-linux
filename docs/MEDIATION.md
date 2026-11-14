@@ -83,7 +83,9 @@ authentication does not itself establish OS separation: the confined worker
 must not inspect the supervisor/plugin process or steal another worker's token.
 The plugin removes broker credentials from its environment and strips configured
 provider credential variables from shell children. Parent-process/handle/control
-channel isolation remains part of Ubuntu acceptance.
+channel isolation remains part of the combined model-connected runtime
+acceptance. The separately tested Ubuntu offline runner has no broker/provider
+network integration.
 
 Non-filesystem refusals also enter durable decision history with sanitized route
 and reason codes. Unsupported connector paths report metadata-only denials;

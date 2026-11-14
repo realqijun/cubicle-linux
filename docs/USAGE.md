@@ -2,8 +2,9 @@
 
 Run commands from the repository root with Python 3.11+. The trusted operator
 CLI creates and inspects control-plane records; it does not currently launch an
-accepted autonomous worker. OS acceptance is deferred to Ubuntu. See
-[known limitations](KNOWN_LIMITATIONS.md) for the retest plan.
+accepted autonomous worker. Use the separate [Ubuntu offline runner](LINUX_SANDBOX.md)
+for private-workspace commands under a `shell` grant. See
+[known limitations](KNOWN_LIMITATIONS.md) for remaining launcher acceptance.
 
 ## State and policy
 

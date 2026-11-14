@@ -80,22 +80,27 @@ profile. Do not replace another application's existing profile blindly.
 
 ## Run an approved worker
 
-Use an approved supervisor task and worker with the `shell` tool and explicit
-file scopes. Keep state and run output outside the source project. These values
-are examples; substitute the IDs returned by the normal control-plane commands.
+Start with an approved supervisor task, such as the `source` template from the
+[quickstart](../README.md). Choose an explicit worker grant that fits its policy.
+Keep state and run output outside the source project. Replace `TASK` below with
+your approved task ID; use the same database as the quickstart.
 
 ```sh
-state=/absolute/trusted/control.sqlite
-run=/absolute/trusted/runs/first-run
+state=/tmp/planner-control/control.sqlite
+run=/tmp/planner-control/first-run
+
+# Approve a worker with the file scopes and shell authority used in this example.
+python3 -m planner --state "$state" assign TASK offline-worker \
+  --read 'README.md' --read 'src/**' --write 'src/**' --tool shell
 
 # Generate the exact approved policy for operator inspection and installation.
 python3 -m planner.native.linux_sandbox --state "$state" --task TASK \
-  --worker WORKER --output "$run" profile > /tmp/planner-worker.apparmor
+  --worker offline-worker --output "$run" profile > /tmp/planner-worker.apparmor
 sudo apparmor_parser -r /tmp/planner-worker.apparmor
 
 # Run offline; edits appear under "$run/workspace".
 python3 -m planner.native.linux_sandbox --state "$state" --task TASK \
-  --worker WORKER --output "$run" --timeout 60 --poll-interval 0.1 \
+  --worker offline-worker --output "$run" --timeout 60 --poll-interval 0.1 \
   run -- /usr/bin/python3 -c 'from pathlib import Path; print(Path("README.md").read_text())'
 ```
 

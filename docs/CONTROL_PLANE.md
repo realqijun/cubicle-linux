@@ -54,8 +54,9 @@ new policy language or automatic authority inferred from repository text.
 ## Execution attempt lifecycle
 
 The lifecycle APIs record what the trusted runner knows. They do not launch or
-terminate processes. A real OS backend must enforce effects and verify cleanup;
-its acceptance remains deferred to Ubuntu.
+terminate processes. The [Ubuntu offline runner](LINUX_SANDBOX.md) has separate
+process-containment tests but does not populate these attempt records. Wiring
+the full launcher and cleanup evidence into this lifecycle remains pending.
 
 1. `prepare_attempt(task, worker)` snapshots the exact grant, revision, and expiry
    into a fresh ID with state `prepared`. Unresolved attempts prevent another
@@ -95,8 +96,8 @@ fixed reasons such as `cleanup_unverified`, `protection_unavailable`, or
 
 `resume(task, worker, model, cleanup_verified=False)` obtains real backend and
 connector preflight results and applies those same controls. It restores only
-durable control state; it starts no worker. On the current unverified platform,
-preflight still blocks. `cleanup_verified` belongs to the trusted operator
+durable control state; it starts no worker. Live-project/model-launcher
+preflight still blocks on every platform. `cleanup_verified` belongs to the trusted operator
 channel and must not be an option accepted from worker text or a tool request.
 
 Legacy workers receive a nullable template-attribution column. Earlier decision
@@ -109,7 +110,7 @@ Run from the repository root:
 
 ```sh
 python3 -m unittest planner.tests.test_delegation_recovery planner.tests.test_supervisor planner.tests.test_control_adversarial -v
-python3 -m mypy --config-file planner/pyproject.toml planner/supervisor.py
+python3 -m mypy --config-file pyproject.toml planner/supervisor.py
 ```
 
 Tests use real temporary SQLite databases and public APIs. Protection-status

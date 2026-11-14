@@ -1,4 +1,4 @@
-"""Fail closed until an OS backend has passed the complete policy contract.
+"""The live-project launch gate, separate from the Ubuntu offline sandbox.
 
 Tool filtering is not an OS sandbox. Detecting a candidate executable or kernel
 feature does not establish that it faithfully enforces a Policy.
@@ -7,7 +7,6 @@ feature does not establish that it faithfully enforces a Policy.
 from collections.abc import Sequence
 from pathlib import Path
 import platform
-import shutil
 import subprocess
 
 from .policy import Policy
@@ -21,17 +20,16 @@ class ProtectionUnavailable(RuntimeError):
 
 
 class Backend:
-    """The same launch gate on every platform; no unsafe fallback or override."""
+    """Refuse live-project execution on every platform; no permissive fallback."""
 
     def check(self, policy: Policy, grant: Grant) -> ProtectionStatus:
         policy.validate_grant(grant)
         system = platform.system()
         if system == "Linux":
-            candidate = "Bubblewrap detected" if shutil.which("bwrap") else "Bubblewrap not found"
             reason = (
-                f"{candidate}; no validated backend enforces dynamic deny patterns, "
-                "link semantics, descendants, and inherited descriptors. "
-                "Landlock tree allowances alone cannot subtract denied name patterns."
+                "Live-project execution is not validated. Use planner.native.linux_sandbox "
+                "for the separate offline private-workspace mode; it does not enable "
+                "this backend or model-provider access."
             )
             backend = "linux"
         elif system == "Darwin":
@@ -60,7 +58,7 @@ class Backend:
         timeout: float,
         runtime_paths: Sequence[Path] = (),
     ) -> subprocess.CompletedProcess[str]:
-        """Refuse before execution until confinement is implemented and verified.
+        """Refuse before execution until the live-project contract is verified.
 
         ``runtime_paths`` describes proposed resources; supplying it is not a grant.
         No supplied command, even a diagnostic or evaluator, runs unconfined.

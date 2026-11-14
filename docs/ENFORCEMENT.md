@@ -1,147 +1,75 @@
-# OS enforcement status
+# Enforcement status
 
-Ubuntu testing has resumed on the user-provided VM. The
-[private-workspace runner](LINUX_SANDBOX.md) combines Bubblewrap, AppArmor and
-seccomp, and is separate from the original live-project backend described below.
-It runs offline, retains edits in a copy, and does not enable the complete
-autonomous-agent launcher. Real-process outcomes and source hashes are recorded
-in [Linux evidence](../evidence/linux-private-workspace.json).
+Planner has two execution interfaces with different contracts:
 
-The live-project launch gate is implemented and remains closed. Its complete
-policy/runtime contract is **not validated** on any platform. A real macOS candidate has been built and tested locally, and
-fails required contract cases described below. `Backend.check(policy, grant)` returns a structured blocking
-status; `Backend.run(...)` raises `ProtectionUnavailable` before spawning the
-command. This also applies to evaluators that execute generated source. There is
-no permissive development mode, environment override, startup-scan fallback, or
-claim that refusing all execution completes the project.
+| Interface | Current behavior |
+| --- | --- |
+| `LinuxSandbox` / `python3 -m planner.native.linux_sandbox` | Runs offline commands in a private copy under Bubblewrap, AppArmor and seccomp. Edits stay in the copy. |
+| `Backend.check()` / `Backend.run()` | The live-project gate remains closed on every platform. `run()` raises `ProtectionUnavailable` before spawning the command. |
 
-The policy module provides deterministic authorization decisions. It cannot
-enforce arbitrary subprocess filesystem access by itself. Callers must not use
-an allowed decision as permission to launch an unconfined process.
+A successful policy decision authorizes a proposed operation; it does not
+confine arbitrary subprocesses. There is no unconfined fallback. Evaluators
+using `Backend` remain gated too.
 
-## Checked environment
+## Tested Ubuntu mode
 
-Diagnostics on 10 November 2026 found:
+The recorded environment is Ubuntu 24.04.3 x86-64, kernel 6.8.0-137-generic.
+The final contract run passes **23 checks**: twenty real-process probes and
+three snapshot API tests. A separate administrative probe verifies that a
+complain-mode profile cannot start the supplied command.
 
-| Resource | Observed result | Meaning |
-| --- | --- | --- |
-| Host | Darwin 27.0.0, ARM64 | Only this host was available for inspection. |
-| Ubuntu SSH forwarding at localhost:2222 | Initially refused; after the user started the VM, key login failed for both documented and host usernames | The user then selected host-only testing; no Linux enforcement tests ran. |
-| UTM `utmctl list` | OSStatus -1743; Automation authorization unavailable | VM inventory could not be established. |
-| macOS `sandbox-exec` | Present; nested invocation denied; escalated allow-default/read-only profile ran `/usr/bin/true` | The executable exists and one permissive diagnostic ran. This does not validate the policy contract. |
-| macOS deny-default diagnostic | `/usr/bin/true` aborted, exit 134 | Even basic legitimate execution was not established for this candidate profile. |
-| Windows | No execution environment available | No Windows enforcement tests ran. |
+The runner copies permitted regular inputs rather than mounting original
+project inodes. AppArmor enforces dynamic read/write denials; seccomp blocks
+links, `io_uring` and process-memory syscalls. A PID namespace contains detached
+descendants. The operator command checks current task/worker authority while
+running. Timeout, revocation and launcher-loss probes exercise actual cleanup.
 
-This table records the earlier investigation. On 13 November the supplied
-password successfully authenticated `user@localhost:2222`; Ubuntu 24.04.3,
-kernel 6.8.0-137-generic x86-64 was available for the private-workspace tests.
-The earlier table entries are negative or inconclusive diagnostics.
-No secret files or provider credentials were used.
+This mode is offline and uses an existing directory tree. It rejects external
+inputs and unsupported scope syntax, prevents directory changes and makes
+read-denied paths write-denied too. It does not supply model-provider access,
+model provenance integration, durable attempt records or automatic patch merge.
+See [setup, commands and the complete restrictions](LINUX_SANDBOX.md).
 
-## Backend selection findings
+[Linux evidence](../evidence/linux-private-workspace.json) retains failed attempts,
+per-test outcomes, source hashes and package versions. The
+[review log](REVIEW.md#ubuntu-private-workspace-validation-13-november-2026)
+records the broader validation. Repeat acceptance after relevant changes; results
+on this guest do not establish support for every Linux environment.
 
-Linux [Landlock](https://docs.kernel.org/userspace-api/landlock.html) grants rights
-to filesystem hierarchies. A broad tree allowance does not directly express a
-continuous subtraction of names such as `**/.env*`. Existing file descriptors,
-renames, hard links, and descendants need explicit contract tests. A startup
-enumeration of files must not be advertised as continuous protection.
+## macOS diagnostic
 
-[Bubblewrap](https://github.com/containers/bubblewrap) constructs a mount namespace;
-its security model depends on its arguments. Binding a project tree and masking
-the sensitive files that exist at startup does not faithfully implement dynamic
-deny patterns for newly created names. Candidate use needs a design that addresses
-this gap, process-control routes, runtime mounts, and inherited descriptors.
+The disposable `sandbox-exec` prototype is diagnostic-only. On macOS 27.0.1,
+build 26A434, Darwin 27.0.0 ARM64, its final attempt passes **12 of 14** probes.
+Two required failures keep it disabled:
 
-macOS `sandbox-exec` and the profiles shipped under `/usr/share/sandbox` are
-private/deprecated interfaces. Apple's shipped profiles explicitly warn that the
-rules are a private interface subject to change. A future candidate must state
-the exact supported OS build, validate the complete contract, and revalidate on
-updates. Its presence cannot imply a stable cross-release security contract.
-Apple's documented [App Sandbox](https://developer.apple.com/documentation/security/app-sandbox)
-is another mechanism to investigate, not an implementation supplied here.
+- Another process can create an allowed-name hardlink to a denied file after
+  startup, exposing dummy secret bytes to the worker.
+- A detached descendant can retain its sandbox authority and perform an allowed
+  write after its owner exits.
 
-Windows [AppContainer](https://learn.microsoft.com/en-us/windows/win32/secauthz/appcontainer-for-legacy-applications-)
-can constrain resources, but resource ACLs, inherited handles, path aliases, and
-worker lifecycle controls must actually implement the reviewed policy. A reduced
-token or process container by itself is not sufficient evidence.
+An earlier denied-file rename also exposed bytes; the diagnostic subsequently
+blocked that rename by denying unlink on read-denied names. This stronger rule
+is recorded as a prototype restriction. The private/deprecated Seatbelt
+interface is not a stable cross-release contract.
 
-## Acceptance work still required
-
-Before enabling `run`, implement one backend and run independent real-process
-tests on its target OS. Include positive controls for permitted reads/writes;
-denied dummy-secret reads through tools, scripts, children and grandchildren;
-traversal and symlinks; hard-link aliases; replacement and newly matching files;
-rename, unlink, truncation; inherited descriptors/handles; protected supervisor
-state and control channels; and supervisor failure cleanup. Repeat on each OS
-before claiming support. Kernel enforcement tests must record actual access
-effects, including confidential reads and transient writes.
-
-The current test proves only that the gate blocks a command before its visible
-effect. The same fixture command runs as a positive control outside the gate.
-It does not establish that any OS filesystem confinement mechanism works.
-
-## Local macOS candidate and actual evidence
-
-At the user's request, further testing used this host only; no VM was used.
-`planner/native/macos_contract.py` contains the disposable Seatbelt prototype and
-the fixed diagnostic runner. The fixture creates its own temporary project. It
-accepts no actual task policy, grant, project, executable or runtime mounts.
-Production `Backend.run` never calls it. The prototype is not a supported backend.
-
-The candidate uses Python-generated SBPL regex rules for component `*`, `?` and
-`**` globs. Bracket globs are refused. It continuously applies name denials,
-limits read/write resources, denies new hardlinks, closes inherited file
-descriptors, and denies Mach lookup, network connections, other-process signals,
-other-process information, Apple Events and authorization-right requests.
-Runtime reads are explicit system directories plus the executing Python prefix
-and its Homebrew gettext library if present. Runtime aliases and canonical paths
-are both included. A startup check refuses preexisting multiply linked project
-files. That scan is supplementary and cannot establish continuous inode safety.
-
-The initial deny-default profile aborted even on `/usr/bin/true`. An inverted
-filesystem allowlist worked after including the root and device-directory
-runtime reads. This is an experiment with a private/deprecated interface, not a
-stable cross-release security contract.
-
-Run the actual local diagnostics in an environment allowed to create a nested
-Seatbelt sandbox:
+The runner owns its disposable dummy project; it accepts no caller project or
+arbitrary task grant. Run it only in an environment that permits nested macOS
+sandbox creation:
 
 ```sh
 python3 -m planner.native.macos_contract --output evidence/macos-candidate.json
 ```
 
-The runner enables only the fixed dummy-data tests, appends sanitized evidence,
-and returns nonzero when the candidate violates its contract. No raw tool output,
-secret bytes or traceback messages are saved. Ordinary unit discovery skips the
-host probes because the desktop workspace sandbox prevents nested confinement.
-Those skips are separate from the explicitly executed host diagnostics.
+[macOS evidence](../evidence/macos-candidate.json) and the [review log](REVIEW.md)
+preserve the attempts. These failures describe this candidate, rather than a
+universal limitation of macOS.
 
-The actual host was macOS 27.0.1, build 26A434, Darwin 27.0.0, ARM64. The final
-recorded attempt ran fourteen tests: twelve passed and two failed. The evidence
-file preserves earlier unsuccessful attempts too.
+## Remaining acceptance
 
-Passing cases covered legitimate reads/writes, protected writes/rename/unlink/
-truncation, existing sensitive paths, traversal and symlinks, case aliases,
-newly created matching sensitive files, permitted source replacement, children
-and grandchildren, inherited descriptor closure, parent-process and Unix control
-socket denial, sensitive symlink names, worker hardlink creation denial, and
-startup refusal of preexisting hardlinks.
-
-An earlier attempt exposed another dummy secret by renaming `src/.env.movable`
-to `src/visible` and reading it. The final candidate conservatively denies
-`file-write-unlink` on read-denied names, so that rename is now blocked. This
-extra restriction is stricter than the independent read/write scopes in the
-policy; it is a diagnostic safety restriction, not a change to production policy
-semantics. The unsuccessful earlier attempt remains in the evidence file.
-
-Required failures remain:
-
-1. An independent process can create a hardlink to `.env` under an allowed name
-   after the startup scan. The worker reads the dummy bytes through that alias.
-2. A worker forks a child that creates a new session and closes inherited output
-   pipes. After its owner exits, the detached child retains its sandbox grant and
-   performs an authorized write. Process-tree expiry/cleanup is not established.
-
-These failures prevent acceptance and keep normal execution blocked. Startup
-scans, successful individual path tests and an interface that launches correctly
-must not be substituted for complete continuous enforcement and lifecycle tests.
+Windows has no implemented or validated backend here. The full OpenCode launcher,
+live-project policy semantics, provider access, storage isolation and matched
+agent comparisons still need integration and independent acceptance. The
+[remaining work](KNOWN_LIMITATIONS.md) distinguishes these gaps from the tested
+Ubuntu offline mode. Initial connection failures and exploratory diagnostics
+remain historical context in the review records; they are not the current
+platform status.

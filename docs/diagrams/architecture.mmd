@@ -17,52 +17,50 @@ config:
     htmlLabels: false
     curve: basis
     nodeSpacing: 28
-    rankSpacing: 60
+    rankSpacing: 45
 ---
 flowchart TB
-    subgraph operator ["Trusted operator"]
-        cli["Terminal CLI"]
-        policy["Reviewed TOML policy + templates"]
+    cli["Operator CLI"]
+    sourceProject["Original project"]
+    supervisor["Trusted supervisor: policy, broker and model admission"]
+    runner["Ubuntu offline runner"]
+    launchGate["Live-project launch gate: blocked"]
+
+    subgraph isolated ["Tested offline boundary: Bubblewrap + AppArmor + seccomp"]
+        process["Command + descendants"]
+        workspace["Private workspace / retained edits"]
     end
 
-    subgraph control ["Trusted Python supervisor"]
-        supervisor["Supervisor + policy decisions"]
-        broker["BrokerServer + WorkerBroker"]
-        context["ModelContext admission"]
-        gate["OS launch gate: blocked"]
-    end
-
-    subgraph worker ["Worker runtime: Ubuntu acceptance pending"]
-        opencode["OpenCode 2.2.5 + hook bridge"]
-        tools["Built-in tools + descendants"]
+    subgraph connector ["Connector fixtures pass; full launcher pending"]
+        opencode["OpenCode 2.2.5 + hook bridge + tools"]
     end
 
     subgraph storage ["Protected supervisor storage"]
-        state[("SQLite: policies, grants, approvals, decisions")]
-        provenance[("SQLite: origins + project notes")]
+        state[("Control records")]
+        provenance[("Origins + project notes")]
     end
 
     provider["Configured model provider"]
-    project["Approved project files"]
-    report["Offline HTML provenance report"]
+    report["Offline provenance report"]
 
-    cli -->|"Approve and inspect"| supervisor
-    policy -->|"Set authority"| supervisor
-    broker -->|"Check current grants"| supervisor
-    supervisor -->|"Persist control records"| state
-    supervisor -->|"Check protection"| gate
-    gate -.->|"Launch and containment: pending Ubuntu"| opencode
-    opencode <-->|"Blocking hook admission"| broker
-    broker -->|"Admit actual inputs"| context
-    context -->|"Record origins and sensitivity"| provenance
+    cli -->|"Review and approve"| supervisor
+    supervisor -->|"Approved grant; runner rechecks authority"| runner
+    sourceProject -->|"Copy permitted inputs only"| runner
+    runner -->|"Prepare private copy"| workspace
+    runner -->|"Launch and contain"| process
+    process -->|"Read and edit"| workspace
+    supervisor -->|"Check full-runtime protection"| launchGate
+    launchGate -.->|"Confinement + provider integration pending"| opencode
+    opencode <-->|"Blocking hook admission"| supervisor
     opencode -->|"Native HTTP after admission"| provider
-    opencode -->|"Dispatch after admission"| tools
-    tools -->|"Read and write"| project
+    supervisor -->|"Persist authority and decisions"| state
+    supervisor -->|"Record origins"| provenance
     state -->|"Read-only export"| report
     provenance -->|"Read-only export"| report
 
     classDef pending fill:#fff5e5,stroke:#b07824,color:#694716,stroke-dasharray:6 4
     classDef output fill:#f1f3f8,stroke:#7c87a1,color:#29364c
-    class gate pending
-    class provider,project,report output
-    style worker fill:#fffcf6,stroke:#b07824,stroke-dasharray:6 4
+    class launchGate pending
+    class sourceProject,workspace,provider,report output
+    style isolated fill:#f1f7f3,stroke:#5f8175
+    style connector fill:#fffcf6,stroke:#b07824,stroke-dasharray:6 4
