@@ -206,3 +206,38 @@ These results establish the documented **offline private-workspace** mode on
 this guest. They do not enable the live-project `Backend`, provide provider
 network access, integrate model provenance or automatically merge edits. Those
 full-runtime acceptance items remain explicit limitations.
+
+## Documentation and code cleanup, 15 November 2026
+
+Fixed point: `1163163`; cleanup commit: `405d3d0`.
+
+### Standards
+
+No findings. Independent review checked the strict typechecking configuration,
+development instructions, sandbox restrictions, command paths and changed code.
+No actionable baseline code smells were found.
+
+### Spec
+
+No findings. Independent review confirmed that the shorter guides and updated
+diagram distinguish tested Ubuntu offline execution from the gated full launcher
+and live-project backend. Sandbox restrictions and historical evidence remain.
+
+### Validation
+
+- Local suite: **147 tests, 112 pass, 35 platform-specific skips**. Strict mypy
+  passes all **20 production source files**. The targeted launch-gate test and
+  whitespace checks pass.
+- The documented offline worker assignment and profile generation were exercised
+  with a real temporary supervisor database. Local documentation links resolve.
+- The Mermaid SVG was regenerated with CLI 12.2.0 and visually checked. It uses
+  native SVG text and includes the offline runner and pending launcher path.
+- All four source hashes in the latest Linux contract attempt still match.
+  Confinement code, policy code, Linux probe code, fixture inputs and evidence
+  files are unchanged. No new OS acceptance run is claimed for this cleanup.
+- Python changes clarify the live-project gate's message, remove an unused
+  executable-presence probe and correct the macOS diagnostic's recorded command
+  path. The historical macOS evidence retains its original diagnostic hash.
+  Generated Python and mypy caches were removed from the local checkout.
+
+Review totals: Standards zero findings; Spec zero findings.
