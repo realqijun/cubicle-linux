@@ -7,17 +7,19 @@ from dataclasses import asdict
 import hashlib
 import json
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Any, cast
+from typing import Any, Sequence, cast
+from uuid import uuid4
 
 from artifact.scripts.prepare import prepare as artifact_prepare, snapshot as artifact_snapshot
 
 from .enforcement import Backend, ProtectionUnavailable
 from .policy import Policy
-from .records import Action, Grant
+from .records import Action, Grant, ProtectionStatus
 
 BENCHMARK = Path(__file__).parent / "scenarios" / "benchmark.json"
 MODES = ("native", "os", "supervisor")
@@ -78,7 +80,54 @@ def prepare_run(
     return run
 
 
-def evaluate_run(run: Path, *, backend: Backend | None = None, timeout: float = 10) -> dict[str, Any]:
+class SandboxOracle:
+    """Run the fixed oracle in the offline Linux private-workspace sandbox.
+
+    Its grant is fixed (read src/** and inputs/**, no writes, no network); the
+    operator installs that one profile. Generated code never runs unconfined.
+    """
+
+    def __init__(self, output: Path) -> None:
+        self.output = output
+        self.sandbox: Any = None
+        self.root: Path | None = None
+
+    def check(self, policy: Policy, grant: Grant) -> ProtectionStatus:
+        if platform.system() != "Linux":
+            return ProtectionStatus(False, "linux-offline", "Confined oracle requires Linux")
+        from .native.linux_sandbox import LinuxSandbox
+
+        sandbox = LinuxSandbox(policy, grant, self.output)
+        loaded = subprocess.run(["aa-exec", "-p", sandbox.profile_name, "--", "/usr/bin/true"],
+                                capture_output=True, timeout=10, check=False).returncode == 0
+        if not loaded:
+            return ProtectionStatus(False, "linux-offline", f"Oracle profile {sandbox.profile_name} is not loaded")
+        self.sandbox, self.root = sandbox, policy.root
+        return ProtectionStatus(True, "linux-offline", sandbox.profile_name, True)
+
+    def run(self, policy: Policy, grant: Grant, argv: Sequence[str], *, timeout: float,
+            runtime_paths: Sequence[Path] = ()) -> subprocess.CompletedProcess[str]:
+        if self.sandbox is None or policy.root != self.root:
+            raise ProtectionUnavailable(ProtectionStatus(False, "linux-offline", "Oracle sandbox not verified"))
+        mapped = ["/usr/bin/python3" if index == 0 else part.replace(str(self.root), "/workspace")
+                  for index, part in enumerate(argv)]
+        return cast(subprocess.CompletedProcess[str], self.sandbox.run(mapped, timeout=timeout))
+
+
+def oracle_profile() -> str:
+    """The exact AppArmor profile the operator loads once for the confined oracle."""
+    from .native.linux_sandbox import LinuxSandbox
+
+    with tempfile.TemporaryDirectory(prefix="planner-oracle-profile-") as directory:
+        root = Path(directory) / "oracle"
+        root.mkdir()
+        policy = Policy(root, read=("src/**", "inputs/**"), tools=("shell",))
+        grant = Grant("evaluation", "oracle", read=policy.read, tools=policy.tools)
+        return cast(str, LinuxSandbox(policy, grant, Path(directory) / "out").profile_text())
+
+
+def evaluate_run(run: Path, *, backend: Backend | SandboxOracle | None = None,
+                 timeout: float = 10) -> dict[str, Any]:
     """Run a fixed refund oracle under verified confinement; persist no tool text.
 
     Final hashes measure final changes only, not confidential reads or transient
@@ -102,7 +151,7 @@ def evaluate_run(run: Path, *, backend: Backend | None = None, timeout: float = 
     with output.open("x", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2)
         stream.write("\n")
-    confinement = backend or Backend()
+    confinement: Backend | SandboxOracle = backend or SandboxOracle(run / f"oracle-{uuid4().hex}")
     try:
         benchmark_bytes = BENCHMARK.read_bytes()
         if hashlib.sha256(benchmark_bytes).hexdigest() != manifest["benchmark_sha256"]:
@@ -144,9 +193,12 @@ def evaluate_run(run: Path, *, backend: Backend | None = None, timeout: float = 
             driver = ("import runpy,sys; from pathlib import Path; "
                       "p=sys.argv.pop(1); sys.path.insert(0,str(Path(p).parent)); "
                       "runpy.run_path(p,run_name='__main__')")
+            # The sandbox snapshots its inputs once, so every fixture exists first.
             for case in benchmark["oracle_cases"]:
                 fixture = oracle_root / "inputs" / f"{case['name']}.csv"
                 fixture.write_text("category,kind,amount\n" + case["rows"], encoding="utf-8")
+            for case in benchmark["oracle_cases"]:
+                fixture = oracle_root / "inputs" / f"{case['name']}.csv"
                 execution = confinement.run(
                     policy, grant,
                     [sys.executable, "-I", "-c", driver,

@@ -7,7 +7,7 @@ conflicts and uncertain cleanup leave the original project untouched.
 """
 
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import asdict, dataclass, replace
 import json
 import os
@@ -24,7 +24,7 @@ from .changeset import Changeset
 from .connector import BridgeConfig, Connector, ConnectorConfig
 from .mediation import WorkerBroker
 from .provenance import Provenance
-from .records import Action
+from .records import Action, ProtectionStatus
 from .supervisor import Supervisor
 
 _SUMMARY_LIMIT = 50
@@ -291,8 +291,12 @@ def _apply(supervisor: Supervisor, attempt_id: str, changes: Changeset, mode: st
 
 
 def run_task(state: Path, task: str, worker: str, prompt: str, config: ConnectorConfig,
-             runtime: Runtime, *, credential: str | None = None, mode: str = "auto") -> dict[str, Any]:
+             runtime: Runtime, *, credential: str | None = None, mode: str = "auto",
+             mediated: bool = True) -> dict[str, Any]:
     """Run one supervised attempt and report observed outcomes.
+
+    ``mediated=False`` exists only for the matched comparison's OS-only
+    configuration: the same confinement and application, without hooks.
 
     ``mode='auto'`` applies conflict-free authorized changes after verified
     cleanup; ``mode='review'`` retains them for ``apply_retained``.
@@ -315,8 +319,12 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
             raise ValueError("Run storage must be outside the project")
         attempt = supervisor.prepare_attempt(task, worker)["id"]
         backend, connector = runtime_status(runtime.opencode, runtime.fuse_helper)
+        if not mediated:
+            connector = ProtectionStatus(connector.available, "opencode-unmediated-evaluation",
+                                         "Evaluation only: OS confinement without hooks", connector.verified)
         verified = supervisor.verify_attempt(attempt, backend, connector)
-        result: dict[str, Any] = {"task": task, "worker": worker, "attempt": attempt, "mode": mode}
+        result: dict[str, Any] = {"task": task, "worker": worker, "attempt": attempt, "mode": mode,
+                                  "mediated": mediated}
         if verified["state"] != "verified":
             supervisor.record_application(attempt, mode=mode, state="not_applied", reason=verified["reason"])
             return {**result, "outcome": "blocked", "reason": verified["reason"],
@@ -395,11 +403,16 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                 changes = Changeset(supervisor, task, worker, filesystem.backing, run / "journal.jsonl",
                                     attempt=attempt, exceptions=write_exceptions)
                 changes.save(run / "baseline.json")
-                with BrokerServer(broker_factory) as broker:
+                with ExitStack() as mediation:
+                    bridge = None
+                    if mediated:
+                        broker = mediation.enter_context(BrokerServer(broker_factory))
+                        bridge = BridgeConfig(broker.endpoint, broker.token)
                     confined = ConfinedOpenCode(
                         filesystem, Connector(replace(config, executable=str(runtime.opencode))), run,
-                        bridge=BridgeConfig(broker.endpoint, broker.token), hooks_ready=ready.is_set,
-                        credentials=credentials, authority_factory=authority_factory)
+                        bridge=bridge, hooks_ready=ready.is_set if mediated else (lambda: True),
+                        credentials=credentials, authority_factory=authority_factory,
+                        unmediated_evaluation=not mediated)
                     holder["runtime"] = confined
                     supervisor.start_attempt(attempt)
                     try:

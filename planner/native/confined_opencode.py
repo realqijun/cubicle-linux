@@ -141,9 +141,14 @@ class ConfinedOpenCode:
     """
 
     def __init__(self, filesystem: MediatedWorkspace, connector: Connector,
-                 runtime_root: Path, *, bridge: BridgeConfig,
+                 runtime_root: Path, *, bridge: BridgeConfig | None,
                  hooks_ready: Callable[[], bool], credentials: Mapping[str, str] | None = None,
-                 authority_factory: Callable[[], AbstractContextManager[Authority]] | None = None) -> None:
+                 authority_factory: Callable[[], AbstractContextManager[Authority]] | None = None,
+                 unmediated_evaluation: bool = False) -> None:
+        """``bridge=None`` with ``unmediated_evaluation`` is the comparison's
+        OS-confinement-only configuration: no hooks, no tool or context mediation."""
+        if (bridge is None) != unmediated_evaluation:
+            raise ValueError("Only the explicit OS-only evaluation configuration may omit the bridge")
         self.filesystem, self.connector, self.runtime_root = filesystem, connector, runtime_root
         self.bridge, self.hooks_ready = bridge, hooks_ready
         self.credentials, self.authority_factory = credentials or {}, authority_factory
@@ -170,20 +175,22 @@ class ConfinedOpenCode:
             transport = Path(self._stack.enter_context(tempfile.TemporaryDirectory(prefix="planner-t-")))
             self.transport = transport
             transport.chmod(0o700)
-            parsed = urlsplit(self.bridge.endpoint)
-            assert parsed.port is not None and parsed.hostname is not None
-            self._stack.enter_context(UnixRelay(transport / "broker.sock", (parsed.hostname, parsed.port)))
+            if self.bridge is not None:
+                parsed = urlsplit(self.bridge.endpoint)
+                assert parsed.port is not None and parsed.hostname is not None
+                self._stack.enter_context(UnixRelay(transport / "broker.sock", (parsed.hostname, parsed.port)))
+            limit = self.bridge.max_body_bytes if self.bridge else 4 * 1024 * 1024
             self.provider_relay = self._stack.enter_context(ProviderRelay(
                 transport / "provider.sock", provider.base_url,
                 api_key=self.credentials.get(provider.api_key_env) if provider.api_key_env else None,
-                limit=self.bridge.max_body_bytes, timeout=self.connector.config.timeout_seconds))
+                limit=limit, timeout=self.connector.config.timeout_seconds))
             inside_provider = replace(provider,
                 base_url="http://127.0.0.1:18182" + urlsplit(provider.base_url).path,
                 api_key_env="WORKER_PROVIDER_TOKEN")
             connector = Connector(replace(self.connector.config, provider=inside_provider))
             password = secrets.token_urlsafe(32)
             self.launch = connector.prepare_server(self.runtime_root, project=self.filesystem.mount,
-                bridge=replace(self.bridge, endpoint="http://127.0.0.1:18181/admit"),
+                bridge=replace(self.bridge, endpoint="http://127.0.0.1:18181/admit") if self.bridge else None,
                 server_password=password, credentials={"WORKER_PROVIDER_TOKEN": self.provider_relay.token})
             owner = self
             channel_listener = socket.socket(socket.AF_UNIX)
@@ -223,7 +230,7 @@ class ConfinedOpenCode:
                         if not channel_ready.wait(owner.connector.config.timeout_seconds) or owner._channel is None:
                             raise OSError("Control unavailable")
                         length = int(self.headers.get("Content-Length", "0"))
-                        if not 0 <= length <= owner.bridge.max_body_bytes or self.headers.get("Transfer-Encoding"):
+                        if not 0 <= length <= limit or self.headers.get("Transfer-Encoding"):
                             raise ValueError("Invalid private API body")
                         request = {"method": self.command, "path": self.path,
                                    "body": self.rfile.read(length).decode("utf-8"),
@@ -281,7 +288,7 @@ class ConfinedOpenCode:
         environment.update(OPENCODE_TEST_HOME=environment["HOME"],
                            OPENCODE_CONFIG_DIR=environment["XDG_CONFIG_HOME"])
         content = json.loads(environment["OPENCODE_CONFIG_CONTENT"])
-        content["plugins"] = ["/runtime/plugin"]
+        content["plugins"] = ["/runtime/plugin"] if self.bridge else []
         # Native interactive approvals are replaced by the authenticated hook,
         # which still vetoes every tracked operation under the approved grant.
         content["permissions"] = [{"action": "*", "resource": "*", "effect": "allow"}]
@@ -301,8 +308,9 @@ class ConfinedOpenCode:
                 "--bind", str(self.filesystem.mount), "/workspace",
                 "--ro-bind", str(transport), "/transport",
                 "--ro-bind", spec.argv[0], "/runtime/opencode",
-                "--ro-bind", str(Path(__file__).parents[1] / "opencode"), "/runtime/plugin",
                 "--ro-bind", str(Path(__file__).with_name("confined_bootstrap.py")), "/runtime/bootstrap.py"]
+            if self.bridge is not None:
+                command.extend(("--ro-bind", str(Path(__file__).parents[1] / "opencode"), "/runtime/plugin"))
             for name in ("home", "xdg_data_home", "xdg_state_home", "xdg_config_home", "xdg_cache_home", "tmpdir"):
                 command.extend(("--dir", "/state/" + name))
             bootstrap = ("import os,sys; p=sys.argv[1]; "

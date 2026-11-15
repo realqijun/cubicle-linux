@@ -91,7 +91,7 @@ class Connector:
     def __init__(self, config: ConnectorConfig) -> None:
         self.config = config
 
-    def prepare_server(self, runtime_root: Path, *, project: Path, bridge: BridgeConfig,
+    def prepare_server(self, runtime_root: Path, *, project: Path, bridge: BridgeConfig | None,
                        server_password: str, credentials: Mapping[str, str] | None = None) -> LaunchSpec:
         """Boot proposal without task data; require authenticated hook readiness first.
 
