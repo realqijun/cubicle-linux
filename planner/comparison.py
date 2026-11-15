@@ -15,6 +15,7 @@ import os
 from pathlib import Path, PurePosixPath
 import signal
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -65,22 +66,25 @@ class RecordingForwarder:
                 headers = {"Content-Type": "application/json"}
                 if owner.credential:
                     headers["Authorization"] = "Bearer " + owner.credential
-                kind = http.client.HTTPSConnection if owner.upstream.scheme == "https" else http.client.HTTPConnection
-                connection = kind(owner.upstream.hostname, owner.upstream.port, timeout=600)
+                host = owner.upstream.hostname or ""
+                connection: http.client.HTTPConnection = (
+                    http.client.HTTPSConnection(host, owner.upstream.port, timeout=600)
+                    if owner.upstream.scheme == "https" else
+                    http.client.HTTPConnection(host, owner.upstream.port, timeout=600))
                 try:
                     connection.request("POST", self.path, body, headers)
                     response = connection.getresponse()
                     raw = response.read()
-                    status, kind = response.status, response.getheader("Content-Type", "application/json")
+                    status, content_type = response.status, response.getheader("Content-Type", "application/json")
                 except (OSError, http.client.HTTPException):
-                    raw, status, kind = b"", 502, "text/plain"
+                    raw, status, content_type = b"", 502, "text/plain"
                 finally:
                     connection.close()
                 with owner._lock:
                     owner.requests += 1
                     owner.traffic += [body, raw]
                 self.send_response(status)
-                self.send_header("Content-Type", kind)
+                self.send_header("Content-Type", content_type)
                 self.send_header("Content-Length", str(len(raw)))
                 self.end_headers()
                 self.wfile.write(raw)
@@ -246,13 +250,22 @@ def collect(run: Path, *, provider_url: str, credential: str | None, opencode: P
 def matrix(output: Path, *, model: str, provider_url: str, credential: str | None, opencode: Path,
            helper: Path, scenarios: list[str], modes: list[str], seconds: float = 900) -> list[dict[str, Any]]:
     """Prepare, collect and evaluate each scenario in each mode; keep every attempt."""
-    results = []
     output.mkdir(parents=True, exist_ok=True)
+    saved = output / "results.json"
+    results: list[dict[str, Any]] = json.loads(saved.read_text()) if saved.exists() else []
+    done = {(entry["scenario"], entry["mode"]) for entry in results}
     for scenario in scenarios:
         for mode in modes:
             if mode not in MODES:
                 raise ValueError(f"Unknown mode {mode}")
             run = output / f"{scenario}-{mode}"
+            if (scenario, mode) in done:
+                continue  # Resume after an interrupted collection; never rerun a recorded cell.
+            if run.exists():
+                results.append({"scenario": scenario, "mode": mode, "run": str(run),
+                                "agent": {"error": "interrupted_before_recording"}, "evaluation": {}})
+                saved.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+                continue
             with tempfile.TemporaryDirectory() as placeholder:
                 run = prepare_run(run, scenario, mode=mode, model=model, harness_release=PINNED_VERSION,
                                   policy=comparison_policy(Path(placeholder)))
@@ -282,7 +295,10 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--provider-url", required=True)
-    parser.add_argument("--api-key-env")
+    credential = parser.add_mutually_exclusive_group()
+    credential.add_argument("--api-key-env")
+    credential.add_argument("--api-key-stdin", action="store_true",
+                            help="Read the credential from stdin; keeps it out of every process environment")
     parser.add_argument("--opencode", type=Path, required=True)
     parser.add_argument("--fuse-helper", type=Path, required=True)
     parser.add_argument("--scenario", action="append")
@@ -290,13 +306,14 @@ def main() -> int:
     parser.add_argument("--seconds", type=float, default=900)
     args = parser.parse_args()
     scenarios = args.scenario or list(json.loads(BENCHMARK.read_text())["scenarios"])
-    results = matrix(args.output, model=args.model, provider_url=args.provider_url,
-                     credential=os.environ.get(args.api_key_env) if args.api_key_env else None,
+    key = (sys.stdin.readline().strip() if args.api_key_stdin else
+           os.environ.get(args.api_key_env) if args.api_key_env else None)
+    results = matrix(args.output, model=args.model, provider_url=args.provider_url, credential=key,
                      opencode=args.opencode, helper=args.fuse_helper, scenarios=scenarios,
                      modes=args.mode or list(MODES), seconds=args.seconds)
-    print(json.dumps([{key: entry[key] for key in ("scenario", "mode")} |
-                      {"completed": entry["evaluation"]["legitimate_completion"],
-                       "authorized": entry["evaluation"]["authorized_final_changes"],
+    print(json.dumps([{name: entry[name] for name in ("scenario", "mode")} |
+                      {"completed": entry["evaluation"].get("legitimate_completion"),
+                       "authorized": entry["evaluation"].get("authorized_final_changes"),
                        "disclosed": entry["agent"].get("secret_disclosed_to_provider")} for entry in results], indent=2))
     return 0
 

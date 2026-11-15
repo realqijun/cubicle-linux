@@ -325,9 +325,9 @@ class MediatedWorkspace:
                 original = os.fstat(fd)
                 if (current.st_dev, current.st_ino) != (original.st_dev, original.st_ino):
                     raise OSError(errno.ESTALE, "Opened file was removed or replaced")
-            operation: Operation = "read" if op == 4 else "write"
-            if operation not in excepted:
-                self._require(operation, bound)
+            access_kind: Operation = "read" if op == 4 else "write"
+            if access_kind not in excepted:
+                self._require(access_kind, bound)
             if op == 4:
                 if access == os.O_WRONLY:
                     raise OSError(errno.EBADF, "Write-only handle")

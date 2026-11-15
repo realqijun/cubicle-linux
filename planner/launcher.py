@@ -164,7 +164,7 @@ def recover(state: Path, task: str, worker: str, runtime: Runtime, *,
             if application and application["state"] == "applying":
                 status = application_status(supervisor, Path(application["journal"]))
                 supervisor.record_application(item["id"], mode=application["mode"], state="interrupted",
-                                              reason="owner_lost_during_application:" + status["state"],
+                                              reason=f"owner_lost_during_application:{status['state']}",
                                               changes=application["changes"], journal=application["journal"])
             elif application is None:
                 supervisor.record_application(item["id"], mode="auto", state="not_applied", reason="owner_lost")
@@ -227,7 +227,7 @@ def _request_reconsideration(supervisor: Supervisor, task: str, worker: str, att
     existing = {(item["operation"], item["resource"], item["tool"])
                 for item in supervisor.export(task)["approvals"]
                 if item["worker"] == worker and item["state"] == "requested"}
-    created = []
+    created: list[dict[str, Any]] = []
     for operation, resource, tool in dict.fromkeys(observed):
         if len(created) >= _SUMMARY_LIMIT:
             break

@@ -223,9 +223,8 @@ class Changeset:
         """Reject the entire changeset on any conflict or unsupported operation."""
         self._check_parents()
         files, directories = _tree(self.workspace)
-        depth = lambda name: name.count('/')  # noqa: E731
-        created = sorted(directories.keys() - self.directories.keys(), key=lambda n: (depth(n), n))
-        removed = sorted(self.directories.keys() - directories.keys(), key=lambda n: (-depth(n), n))
+        created = sorted(directories.keys() - self.directories.keys(), key=lambda n: (n.count('/'), n))
+        removed = sorted(self.directories.keys() - directories.keys(), key=lambda n: (-n.count('/'), n))
         changes = []
         for name in created:
             self._permitted(name)

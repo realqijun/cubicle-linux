@@ -123,7 +123,7 @@ def oracle_profile() -> str:
         root.mkdir()
         policy = Policy(root, read=("src/**", "inputs/**"), tools=("shell",))
         grant = Grant("evaluation", "oracle", read=policy.read, tools=policy.tools)
-        return cast(str, LinuxSandbox(policy, grant, Path(directory) / "out").profile_text())
+        return LinuxSandbox(policy, grant, Path(directory) / "out").profile_text()
 
 
 def evaluate_run(run: Path, *, backend: Backend | SandboxOracle | None = None,

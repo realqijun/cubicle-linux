@@ -87,7 +87,7 @@ final class CandidateVolume: FSVolume, FSVolume.Handler,
             let (bytes, attributes) = try readBytes(from: item, offset: Int64(offset), length: length)
             try buffer.withUnsafeMutableBytes { destination in
                 guard bytes.count <= destination.count else { throw POSIXError(.EIO) }
-                bytes.copyBytes(to: destination.bindMemory(to: UInt8.self))
+                _ = bytes.copyBytes(to: destination.bindMemory(to: UInt8.self))
             }
             guard let result = FSReadFileResult(bytesRead: bytes.count, itemAttributes: attributes)
             else { throw POSIXError(.EIO) }
