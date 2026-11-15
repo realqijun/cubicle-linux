@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "attempts": [
+    {
+      "at": "2026-11-15T02:40:20.496437+00:00",
+      "release": "2.2.5",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "bridge.mjs": "676cf27ae62908a4d5d3acc74d19a17ab8faad4bbd8a49c38bd82914bd2ccfd6",
+        "diagnostic.py": "8ce96700cd8130c8332c1b2e2f286b9b0f40fbcc529c8e0aca0ecb61af36488a",
+        "connector.py": "eeae02e0e47a14518eec536775b2d493cd4215b93da2c9e2520636af924e6317",
+        "mediation.py": "84273bbd4e1b8f67e7024ef4b2f120392ace809a65e52e5f362d37489537dad5",
+        "broker_server.py": "70bb5a08d30a57201149e684d064e42983be1403e74bd493f92994047f58aa45",
+        "context.py": "fd649cf9e08d3a77b7b8ed46381ba24c4060de3d3829f44aa82fa3b2b522c5d3",
+        "supervisor.py": "56b8a30f483079bcfbe0c0e536cd3d9ed136c807d605156bf9edf421387a2318",
+        "provenance.py": "b749f9b1ea9fb31b1e2d6592e1c0e598e743dbc3723e1b76e83b9cd12540922b"
+      },
+      "sources_stable": true,
+      "results": [
+        {
+          "case": "permitted_read",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": true,
+          "write_effect": false,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "permitted_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "permission.evaluate",
+            "tool.after",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": true,
+          "denial_observed": false,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "denied_write",
+          "passed": true,
+          "exit_code": 0,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request",
+            "provider.http.request",
+            "provider.http.request",
+            "provider.http.response",
+            "provider.http.response",
+            "tool.before",
+            "context",
+            "model.request",
+            "provider.http.request",
+            "provider.http.response"
+          ],
+          "provider_requests": 3,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true,
+          "bridge_registered": true,
+          "native_completion": true,
+          "all_provider_requests_admitted": true
+        },
+        {
+          "case": "denied_provider",
+          "passed": true,
+          "exit_code": 1,
+          "routes": [
+            "hello",
+            "session.bind",
+            "prompt",
+            "title",
+            "context",
+            "model.request",
+            "model.request"
+          ],
+          "provider_requests": 0,
+          "public_fixture_observed": false,
+          "write_effect": false,
+          "denial_observed": true,
+          "bridge_registered": true,
+          "native_completion": false,
+          "all_provider_requests_admitted": true
+        }
+      ],
+      "scope": "Pinned binary, actual supervisor/broker, fixed loopback dummy provider; not OS confinement or full-route acceptance."
+    }
+  ]
+}

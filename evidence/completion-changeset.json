@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-15",
+  "environment": {
+    "system": "Linux",
+    "kernel": "6.8.0-137-generic",
+    "python": "3.12.3"
+  },
+  "scope": "Changeset filesystem application and existing unit/integration suite; no new confinement or autonomous-agent acceptance claim.",
+  "source_sha256": {
+    "planner/changeset.py": "dd7e87328faa79b5856e47813bc3302e9fb891bdfbf79436fbc980ab15fea477",
+    "planner/tests/test_changeset.py": "d7457751145fa4046f61699ff438f417e23798280350b15b49fe64028970e4dc"
+  },
+  "attempts": [
+    {
+      "suite": "full Ubuntu suite, incomplete transferred fixtures",
+      "tests": 162,
+      "errors": 2,
+      "skipped": 46,
+      "result": "failed",
+      "reason": "Transfer omitted artifact scenario/skill fixture files; corrected bundle before final run."
+    },
+    {
+      "suite": "changeset tests, final source",
+      "tests": 16,
+      "passed": 16,
+      "skipped": 0,
+      "result": "passed"
+    },
+    {
+      "suite": "full Ubuntu suite, final source and complete fixtures",
+      "tests": 163,
+      "passed": 117,
+      "skipped": 46,
+      "result": "passed"
+    }
+  ],
+  "review": "Independent review agent confirmed all reported component findings resolved; runtime integration remains outstanding.",
+  "typecheck": "Not run: mypy unavailable in checked local and Ubuntu Python environments."
+}

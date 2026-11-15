@@ -34,30 +34,34 @@ class Note:
 class Provenance:
     def __init__(self, path: str | Path) -> None:
         self.db = sqlite3.connect(path)
-        self.db.row_factory = sqlite3.Row
-        self.db.execute("PRAGMA foreign_keys = ON")
-        self.db.execute("PRAGMA secure_delete = ON")
-        self.db.executescript("""
-            CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY, project_id TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS records (
-                id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES tasks(id),
-                worker_id TEXT NOT NULL, kind TEXT NOT NULL, reference TEXT,
-                origins TEXT NOT NULL, sensitive INTEGER NOT NULL,
-                created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS edges (
-                source TEXT NOT NULL REFERENCES records(id),
-                target TEXT NOT NULL REFERENCES records(id),
-                PRIMARY KEY(source, target)
-            );
-            CREATE TABLE IF NOT EXISTS notes (
-                id TEXT PRIMARY KEY REFERENCES records(id),
-                project_id TEXT NOT NULL, text TEXT,
-                deleted_at REAL
-            );
-        """)
+        try:
+            self.db.row_factory = sqlite3.Row
+            self.db.execute("PRAGMA foreign_keys = ON")
+            self.db.execute("PRAGMA secure_delete = ON")
+            self.db.executescript("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id TEXT PRIMARY KEY, project_id TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS records (
+                    id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES tasks(id),
+                    worker_id TEXT NOT NULL, kind TEXT NOT NULL, reference TEXT,
+                    origins TEXT NOT NULL, sensitive INTEGER NOT NULL,
+                    created_at REAL NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS edges (
+                    source TEXT NOT NULL REFERENCES records(id),
+                    target TEXT NOT NULL REFERENCES records(id),
+                    PRIMARY KEY(source, target)
+                );
+                CREATE TABLE IF NOT EXISTS notes (
+                    id TEXT PRIMARY KEY REFERENCES records(id),
+                    project_id TEXT NOT NULL, text TEXT,
+                    deleted_at REAL
+                );
+            """)
+        except BaseException:
+            self.db.close()
+            raise
 
     def close(self) -> None:
         self.db.close()

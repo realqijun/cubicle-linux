@@ -7,6 +7,7 @@ before allowing OpenCode to execute any prepared operation.
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 import json
+from pathlib import PurePosixPath
 import sqlite3
 from typing import Any
 from uuid import uuid4
@@ -41,10 +42,15 @@ class _Request:
 
 class WorkerBroker:
     def __init__(self, supervisor: Supervisor, store: Provenance,
-                 task_id: str, worker_id: str, *, provider_origins: tuple[str, ...] = ()) -> None:
+                 task_id: str, worker_id: str, *, provider_origins: tuple[str, ...] = (),
+                 worker_project: str | None = None) -> None:
         supervisor.check_worker(task_id, worker_id)
         self.supervisor, self.task_id, self.worker_id = supervisor, task_id, worker_id
         self.project = str(supervisor.policy(task_id).root)
+        if worker_project is not None and (not worker_project.startswith("/") or
+                ".." in PurePosixPath(worker_project).parts):
+            raise ValueError("Worker project must be an absolute normalized POSIX path")
+        self.worker_project = PurePosixPath(worker_project) if worker_project else None
         store.register_task(task_id, self.project)
         self.context = ModelContext(store, task_id, worker_id)
         self._tools: dict[str, _Tool] = {}
@@ -61,6 +67,24 @@ class WorkerBroker:
         self._last_output: ContextHandle | None = None
         self._messages: dict[str, ContextHandle] = {}
         self._output_receipts: dict[str, str] = {}
+
+    @property
+    def hooks_ready(self) -> bool:
+        """True only after an authenticated compatible hook inventory arrived."""
+        return self._hello and not self._closed
+
+    def _resource(self, resource: str) -> str:
+        if self.worker_project is None:
+            return resource
+        path = PurePosixPath(resource)
+        if ".." in path.parts:
+            raise MediationDenied("outside_worker_project")
+        if path.is_absolute():
+            try:
+                return path.relative_to(self.worker_project).as_posix()
+            except ValueError:
+                raise MediationDenied("outside_worker_project") from None
+        return resource
 
     def _active(self, tool: str | None = None) -> None:
         if self._closed:
@@ -98,7 +122,7 @@ class WorkerBroker:
             # Pinned OpenCode write reads existing content for previews/BOM.
             operations: tuple[Operation, ...] = ("read", "write") if tool in ("edit", "write") else ("read",)
             for operation in operations:
-                actions.append(Action(self.task_id, self.worker_id, operation, resource, category))
+                actions.append(Action(self.task_id, self.worker_id, operation, self._resource(resource), category))
         decisions = self.supervisor.authorize_many(actions) if actions else ()
         if any(not decision.allowed for decision in decisions):
             self._seen_tools.add(call_id)
@@ -232,7 +256,7 @@ class WorkerBroker:
                     raise MediationDenied("substituted_permission_action")
                 approved = {decision.resource for decision in ticket.decisions}
                 policy = self.supervisor.policy(self.task_id)
-                if not resources or any(str(policy.normalize(resource)[0]) not in approved for resource in resources):
+                if not resources or any(str(policy.normalize(self._resource(resource))[0]) not in approved for resource in resources):
                     raise MediationDenied("substituted_permission_resource")
             elif action != ticket.name or (ticket.name != "shell" and resources != [ticket.arguments.get("pattern")]):
                 raise MediationDenied("substituted_permission_action")
@@ -244,7 +268,7 @@ class WorkerBroker:
             if not any(ticket.name == "shell" and ticket.arguments.get("command") == payload.get("command")
                        for ticket in self._tools.values()):
                 raise MediationDenied("untracked_shell_execution")
-            self.supervisor.policy(self.task_id).normalize(payload["cwd"])
+            self.supervisor.policy(self.task_id).normalize(self._resource(payload["cwd"]))
             return None
         if route == "prompt":
             handle = self.context.observe(json.dumps(payload, ensure_ascii=True), "worker_input", "opencode:prompt")

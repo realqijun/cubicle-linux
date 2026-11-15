@@ -3,6 +3,7 @@
 import argparse
 from dataclasses import asdict
 import json
+import os
 from pathlib import Path
 import sqlite3
 import sys
@@ -20,6 +21,17 @@ def parser() -> argparse.ArgumentParser:
     cli.add_argument("--task-seconds", type=float, default=3600, help="New task lifetime, seconds")
     cli.add_argument("--denial-limit", type=int, default=3, help="Identical denied attempts before suspension")
     commands = cli.add_subparsers(dest="command", required=True)
+    application = commands.add_parser("application-status", help="Inspect a trusted application journal without replay")
+    application.add_argument("journal", type=Path)
+    planning = commands.add_parser("plan", help="Ask an explicit provider for a reviewable task proposal")
+    planning.add_argument("project", type=Path)
+    planning.add_argument("--prompt", required=True)
+    planning.add_argument("--model", required=True)
+    planning.add_argument("--provider-url", required=True)
+    planning.add_argument("--api-key-env")
+    planning.add_argument("--worker", default="worker")
+    planning.add_argument("--timeout", type=float, default=10)
+    planning.add_argument("--max-response-bytes", type=int, default=1024 * 1024)
     proposal = commands.add_parser("propose", help="Create a policy proposal without starting work")
     proposal.add_argument("project", type=Path)
     selection = proposal.add_mutually_exclusive_group(required=True)
@@ -95,6 +107,20 @@ def parser() -> argparse.ArgumentParser:
 
 def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
     command = args.command
+    if command == "application-status":
+        from .changeset import application_status
+
+        return application_status(supervisor, args.journal)
+    if command == "plan":
+        from .connector import ConnectorConfig, ProviderConfig
+        from .workflow import plan
+
+        provider = ProviderConfig(args.provider_url, api_key_env=args.api_key_env)
+        credential = os.environ.get(args.api_key_env) if args.api_key_env else None
+        return plan(supervisor, args.project, args.prompt,
+                    ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
+                    credential=credential, worker_id=args.worker,
+                    max_response_bytes=args.max_response_bytes)
     if command == "propose":
         path = args.policy if args.policy else Path(__file__).parent / "templates" / f"{args.template}.toml"
         task_id = supervisor.propose(Policy.load(args.project, path))
