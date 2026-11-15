@@ -56,7 +56,12 @@ def application_status(supervisor: Supervisor, journal: Path) -> dict[str, objec
         if not parts or Path(name).is_absolute() or any(p in ('.', '..') for p in name.split('/')):
             raise ValueError('Invalid application resource')
         observed = 'unverified'
-        if current:
+        if current and change['operation'] in ('mkdir', 'rmdir'):
+            target = policy.root / name
+            present = target.is_dir() and not target.is_symlink()
+            observed = ('matches_expected' if present == (change['operation'] == 'mkdir') else
+                        'missing' if change['operation'] == 'mkdir' else 'conflict')
+        elif current:
             target, _ = policy.normalize(name)
             if target != policy.root / name:
                 raise ValueError('Application resource was aliased')
@@ -136,8 +141,14 @@ class Changeset:
     """Trusted, in-memory baseline with a durable application progress record."""
 
     def __init__(self, supervisor: Supervisor, task: str, worker: str,
-                 workspace: Path, journal: Path) -> None:
+                 workspace: Path, journal: Path, *, attempt: str | None = None,
+                 exceptions: dict[str, str] | None = None) -> None:
+        """``exceptions`` maps a relative path to the write approval reserved for
+        ``attempt``; only that exact staged edit may use it, once."""
         self.supervisor = supervisor
+        self.attempt, self.exceptions = attempt, dict(exceptions or {})
+        if self.exceptions and attempt is None:
+            raise ValueError('Exception-bound edits require their attempt')
         grant = supervisor.check_worker(task, worker, "shell")
         policy = supervisor.policy(task)
         self.revision = supervisor.status(task)["revision"]
@@ -172,7 +183,8 @@ class Changeset:
                 'journal': str(self.journal),
                 'baseline': {name: asdict(value) for name, value in self.baseline.items()},
                 'original': {name: asdict(value) for name, value in self.original.items()},
-                'directories': self.directories, 'parents': self.parents}
+                'directories': self.directories, 'parents': self.parents,
+                'attempt': self.attempt, 'exceptions': self.exceptions}
         descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(descriptor, 'w', encoding='utf-8') as stream:
             json.dump(data, stream)
@@ -197,6 +209,7 @@ class Changeset:
         self.original = {name: FileState(**value) for name, value in data['original'].items()}
         self.directories = {name: tuple(value) for name, value in data['directories'].items()}
         self.parents = {name: tuple(value) for name, value in data['parents'].items()}
+        self.attempt, self.exceptions = data['attempt'], data['exceptions']
         self.used = self.journal.exists()
         return self
 
@@ -210,9 +223,15 @@ class Changeset:
         """Reject the entire changeset on any conflict or unsupported operation."""
         self._check_parents()
         files, directories = _tree(self.workspace)
-        if directories != self.directories:
-            raise ValueError('Directory changes require validated directory support')
+        depth = lambda name: name.count('/')  # noqa: E731
+        created = sorted(directories.keys() - self.directories.keys(), key=lambda n: (depth(n), n))
+        removed = sorted(self.directories.keys() - directories.keys(), key=lambda n: (-depth(n), n))
         changes = []
+        for name in created:
+            self._permitted(name)
+            if os.path.lexists(self.policy.root / name):
+                raise FileExistsError('New directory collides with an original resource')
+            changes.append(Change(name, 'mkdir'))
         for name in sorted(self.baseline.keys() | files.keys()):
             before, after = self.baseline.get(name), files.get(name)
             if before is not None and after is not None:
@@ -220,9 +239,10 @@ class Changeset:
                     raise ValueError('File metadata changes are unsupported')
                 if before.digest == after.digest:
                     continue
-            decision = self.policy.decide(Action(self.grant.task_id, self.grant.worker_id,
-                                                'write', name, 'shell'), self.grant)
-            if not decision.allowed:
+            if name in self.exceptions:
+                self._exception(name, consume=False)
+            elif not self.policy.decide(Action(self.grant.task_id, self.grant.worker_id,
+                                               'write', name, 'shell'), self.grant).allowed:
                 raise PermissionError('Changeset contains an unauthorized write')
             target = self.policy.root / name
             if before is None:
@@ -234,16 +254,39 @@ class Changeset:
                 raise ValueError('Original file changed since preparation')
             changes.append(Change(name, 'add' if before is None else
                                   'delete' if after is None else 'modify'))
+        for name in removed:
+            self._permitted(name)
+            # Copies omit denied files; removing their directory would delete
+            # content the worker never saw, so require exactly the exposed entries.
+            target = self.policy.root / name
+            exposed = {item.rsplit('/', 1)[-1] for item in (*self.baseline, *self.directories)
+                       if item != name and item.rsplit('/', 1)[0] == name}
+            if {child.name for child in target.iterdir()} - exposed:
+                raise PermissionError('Directory removal would delete unexposed content')
+            changes.append(Change(name, 'rmdir'))
         return tuple(changes)
+
+    def _permitted(self, name: str) -> None:
+        if not self.policy.decide(Action(self.grant.task_id, self.grant.worker_id, 'write', name, 'shell'),
+                                  self.grant).allowed:
+            raise PermissionError('Changeset contains an unauthorized directory change')
 
     def _check_authority(self) -> None:
         grant = self.supervisor.check_worker(self.grant.task_id, self.grant.worker_id, "shell")
         if grant != self.grant or self.supervisor.status(grant.task_id)["revision"] != self.revision:
             raise PermissionError("Authority changed since preparation")
 
-    def _authorize(self, changes: tuple[Change, ...]) -> None:
+    def _exception(self, name: str, *, consume: bool) -> None:
+        assert self.attempt is not None
+        self.supervisor.check_application_exception(self.exceptions[name], self.attempt,
+                                                    self.policy.root / name, consume=consume)
+
+    def _authorize(self, changes: tuple[Change, ...], *, consume: bool = False) -> None:
+        for item in changes:
+            if item.path in self.exceptions:
+                self._exception(item.path, consume=consume)
         actions = tuple(Action(self.grant.task_id, self.grant.worker_id, "write", item.path, "shell")
-                        for item in changes)
+                        for item in changes if item.path not in self.exceptions)
         if actions:
             decisions = self.supervisor.authorize_many(actions)
             if any(not decision.allowed or decision.approval_id is not None for decision in decisions):
@@ -264,9 +307,12 @@ class Changeset:
         self._authorize(changes)
         for change in changes:
             target = self.policy.root / change.path
+            parent = target.parent
+            while not parent.exists():  # Created by an earlier mkdir in this changeset.
+                parent = parent.parent
             # Linux exposes POSIX access/default ACLs as extended attributes.
             # Refuse metadata we cannot faithfully retain instead of dropping it.
-            if os.listxattr(target.parent) or (target.exists() and os.listxattr(target)):
+            if os.listxattr(parent) or (target.exists() and os.listxattr(target)):
                 raise ValueError('Extended attributes and ACLs require explicit support')
             before = self.original.get(change.path)
             if before and (before.uid != os.geteuid() or before.gid != os.getegid()):
@@ -292,16 +338,28 @@ class Changeset:
             _sync_directory(self.journal.parent)
             for change in changes:
                 self._check_authority()
-                self._authorize((change,))
                 self._check_parents()
                 target = self.policy.root / change.path
-                if change.operation == 'add':
+                if change.operation in ('add', 'mkdir'):
                     if os.path.lexists(target):
                         raise FileExistsError('Destination appeared during application')
+                elif change.operation == 'rmdir':
+                    pass  # Identity checked above; rmdir itself refuses a non-empty directory.
                 elif _file(target) != self.original[change.path]:
                     raise ValueError('Original changed during application')
+                # Consumes a once-only exception before the write; an interruption
+                # after this point is reconciled, never replayed with that approval.
+                self._authorize((change,), consume=True)
                 record('applying', change.path)
-                if change.operation == 'delete':
+                if change.operation == 'mkdir':
+                    target.mkdir(mode=0o700)
+                    os.chmod(target, 0o700)  # Not widened by umask; documented new-directory rule.
+                    info = target.lstat()
+                    self.parents[change.path] = (info.st_dev, info.st_ino)
+                elif change.operation == 'rmdir':
+                    target.rmdir()
+                    del self.parents[change.path]
+                elif change.operation == 'delete':
                     target.unlink()
                 else:
                     descriptor, temporary = tempfile.mkstemp(prefix='.planner-', dir=target.parent)

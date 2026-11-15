@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass, replace
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import threading
 import time
@@ -22,6 +23,7 @@ from .changeset import Changeset
 from .connector import BridgeConfig, Connector, ConnectorConfig
 from .mediation import WorkerBroker
 from .provenance import Provenance
+from .records import Action
 from .supervisor import Supervisor
 
 _SUMMARY_LIMIT = 50
@@ -167,12 +169,54 @@ def recover(state: Path, task: str, worker: str, runtime: Runtime, *,
                 supervisor.record_application(item["id"], mode="auto", state="not_applied", reason="owner_lost")
             recovered = supervisor.recover_attempt(item["id"], backend, connector,
                                                    cleanup_verified=observed or operator_confirmed)
+            if observed:
+                _purge(run)
             results.append({"attempt": item["id"], "state": recovered["state"], "reason": recovered["reason"],
                             "cleanup_evidence": evidence, "operator_confirmed": operator_confirmed,
                             "application": supervisor.application(item["id"])})
         return results
     finally:
         supervisor.close()
+
+
+def _purge(run: Path) -> None:
+    """The private copy includes denied files; keep only digest metadata once final."""
+    backing = run / "fs" / "backing"
+    if backing.exists():
+        shutil.rmtree(backing)
+
+
+def _request_reconsideration(supervisor: Supervisor, task: str, worker: str, attempt: str,
+                             denials: list[tuple[str, str]]) -> list[dict[str, Any]]:
+    """Turn the exact denied operations of this attempt into inert pending requests.
+
+    The request names the supervisor-observed operation and normalized resource,
+    never model-chosen text. Only the user's separate approval can make it usable.
+    """
+    started = supervisor.attempt(attempt)["created"]
+    observed: list[tuple[str, str, str]] = [(operation, name, "shell") for operation, name in denials]
+    observed += [(row["operation"], row["resource"], row["tool"]) for row in supervisor.history(task)
+                 if row["worker"] == worker and not row["allowed"] and row["created"] >= started
+                 and row["tool"] in ("file", "search") and row["operation"] in ("read", "write")]
+    existing = {(item["operation"], item["resource"], item["tool"])
+                for item in supervisor.export(task)["approvals"]
+                if item["worker"] == worker and item["state"] == "requested"}
+    created = []
+    for operation, resource, tool in dict.fromkeys(observed):
+        if len(created) >= _SUMMARY_LIMIT:
+            break
+        try:
+            path, _ = supervisor.policy(task).normalize(resource)
+            if (operation, str(path), tool) in existing:
+                continue
+            approval = supervisor.request_exception(Action(task, worker, operation, resource, tool),  # type: ignore[arg-type]
+                                                    sources=(f"attempt:{attempt}", "observed_denied_operation"))
+        except (ValueError, OSError):
+            continue  # Protected, external-write, inactive-worker or vanished resources stay denied.
+        existing.add((operation, str(path), tool))
+        item = supervisor.exception(approval)
+        created.append({key: item[key] for key in ("id", "operation", "resource", "tool", "lifetime", "sensitive")})
+    return created
 
 
 def _classify(error: BaseException) -> str:
@@ -193,7 +237,9 @@ def apply_retained(state: Path, attempt_id: str) -> dict[str, Any]:
             raise ValueError("Only a retained changeset can be applied")
         run = Path(record["journal"]).parent
         changes = Changeset.restore(supervisor, run / "baseline.json")
-        return _apply(supervisor, attempt_id, changes, "review")
+        outcome = _apply(supervisor, attempt_id, changes, "review")
+        _purge(run)
+        return outcome
     finally:
         supervisor.close()
 
@@ -252,6 +298,12 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         runs.mkdir(mode=0o700, parents=True, exist_ok=True)
         run = runs / attempt
         run.mkdir(mode=0o700)
+        bindings = supervisor.reserve_exceptions(attempt)
+        inside = [item for item in bindings if Path(item["resource"]).is_relative_to(policy.root)]
+        relative = {item["id"]: Path(item["resource"]).relative_to(policy.root).as_posix() for item in inside}
+        fs_exceptions = [(item["operation"], relative[item["id"]], item["lifetime"], bool(item["sensitive"]))
+                         for item in inside]
+        write_exceptions = {relative[item["id"]]: item["id"] for item in inside if item["operation"] == "write"}
         ready = threading.Event()
         holder: dict[str, Any] = {}
 
@@ -271,7 +323,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         def broker_factory() -> Iterator[WorkerBroker]:
             owner, store = Supervisor(state), Provenance(state.with_suffix(".memory.sqlite"))
             broker = Broker(owner, store, task, worker, worker_project="/workspace",
-                            provider_origins=("http://127.0.0.1:18182",))
+                            provider_origins=("http://127.0.0.1:18182",),
+                            sensitive_exposure=filesystem.sensitive_exposure)
             try:
                 yield broker
             finally:
@@ -288,14 +341,16 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                 authority.supervisor.close()
 
         outcome, cleaned, unmounted, failure = "runtime_error", False, False, ""
-        filesystem = MediatedWorkspace(policy, grant, run / "fs", helper=runtime.fuse_helper, check_authority=lost)
+        filesystem = MediatedWorkspace(policy, grant, run / "fs", helper=runtime.fuse_helper, check_authority=lost,
+                                       exceptions=fs_exceptions)
         changes: Changeset | None = None
         processes = _Processes(run / "processes.json")
         try:
             with filesystem:
                 processes.add("filesystem", filesystem.pid)
                 processes.data["mount"] = str(filesystem.mount)
-                changes = Changeset(supervisor, task, worker, filesystem.backing, run / "journal.jsonl")
+                changes = Changeset(supervisor, task, worker, filesystem.backing, run / "journal.jsonl",
+                                    attempt=attempt, exceptions=write_exceptions)
                 changes.save(run / "baseline.json")
                 with BrokerServer(broker_factory) as broker:
                     confined = ConfinedOpenCode(
@@ -339,8 +394,13 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                                       cleanup_verified=cleaned and unmounted)
         else:
             supervisor.abandon_attempt(attempt, outcome)
+        supervisor.settle_exceptions(attempt)
         supervisor.record_filesystem_denials(task, worker, filesystem.denials, filesystem.denials_dropped)
         finished = supervisor.attempt(attempt)
+        result["exceptions"] = [{"id": item["id"], "operation": item["operation"], "resource": item["resource"],
+                                 "lifetime": item["lifetime"], "state": supervisor.exception(item["id"])["state"]}
+                                for item in bindings]
+        result["requests"] = _request_reconsideration(supervisor, task, worker, attempt, filesystem.denials)
         result.update(outcome=outcome, error=failure, attempt_state=finished["state"],
                       cleanup_verified=finished["cleanup_verified"],
                       filesystem_denials=[{"operation": op, "resource": name}
@@ -358,6 +418,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                                                             reason=str(error), journal=str(changes.journal))
         else:
             application = _apply(supervisor, attempt, changes, mode)
+        if application["state"] != "retained" and unmounted:
+            _purge(run)
         return {**result, "application": application}
     finally:
         supervisor.close()

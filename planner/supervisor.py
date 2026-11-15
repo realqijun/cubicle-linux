@@ -92,6 +92,9 @@ class Supervisor:
             columns = {row["name"] for row in self.db.execute("PRAGMA table_info(workers)")}
             if "template" not in columns:
                 self.db.execute("ALTER TABLE workers ADD COLUMN template TEXT")
+            columns = {row["name"] for row in self.db.execute("PRAGMA table_info(approvals)")}
+            if "attempt" not in columns:
+                self.db.execute("ALTER TABLE approvals ADD COLUMN attempt TEXT")
 
     def close(self) -> None:
         self.db.close()
@@ -371,6 +374,8 @@ class Supervisor:
                                 (task_id, item["worker"]))
                 self.db.execute("""UPDATE approvals SET state='revoked' WHERE task=? AND worker=?
                     AND state IN ('requested','approved')""", (task_id, item["worker"]))
+                self.db.execute("UPDATE approvals SET state='interrupted' WHERE attempt=? AND state='reserved'",
+                                (item["id"],))
         return [self.attempt(item["id"]) for item in pending]
 
     def recover_attempt(self, attempt_id: str, backend: ProtectionStatus, connector: ProtectionStatus,
@@ -492,7 +497,8 @@ class Supervisor:
                 raise ValueError("Hard-linked write exceptions cannot protect other aliases")
             approval_id = uuid4().hex
             status = self.status(action.task_id)
-            self.db.execute("INSERT INTO approvals VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            self.db.execute("""INSERT INTO approvals (id,task,worker,operation,resource,tool,lifetime,expires,
+                state,sensitive,identity,revision,sources) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                             (approval_id, action.task_id, action.worker_id, action.operation,
                              str(path), action.tool, lifetime, status["expires"], "requested",
                                  policy.is_sensitive(names) or (path.is_file() and path.stat().st_nlink > 1),
@@ -541,7 +547,7 @@ class Supervisor:
         policy = self.policy(action.task_id)
         path, _ = policy.normalize(action.resource)
         rows = self.db.execute("""SELECT * FROM approvals WHERE task=? AND worker=?
-            AND operation=? AND resource=? AND tool=? AND state='approved' AND expires>?
+            AND operation=? AND resource=? AND tool=? AND state IN ('approved','reserved') AND expires>?
             ORDER BY rowid""", (action.task_id, action.worker_id, action.operation,
                                  str(path), action.tool, self.clock()))
         for item in rows:
@@ -549,11 +555,85 @@ class Supervisor:
                 continue
             if item["identity"] != self._identity(path):
                 continue
-            if item["lifetime"] == "once":
+            if item["state"] == "reserved":
+                # The mediated filesystem enforces the single operation for its
+                # running attempt; the broker only agrees while that attempt runs.
+                if self.attempt(item["attempt"])["state"] != "running":
+                    continue
+            elif item["lifetime"] == "once":
+                # Approved during a confined run: only a replacement worker's
+                # reservation can use it, so the running broker must not spend it.
+                if self.db.execute("SELECT 1 FROM attempts WHERE task=? AND worker=? AND state='running'",
+                                   (action.task_id, action.worker_id)).fetchone():
+                    continue
                 self.db.execute("UPDATE approvals SET state='consumed' WHERE id=?", (item["id"],))
             return Decision(True, "Exact user-approved exception", str(path),
                             decision.sensitive or bool(item["sensitive"]), item["id"])
         return decision
+
+    def reserve_exceptions(self, attempt_id: str) -> list[dict[str, Any]]:
+        """Bind valid approvals to one verified attempt before its worker starts.
+
+        A once-only approval becomes unusable by any other attempt. Stale,
+        expired, substituted or changed-resource approvals are not bound.
+        """
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            item = self.attempt(attempt_id)
+            if item["state"] != "verified":
+                raise ValueError("Exceptions bind only to a verified, undispatched attempt")
+            self._attempt_authority(item)
+            revision = self.status(item["task"])["revision"]
+            bound = []
+            for row in self.db.execute("""SELECT * FROM approvals WHERE task=? AND worker=?
+                    AND state='approved' AND expires>? ORDER BY rowid""",
+                    (item["task"], item["worker"], self.clock())).fetchall():
+                path = Path(row["resource"])
+                if row["revision"] != revision or self._identity(path) != row["identity"]:
+                    continue
+                if row["lifetime"] == "once":
+                    self.db.execute("UPDATE approvals SET state='reserved',attempt=? WHERE id=?",
+                                    (attempt_id, row["id"]))
+                bound.append({**dict(row), "state": "reserved" if row["lifetime"] == "once" else "approved",
+                              "attempt": attempt_id})
+        return bound
+
+    def settle_exceptions(self, attempt_id: str) -> None:
+        """After the attempt ends: an unused dispatch still spends a once-only approval."""
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            dispatched = any(event["state"] == "running" for event in self.attempt(attempt_id)["events"])
+            self.db.execute("UPDATE approvals SET state=?,attempt=CASE WHEN ?='approved' THEN NULL ELSE attempt END "
+                            "WHERE attempt=? AND state='reserved'",
+                            ("executed" if dispatched else "approved", "executed" if dispatched else "approved",
+                             attempt_id))
+
+    def check_application_exception(self, approval_id: str, attempt_id: str, path: Path, *,
+                                    consume: bool) -> None:
+        """Bind applying one staged edit to the exact approval that permitted it."""
+        own = not self.db.in_transaction
+        if own:
+            self.db.execute("BEGIN IMMEDIATE")
+        try:
+            item = self.exception(approval_id)
+            attempt = self.attempt(attempt_id)
+            self._attempt_authority(attempt)
+            expected = "executed" if item["lifetime"] == "once" else "approved"
+            if (item["operation"] != "write" or item["resource"] != str(path) or item["state"] != expected
+                    or (item["lifetime"] == "once" and item["attempt"] != attempt_id)
+                    or item["task"] != attempt["task"] or item["worker"] != attempt["worker"]
+                    or item["expires"] <= self.clock()
+                    or item["revision"] != self.status(item["task"])["revision"]
+                    or self._identity(path) != item["identity"]):
+                raise PermissionError("Exception does not authorize applying this edit")
+            if consume and item["lifetime"] == "once":
+                self.db.execute("UPDATE approvals SET state='applied' WHERE id=?", (approval_id,))
+            if own:
+                self.db.commit()
+        except BaseException:
+            if own:
+                self.db.rollback()
+            raise
 
     def authorize(self, action: Action) -> Decision:
         return self.authorize_many((action,))[0]

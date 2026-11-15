@@ -4,7 +4,7 @@ The private backing tree and bridge descriptor must stay outside worker access.
 This is a candidate, not acceptance of the complete backend contract.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from contextlib import ExitStack
 from dataclasses import replace
 import errno
@@ -30,7 +30,11 @@ class MediatedWorkspace:
     """One worker's single-threaded filesystem; mount only ``mount`` in its jail."""
 
     def __init__(self, policy: Policy, grant: Grant, output: Path, *, helper: Path,
-                 check_authority: Callable[[], object] | None = None, timeout: float = 10) -> None:
+                 check_authority: Callable[[], object] | None = None, timeout: float = 10,
+                 exceptions: Sequence[tuple[str, str, str, bool]] = ()) -> None:
+        """``exceptions`` are approvals reserved for this attempt, as
+        (operation, relative path, lifetime, sensitive). A once-only approval
+        permits exactly one open of that file; a later open is refused."""
         policy.validate_grant(grant)
         if "shell" not in grant.tools:
             raise ValueError("This candidate requires an explicit shell grant; file-only workers are not accepted")
@@ -42,7 +46,14 @@ class MediatedWorkspace:
             raise ValueError("External-input operation binding is not implemented by this candidate")
         self.backing, self.mount = self.output / "backing", self.output / "mount"
         self.check_authority, self.timeout = check_authority, timeout
-        self.handles: dict[int, tuple[int, str, int]] = {}
+        self.exceptions = {(operation, name): {"lifetime": lifetime, "sensitive": sensitive, "state": "unused"}
+                           for operation, name, lifetime, sensitive in exceptions}
+        if any(operation not in ("read", "write") or lifetime not in ("once", "task")
+               for operation, _, lifetime, _ in exceptions):
+            raise ValueError("Unsupported exception binding")
+        # Set when an approved sensitive read is served; derived output is sensitive.
+        self.sensitive_exposure = threading.Event()
+        self.handles: dict[int, tuple[int, str, int, frozenset[str]]] = {}
         self._next_handle = 1
         self._process: subprocess.Popen[bytes] | None = None
         self._socket: socket.socket | None = None
@@ -154,7 +165,7 @@ class MediatedWorkspace:
                 raise RuntimeError("Filesystem policy thread did not stop")
 
     def _close_handles(self) -> None:
-        for fd, _, _ in tuple(self.handles.values()):
+        for fd, _, _, _ in tuple(self.handles.values()):
             os.close(fd)
         self.handles.clear()
 
@@ -205,6 +216,15 @@ class MediatedWorkspace:
         return self.policy.decide(Action(self.grant.task_id, self.grant.worker_id,
                                         operation, name, "shell"), self.grant).allowed
 
+    def _excepted(self, operation: Operation, name: str) -> bool:
+        entry = self.exceptions.get((operation, name))
+        if entry is None or (entry["lifetime"] == "once" and entry["state"] != "unused"):
+            return False
+        entry["state"] = "open"
+        if operation == "read" and entry["sensitive"]:
+            self.sensitive_exposure.set()
+        return True
+
     def _require(self, operation: Operation, name: str) -> None:
         if not self._allowed(operation, name):
             if len(self.denials) < 1000:
@@ -224,16 +244,31 @@ class MediatedWorkspace:
             return b"".join(os.fsencode(child.name) + b"\0" for child in path.iterdir())
         if op == 3:
             access = flags & os.O_ACCMODE
+            needed: list[Operation] = []
             if access != os.O_WRONLY:
-                self._require("read", name)
+                needed.append("read")
             if access != os.O_RDONLY or flags & (os.O_CREAT | os.O_TRUNC | os.O_APPEND):
-                self._require("write", name)
+                needed.append("write")
+            denied = [operation for operation in needed if not self._allowed(operation, name)]
+            for operation in denied:
+                if self.exceptions.get((operation, name)) is None:
+                    self._require(operation, name)
+            if not all(self._excepted(operation, name) for operation in denied):
+                self._require(denied[0], name)
             descriptor = os.open(path, flags | os.O_NOFOLLOW, mode & 0o777)
             self._next_handle += 1
-            self.handles[self._next_handle] = (descriptor, name, access)
+            self.handles[self._next_handle] = (descriptor, name, access, frozenset(denied))
             return struct.pack("=Q", self._next_handle)
+        if op == 11 and handle in self.handles:
+            fd, bound, access, excepted = self.handles[handle]
+            if bound != name or access == os.O_RDONLY:
+                raise OSError(errno.EBADF, "Handle does not permit truncation")
+            if "write" not in excepted:
+                self._require("write", bound)
+            os.ftruncate(fd, offset)
+            return b""
         if op in (4, 5, 6, 12):
-            fd, bound, access = self.handles[handle]
+            fd, bound, access, excepted = self.handles[handle]
             if op == 6:
                 os.close(fd)
                 del self.handles[handle]
@@ -242,7 +277,9 @@ class MediatedWorkspace:
             original = os.fstat(fd)
             if (current.st_dev, current.st_ino) != (original.st_dev, original.st_ino):
                 raise OSError(errno.ESTALE, "Opened file was removed or replaced")
-            self._require("read" if op == 4 else "write", bound)
+            operation: Operation = "read" if op == 4 else "write"
+            if operation not in excepted:
+                self._require(operation, bound)
             if op == 4:
                 if access == os.O_WRONLY:
                     raise OSError(errno.EBADF, "Write-only handle")
@@ -266,9 +303,9 @@ class MediatedWorkspace:
                 if not self._allowed("read", before) and self._allowed("read", after):
                     raise PermissionError(errno.EACCES, "Move would disclose protected input")
             os.rename(path, target)
-            for key, (fd, bound, access) in tuple(self.handles.items()):
+            for key, (fd, bound, access, excepted) in tuple(self.handles.items()):
                 if bound == name or bound.startswith(name + "/"):
-                    self.handles[key] = (fd, other + bound[len(name):], access)
+                    self.handles[key] = (fd, other + bound[len(name):], access, excepted)
             return b""
         self._require("write", name)
         if op == 7:

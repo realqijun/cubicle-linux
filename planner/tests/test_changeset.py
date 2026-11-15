@@ -3,6 +3,7 @@
 from pathlib import Path
 import json
 import os
+import stat
 import tempfile
 import sys
 import subprocess
@@ -137,10 +138,61 @@ class ChangesetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.apply()
 
-    def test_new_directory_is_explicitly_unsupported(self) -> None:
-        (self.work / 'src/new').mkdir()
-        with self.assertRaises(ValueError):
+    def fresh(self) -> None:
+        """Recapture after changing both trees identically, as preparation would."""
+        self.changes = Changeset(self.supervisor, self.task, "worker", self.work, self.base / 'journal2.jsonl')
+        self.journal = self.base / 'journal2.jsonl'
+
+    def test_directory_create_move_and_remove(self) -> None:
+        for root in (self.project, self.work):
+            (root / 'src/old').mkdir()
+            (root / 'src/old/f').write_text('moved')
+            (root / 'src/gone').mkdir()
+            (root / 'src/gone/g').write_text('removed')
+        self.fresh()
+        (self.work / 'src/new/deep').mkdir(parents=True)
+        (self.work / 'src/new/deep/x').write_text('created')
+        os.rename(self.work / 'src/old', self.work / 'src/moved')
+        (self.work / 'src/gone/g').unlink()
+        (self.work / 'src/gone').rmdir()
+        changes = {(change.path, change.operation) for change in self.changes.apply()}
+        self.assertEqual(changes, {('src/new', 'mkdir'), ('src/new/deep', 'mkdir'), ('src/moved', 'mkdir'),
+                                   ('src/new/deep/x', 'add'), ('src/moved/f', 'add'), ('src/old/f', 'delete'),
+                                   ('src/gone/g', 'delete'), ('src/old', 'rmdir'), ('src/gone', 'rmdir')})
+        self.assertEqual((self.project / 'src/new/deep/x').read_text(), 'created')
+        self.assertEqual((self.project / 'src/moved/f').read_text(), 'moved')
+        self.assertEqual(stat.S_IMODE((self.project / 'src/new').stat().st_mode), 0o700)
+        for gone in ('src/old', 'src/gone'):
+            self.assertFalse((self.project / gone).exists())
+        status = application_status(self.supervisor, self.journal)
+        self.assertEqual(status['state'], 'complete')
+
+    def test_directory_removal_refuses_content_never_exposed(self) -> None:
+        for root in (self.project, self.work):
+            (root / 'src/gone').mkdir()
+            (root / 'src/gone/g').write_text('exposed')
+        self.fresh()
+        (self.project / 'src/gone/.env.local').write_text('NEVER_COPIED')
+        (self.work / 'src/gone/g').unlink()
+        (self.work / 'src/gone').rmdir()
+        with self.assertRaises(PermissionError):
+            self.changes.apply()
+        self.assertEqual((self.project / 'src/gone/g').read_text(), 'exposed')
+        self.assertEqual((self.project / 'src/gone/.env.local').read_text(), 'NEVER_COPIED')
+
+    def test_directory_outside_write_scope_is_refused(self) -> None:
+        (self.work / 'docs').mkdir()
+        with self.assertRaises(PermissionError):
             self.apply()
+        self.assertFalse((self.project / 'docs').exists())
+
+    def test_new_directory_destination_collision_is_refused(self) -> None:
+        (self.work / 'src/new').mkdir()
+        (self.work / 'src/new/x').write_text('worker')
+        (self.project / 'src/new').mkdir()
+        with self.assertRaises(FileExistsError):
+            self.apply()
+        self.assertEqual(list((self.project / 'src/new').iterdir()), [])
 
     def test_authority_failure_before_start_changes_nothing(self) -> None:
         (self.work / 'src/a').write_text('new')

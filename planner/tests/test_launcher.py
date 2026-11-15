@@ -26,8 +26,9 @@ ORIGINAL = {"README.md": "Example service.\n", "src/app.py": "VALUE = 1\n",
             "tests/test_app.py": "from src.app import VALUE\nassert VALUE == 2\n", ".env": "TOKEN=DUMMY_SECRET\n"}
 
 
-@unittest.skipUnless(RUNTIME_GATE, RUNTIME_REASON)
-class LauncherTests(unittest.TestCase):
+class RuntimeCase(unittest.TestCase):
+    """Shared project, operator storage and CLI helpers; defines no tests."""
+
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="planner-launcher-")
         self.addCleanup(temporary.cleanup)
@@ -65,6 +66,15 @@ class LauncherTests(unittest.TestCase):
         for name in names:
             self.assertEqual((self.project / name).read_text(), ORIGINAL[name], name)
 
+    def run_script(self, task: str, script: str) -> tuple[dict, ScriptedProvider]:
+        with ScriptedProvider([shell(script)]) as provider:
+            result = self.cli(*self.run_args(task, provider))
+        self.assertEqual(result["attempt_state"], "finished", result)
+        return result, provider
+
+
+@unittest.skipUnless(RUNTIME_GATE, RUNTIME_REASON)
+class LauncherTests(RuntimeCase):
     def test_prompt_to_applied_edit_with_child_denials_recorded(self) -> None:
         task = self.approved_task()
         checks = ("from pathlib import Path\n"
@@ -89,6 +99,25 @@ class LauncherTests(unittest.TestCase):
                   if d["tool"] == "filesystem" and not d["allowed"]}
         self.assertEqual(denied, {("read", ".env"), ("write", "tests/test_app.py")})
         self.assertNotIn("DUMMY_SECRET", provider.tool_results())
+
+    def test_directory_create_move_and_remove_reach_the_original(self) -> None:
+        (self.project / "src/old").mkdir()
+        (self.project / "src/old/f.py").write_text("moved\n")
+        task = self.approved_task()
+        script = ("import os\n"
+                  "os.makedirs('/workspace/src/pkg/sub')\n"
+                  "open('/workspace/src/pkg/sub/mod.py', 'w').write('created\\n')\n"
+                  "os.rename('/workspace/src/old', '/workspace/src/renamed')\n"
+                  "try: os.rename('/workspace/src/renamed', '/workspace/tests/renamed')\n"
+                  "except PermissionError: print('PROTECTED_MOVE_DENIED')\n")
+        result, provider = self.run_script(task, script)
+        self.assertIn("PROTECTED_MOVE_DENIED", provider.tool_results())
+        self.assertEqual(result["application"]["state"], "applied", result)
+        self.assertEqual((self.project / "src/pkg/sub/mod.py").read_text(), "created\n")
+        self.assertEqual((self.project / "src/renamed/f.py").read_text(), "moved\n")
+        self.assertFalse((self.project / "src/old").exists())
+        self.assertFalse((self.project / "tests/renamed").exists())
+        self.unchanged("src/app.py", "tests/test_app.py", ".env")
 
     def test_review_mode_retains_until_explicit_apply_and_never_replays(self) -> None:
         task = self.approved_task()
@@ -226,3 +255,81 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "blocked")
         self.assertEqual(provider.bodies, [])
         self.assertEqual(result["application"]["state"], "not_applied")
+
+
+@unittest.skipUnless(RUNTIME_GATE, RUNTIME_REASON)
+class ReconsiderationTests(RuntimeCase):
+    """Denial, request, authentic approval and exact single-use execution."""
+
+    def test_approved_write_exception_permits_exactly_one_applied_edit(self) -> None:
+        task = self.approved_task()
+        attempt = ("try: open('/workspace/tests/test_app.py', 'a')\n"
+                   "except PermissionError: print('FIRST_DENIED')\n")
+        first, provider = self.run_script(task, attempt)
+        self.assertIn("FIRST_DENIED", provider.tool_results())
+        [request] = [item for item in first["requests"] if item["resource"].endswith("tests/test_app.py")]
+        self.assertEqual((request["operation"], request["lifetime"]), ("write", "once"))
+        self.assertEqual(self.cli("exception", request["id"])["state"], "requested")
+        self.unchanged("tests/test_app.py")
+        self.cli("approve-exception", request["id"])
+        approved = ("with open('/workspace/tests/test_app.py', 'w') as f: f.write('APPROVED\\n')\n"
+                    "for name in ('/workspace/tests/test_app.py', '/workspace/tests/other.py'):\n"
+                    "    try: open(name, 'w')\n"
+                    "    except PermissionError: print('DENIED ' + name)\n"
+                    "    else: raise SystemExit('ALLOWED ' + name)\n")
+        second, provider = self.run_script(task, approved)
+        results = provider.tool_results()
+        self.assertIn("DENIED /workspace/tests/test_app.py", results)
+        self.assertIn("DENIED /workspace/tests/other.py", results)
+        self.assertEqual(second["application"]["state"], "applied", second)
+        self.assertEqual(second["application"]["changes"], [{"path": "tests/test_app.py", "operation": "modify"}])
+        self.assertEqual((self.project / "tests/test_app.py").read_text(), "APPROVED\n")
+        self.assertEqual(self.cli("exception", request["id"])["state"], "applied")
+        self.unchanged("src/app.py", ".env")
+        replay = ("try: open('/workspace/tests/test_app.py', 'w')\n"
+                  "except PermissionError: print('REPLAY_DENIED')\n")
+        third, provider = self.run_script(task, replay)
+        self.assertIn("REPLAY_DENIED", provider.tool_results())
+        self.assertEqual(third["application"]["changes"], [])
+        self.assertEqual((self.project / "tests/test_app.py").read_text(), "APPROVED\n")
+
+    def test_refused_request_stays_denied(self) -> None:
+        task = self.approved_task()
+        attempt = ("try: open('/workspace/tests/test_app.py', 'a')\n"
+                   "except PermissionError: print('DENIED')\n")
+        first, _ = self.run_script(task, attempt)
+        [request] = [item for item in first["requests"] if item["resource"].endswith("tests/test_app.py")]
+        self.cli("refuse-exception", request["id"])
+        second, provider = self.run_script(task, attempt)
+        self.assertIn("DENIED", provider.tool_results())
+        self.assertEqual(second["exceptions"], [])
+        self.unchanged("tests/test_app.py")
+
+    def test_sensitive_read_needs_disclosure_consent_is_single_use_and_taints_outputs(self) -> None:
+        task = self.approved_task()
+        attempt = ("try: open('/workspace/.env').read()\n"
+                   "except PermissionError: print('READ_DENIED')\n")
+        first, provider = self.run_script(task, attempt)
+        self.assertNotIn("DUMMY_SECRET", provider.tool_results())
+        [request] = [item for item in first["requests"] if item["resource"].endswith(".env")]
+        self.assertTrue(request["sensitive"])
+        self.assertEqual(self.cli("approve-exception", request["id"], check=False)["returncode"], 2)
+        self.cli("approve-exception", request["id"], "--confirm-sensitive-provider-disclosure")
+        reads = ("print(open('/workspace/.env').read())\n"
+                 "try: open('/workspace/.env').read()\n"
+                 "except PermissionError: print('SECOND_READ_DENIED')\n")
+        second, provider = self.run_script(task, reads)
+        self.assertIn("DUMMY_SECRET", provider.tool_results())  # Disclosure the user approved.
+        self.assertIn("SECOND_READ_DENIED", provider.tool_results())
+        self.assertEqual(self.cli("exception", request["id"])["state"], "executed")
+        from planner.provenance import Provenance
+        store = Provenance(self.state.with_suffix(".memory.sqlite"))
+        try:
+            nodes = store.export(task)["nodes"]
+        finally:
+            store.close()
+        results = [node for node in nodes if node["kind"] == "tool_result" and node["worker_id"] == "worker"]
+        self.assertTrue(results and results[-1]["sensitive"], results)
+        for path in (self.base / "operator").rglob("*"):
+            if path.is_file():
+                self.assertNotIn(b"DUMMY_SECRET", path.read_bytes(), str(path))

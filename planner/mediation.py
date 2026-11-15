@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 import json
 from pathlib import PurePosixPath
 import sqlite3
+import threading
 from typing import Any
 from uuid import uuid4
 
@@ -43,7 +44,7 @@ class _Request:
 class WorkerBroker:
     def __init__(self, supervisor: Supervisor, store: Provenance,
                  task_id: str, worker_id: str, *, provider_origins: tuple[str, ...] = (),
-                 worker_project: str | None = None) -> None:
+                 worker_project: str | None = None, sensitive_exposure: threading.Event | None = None) -> None:
         supervisor.check_worker(task_id, worker_id)
         self.supervisor, self.task_id, self.worker_id = supervisor, task_id, worker_id
         self.project = str(supervisor.policy(task_id).root)
@@ -51,6 +52,9 @@ class WorkerBroker:
                 ".." in PurePosixPath(worker_project).parts):
             raise ValueError("Worker project must be an absolute normalized POSIX path")
         self.worker_project = PurePosixPath(worker_project) if worker_project else None
+        # Shell tools hide which file they read; once the confined filesystem
+        # served an approved sensitive read, all later tool output is sensitive.
+        self.sensitive_exposure = sensitive_exposure
         store.register_task(task_id, self.project)
         self.context = ModelContext(store, task_id, worker_id)
         self._tools: dict[str, _Tool] = {}
@@ -142,7 +146,8 @@ class WorkerBroker:
             raise MediationDenied("unknown_tool_call")
         text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=True)
         reference = ticket.name + ":" + ",".join(d.resource for d in ticket.decisions)
-        sensitive = any(d.sensitive for d in ticket.decisions)
+        sensitive = any(d.sensitive for d in ticket.decisions) or bool(
+            self.sensitive_exposure is not None and self.sensitive_exposure.is_set())
         handle = self.context.observe(text, "tool_result" if successful else "tool_error",
                                       reference, sensitive)
         if self._last_output is not None:
