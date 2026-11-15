@@ -166,6 +166,40 @@ class Changeset:
             self.original[name] = source
         self.used = False
 
+    def save(self, path: Path) -> None:
+        """Keep the trusted baseline in operator storage for a later review-only apply."""
+        data = {'revision': self.revision, 'grant': asdict(self.grant), 'workspace': str(self.workspace),
+                'journal': str(self.journal),
+                'baseline': {name: asdict(value) for name, value in self.baseline.items()},
+                'original': {name: asdict(value) for name, value in self.original.items()},
+                'directories': self.directories, 'parents': self.parents}
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as stream:
+            json.dump(data, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+
+    @classmethod
+    def restore(cls, supervisor: Supervisor, path: Path) -> 'Changeset':
+        """Rebuild from a saved baseline; current authority must equal the recorded one."""
+        data = json.loads(path.read_text(encoding='utf-8'))
+        grant = data['grant']
+        self = cls.__new__(cls)
+        self.supervisor = supervisor
+        self.grant = supervisor.check_worker(grant['task_id'], grant['worker_id'], 'shell')
+        self.revision = data['revision']
+        if (json.loads(json.dumps(asdict(self.grant))) != grant or
+                supervisor.status(self.grant.task_id)['revision'] != self.revision):
+            raise PermissionError('Authority changed since preparation')
+        self.policy = supervisor.policy(self.grant.task_id)
+        self.workspace, self.journal = Path(data['workspace']), Path(data['journal'])
+        self.baseline = {name: FileState(**value) for name, value in data['baseline'].items()}
+        self.original = {name: FileState(**value) for name, value in data['original'].items()}
+        self.directories = {name: tuple(value) for name, value in data['directories'].items()}
+        self.parents = {name: tuple(value) for name, value in data['parents'].items()}
+        self.used = self.journal.exists()
+        return self
+
     def _check_parents(self) -> None:
         for name, identity in self.parents.items():
             info = (self.policy.root / name).lstat()

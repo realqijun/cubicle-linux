@@ -37,11 +37,14 @@ def parser() -> argparse.ArgumentParser:
     selection = proposal.add_mutually_exclusive_group(required=True)
     selection.add_argument("--policy", type=Path)
     selection.add_argument("--template", choices=("source", "inspection", "tests", "documentation"))
-    for name in ("review", "status", "history", "cancel", "export", "workers", "templates", "attempts", "reconcile"):
+    for name in ("review", "status", "history", "cancel", "export", "workers", "templates", "attempts", "reconcile",
+                 "applications"):
         commands.add_parser(name).add_argument("task")
     approval = commands.add_parser("approve-task")
     approval.add_argument("task")
     approval.add_argument("--revision", type=int, required=True)
+    approval.add_argument("--assign", metavar="WORKER",
+                          help="Also approve WORKER with exactly the reviewed policy's scopes and tools")
     revision = commands.add_parser("revise")
     revision.add_argument("task")
     revision.add_argument("--policy", type=Path, required=True)
@@ -99,6 +102,21 @@ def parser() -> argparse.ArgumentParser:
     memory.add_argument("operation", choices=("list", "inspect", "delete"))
     memory.add_argument("--note")
     memory.add_argument("--query", default="")
+    launch = commands.add_parser("run", help="Run one confined worker attempt (Linux connected runtime)")
+    launch.add_argument("task")
+    launch.add_argument("worker")
+    launch.add_argument("--prompt", required=True)
+    launch.add_argument("--model", required=True, help="Explicit provider/model")
+    launch.add_argument("--provider-url", required=True)
+    launch.add_argument("--api-key-env")
+    launch.add_argument("--opencode", type=Path, required=True, help="Pinned OpenCode binary")
+    launch.add_argument("--fuse-helper", type=Path, required=True, help="Compiled fuse_bridge.c")
+    launch.add_argument("--runs", type=Path, required=True, help="Trusted run storage outside the project")
+    launch.add_argument("--mode", choices=("auto", "review"), default="auto",
+                        help="auto applies authorized conflict-free edits; review retains them")
+    launch.add_argument("--run-seconds", type=float, default=900)
+    launch.add_argument("--timeout", type=float, default=120, help="Provider and control timeout, seconds")
+    commands.add_parser("apply", help="Apply a retained review-only changeset").add_argument("attempt")
     report = commands.add_parser("report")
     report.add_argument("task")
     report.add_argument("output", type=Path)
@@ -129,7 +147,26 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
         return supervisor.status(args.task)
     if command == "approve-task":
         supervisor.approve_task(args.task, revision=args.revision)
+        if args.assign:
+            policy = supervisor.policy(args.task)
+            supervisor.approve_worker(Grant(args.task, args.assign, policy.read, policy.write, policy.tools))
         return supervisor.status(args.task)
+    if command == "applications":
+        return supervisor.applications(args.task)
+    if command in ("run", "apply"):
+        from .launcher import Runtime, apply_retained, run_task
+
+        if command == "apply":
+            return apply_retained(args.state, args.attempt)
+        from .connector import ConnectorConfig, ProviderConfig
+
+        provider = ProviderConfig(args.provider_url, api_key_env=args.api_key_env)
+        credential = os.environ.get(args.api_key_env) if args.api_key_env else None
+        supervisor.close()  # The runner owns its own connections and threads.
+        return run_task(args.state, args.task, args.worker, args.prompt,
+                        ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
+                        Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds),
+                        credential=credential, mode=args.mode)
     if command == "revise":
         root = Path(supervisor.status(args.task)["policy"]["root"])
         supervisor.revise(args.task, Policy.load(root, args.policy))

@@ -13,6 +13,7 @@ import errno
 import hashlib
 import json
 from http.server import BaseHTTPRequestHandler
+import os
 from pathlib import Path
 import platform
 import secrets
@@ -26,10 +27,11 @@ from collections.abc import Callable, Mapping
 from typing import Protocol
 from urllib.parse import urlsplit
 
-from planner.connector import BridgeConfig, Connector
+from planner.connector import PINNED_VERSION, BridgeConfig, Connector
 from planner.native.confined_transport import ProviderRelay, UnixRelay
 from planner.native.mediatedfs import MediatedWorkspace
 from planner.private_server import PrivateServer
+from planner.records import ProtectionStatus
 
 
 class _ControlServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -67,6 +69,47 @@ def _candidate_filter(descriptor: int) -> None:
         os.lseek(descriptor, 0, os.SEEK_SET)
     finally:
         library.seccomp_release(context)
+
+
+def runtime_status(opencode: Path, helper: Path) -> tuple[ProtectionStatus, ProtectionStatus]:
+    """Backend and connector startup checks for the connected Linux runtime.
+
+    Any gap blocks launch.
+
+    The operator installs ``profile_text()``; this verifies that exact profile is
+    loaded rather than assuming a host-wide AppArmor configuration.
+    """
+    def blocked(reason: str) -> tuple[ProtectionStatus, ProtectionStatus]:
+        return (ProtectionStatus(False, "linux-connected", reason),
+                ProtectionStatus(False, "opencode-confined", "Runtime unavailable"))
+    if platform.system() != "Linux":
+        return blocked("Connected runtime requires Linux")
+    for tool in ("bwrap", "aa-exec", "fusermount3"):
+        if not shutil.which(tool):
+            return blocked(f"Required tool unavailable: {tool}")
+    if not Path("/dev/fuse").exists():
+        return blocked("FUSE device unavailable")
+    if not helper.is_file() or not os.access(helper, os.X_OK):
+        return blocked("FUSE bridge helper unavailable")
+    try:
+        with tempfile.TemporaryFile() as probe:
+            _candidate_filter(probe.fileno())
+        loaded = subprocess.run(["aa-exec", "-p", profile_name(), "--", "/usr/bin/true"],
+                                capture_output=True, timeout=10, check=False).returncode == 0
+        version = subprocess.run([str(opencode), "--version"], capture_output=True, text=True,
+                                 timeout=30, check=False, env={"PATH": "/usr/bin:/bin"}).stdout.strip()
+    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+        return blocked(f"Runtime probe failed: {type(error).__name__}")
+    if not loaded:
+        return blocked(f"AppArmor profile {profile_name()} is not loaded; install profile_text() first")
+    if version != f"opencode v{PINNED_VERSION}":
+        return blocked(f"OpenCode incompatible; requires {PINNED_VERSION}")
+    if not (Path(__file__).parents[1] / "opencode" / "bridge.mjs").is_file():
+        return blocked("Mediation plugin unavailable")
+    # Hook readiness is verified per launch before any task data is dispatched.
+    return (ProtectionStatus(True, "linux-connected", f"{profile_name()} with FUSE mediation", True),
+            ProtectionStatus(True, "opencode-confined",
+                             f"Pinned {PINNED_VERSION}; authenticated hooks required before dispatch", True))
 
 
 def profile_name() -> str:
@@ -123,8 +166,8 @@ class ConfinedOpenCode:
         if set(self.credentials) != expected:
             raise ValueError("Exactly the configured provider credential is required")
         try:
-            transport = Path(self._stack.enter_context(tempfile.TemporaryDirectory(
-                prefix="transport-", dir=self.runtime_root)))
+            # Short operator-owned path: AF_UNIX names are limited to 108 bytes.
+            transport = Path(self._stack.enter_context(tempfile.TemporaryDirectory(prefix="planner-t-")))
             transport.chmod(0o700)
             parsed = urlsplit(self.bridge.endpoint)
             assert parsed.port is not None and parsed.hostname is not None

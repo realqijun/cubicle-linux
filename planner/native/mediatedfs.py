@@ -48,6 +48,10 @@ class MediatedWorkspace:
         self._socket: socket.socket | None = None
         self._thread: threading.Thread | None = None
         self._mounted = False
+        # Refusals observed by the serving thread; the runner records them after
+        # cleanup. Bounded so a looping worker cannot exhaust supervisor memory.
+        self.denials: list[tuple[str, str]] = []
+        self.denials_dropped = 0
 
     def __enter__(self) -> "MediatedWorkspace":
         try:
@@ -105,6 +109,10 @@ class MediatedWorkspace:
                 subprocess.run(["fusermount3", "-u", str(self.mount)], check=True,
                                stdin=subprocess.DEVNULL, capture_output=True, timeout=self.timeout)
                 self._mounted = False
+
+    @property
+    def mounted(self) -> bool:
+        return self.mount.exists() and self._is_mounted()
 
     def _is_mounted(self) -> bool:
         if sys.platform != "linux":
@@ -195,6 +203,10 @@ class MediatedWorkspace:
 
     def _require(self, operation: Operation, name: str) -> None:
         if not self._allowed(operation, name):
+            if len(self.denials) < 1000:
+                self.denials.append((operation, name))
+            else:
+                self.denials_dropped += 1
             raise PermissionError(errno.EACCES, "Worker operation denied")
 
     def _operation(self, op: int, name: str, other: str, flags: int, mode: int,

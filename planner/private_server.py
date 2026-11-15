@@ -115,6 +115,13 @@ class PrivateServer:
         self._request(f"/api/session/{session_id}/prompt", {"text": prompt})
         return session_id
 
+    def active(self, session_id: str) -> bool:
+        """Whether the pinned server still reports the session as running."""
+        sessions = self._request("/api/session/active").get("data")
+        if not isinstance(sessions, (dict, list)):
+            raise ValueError("Invalid active-session response")
+        return session_id in sessions
+
     def close(self) -> None:
         process = self._process
         if process is None:

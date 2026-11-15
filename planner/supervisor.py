@@ -78,6 +78,10 @@ class Supervisor:
                 tool TEXT NOT NULL, lifetime TEXT NOT NULL, expires REAL NOT NULL,
                 state TEXT NOT NULL, sensitive INTEGER NOT NULL, identity TEXT NOT NULL,
                 revision INTEGER NOT NULL, sources TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS applications (
+                attempt TEXT PRIMARY KEY REFERENCES attempts(id), task TEXT NOT NULL,
+                worker TEXT NOT NULL, mode TEXT NOT NULL, state TEXT NOT NULL, reason TEXT NOT NULL,
+                changes TEXT NOT NULL, journal TEXT NOT NULL, updated REAL NOT NULL);
         """)
         # Preserve earlier records without inventing historic grant evidence.
         with self.db:
@@ -342,6 +346,17 @@ class Supervisor:
             self._audit_attempt(attempt_id)
         return self.attempt(attempt_id)
 
+    def abandon_attempt(self, attempt_id: str, reason: str) -> dict[str, Any]:
+        """Close an attempt the runner never dispatched; no worker process was started."""
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            if self.attempt(attempt_id)["state"] not in ("prepared", "verified"):
+                raise ValueError("Only an undispatched attempt can be abandoned")
+            self.db.execute("UPDATE attempts SET state='blocked',reason=?,updated=? WHERE id=?",
+                            (reason[:200], self.clock(), attempt_id))
+            self._audit_attempt(attempt_id)
+        return self.attempt(attempt_id)
+
     def reconcile(self, task_id: str) -> list[dict[str, Any]]:
         """Record unresolved work after owner loss; never assume descendants stopped."""
         with self.db:
@@ -411,6 +426,42 @@ class Supervisor:
                 self.db.execute("""UPDATE approvals SET state='revoked' WHERE task=? AND worker=?
                     AND state IN ('requested','approved')""", (item["task"], item["worker"]))
         return self.attempt(attempt_id)
+
+    APPLICATION_STATES = ("retained", "applying", "applied", "conflicted", "blocked", "interrupted", "not_applied")
+
+    def record_application(self, attempt_id: str, *, mode: str, state: str, reason: str,
+                           changes: Sequence[dict[str, str]] = (), journal: str = "") -> dict[str, Any]:
+        """Trusted runner records what actually happened to the original project.
+
+        Only the runner that owns the stopped workspace calls this. An applying or
+        applied record can never be restarted, so interruption is not replayed.
+        """
+        if mode not in ("auto", "review") or state not in self.APPLICATION_STATES:
+            raise ValueError("Unknown application mode or state")
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            item = self.attempt(attempt_id)
+            current = self.db.execute("SELECT state FROM applications WHERE attempt=?", (attempt_id,)).fetchone()
+            if current is not None and (current["state"] in ("applied", "interrupted", "conflicted", "blocked")
+                                        or (current["state"] == "applying" and state == "applying")):
+                raise ValueError("Application outcome is final and cannot be replayed")
+            if state in ("applying", "applied") and (item["state"] != "finished" or not item["cleanup_verified"]):
+                raise ValueError("Only a finished attempt with verified cleanup can be applied")
+            self.db.execute("INSERT OR REPLACE INTO applications VALUES (?,?,?,?,?,?,?,?,?)",
+                            (attempt_id, item["task"], item["worker"], mode, state, reason,
+                             json.dumps(list(changes)), journal, self.clock()))
+        return self.application(attempt_id)
+
+    def application(self, attempt_id: str) -> dict[str, Any]:
+        row = self.db.execute("SELECT * FROM applications WHERE attempt=?", (attempt_id,)).fetchone()
+        if row is None:
+            raise ValueError("No application record")
+        return {**dict(row), "changes": json.loads(row["changes"])}
+
+    def applications(self, task_id: str) -> list[dict[str, Any]]:
+        self.status(task_id)
+        return [{**dict(row), "changes": json.loads(row["changes"])} for row in self.db.execute(
+            "SELECT * FROM applications WHERE task=? ORDER BY rowid", (task_id,))]
 
     def _protected(self, path: Path, operation: str) -> bool:
         state_files = (self.path, self.path.with_suffix(".memory.sqlite"))
@@ -579,6 +630,18 @@ class Supervisor:
             self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,?,?,?,0,?,NULL,?,NULL)",
                             (task_id, worker_id, "mediation", route, "opencode", reason, self.clock()))
 
+    def record_filesystem_denials(self, task_id: str, worker_id: str,
+                                  denials: Sequence[tuple[str, str]], dropped: int = 0) -> None:
+        """Trusted runner records refusals the mediated filesystem enforced in real time."""
+        with self.db:
+            self.status(task_id)
+            for operation, resource in denials:
+                self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,?,?,'filesystem',0,?,NULL,?,NULL)",
+                                (task_id, worker_id, operation, resource, "Worker operation denied", self.clock()))
+            if dropped:
+                self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,'mediation','filesystem','filesystem',0,?,NULL,?,NULL)",
+                                (task_id, worker_id, f"{dropped} further denials not itemized", self.clock()))
+
     def access_requests(self, task_id: str) -> list[dict[str, Any]]:
         self.status(task_id)
         return [{**dict(row), "resources": json.loads(row["resources"])} for row in self.db.execute(
@@ -673,6 +736,7 @@ class Supervisor:
                 "workers": self.workers(task_id),
                 "delegation_templates": self.templates(task_id),
                 "attempts": self.attempts(task_id),
+                "applications": self.applications(task_id),
                 "access_requests": self.access_requests(task_id),
                 "decisions": self.history(task_id),
                 "approvals": [dict(row) for row in self.db.execute(
