@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/prctl.h>
 
 enum { ATTR=1, LIST, OPEN, READ, WRITE, CLOSE, MKDIR, UNLINK, RMDIR, RENAME, TRUNCATE, SYNC };
 struct __attribute__((packed)) request {
@@ -105,6 +107,9 @@ static void *initialize_fs(struct fuse_conn_info *connection, struct fuse_config
 }
 int main(int argc,char **argv) {
     if(argc<3) return 2;
+    /* Owner death must not leave a mount whose policy server is gone. SIGTERM
+       lets fuse_main unmount; a reparented start means the owner already died. */
+    if(prctl(PR_SET_PDEATHSIG,SIGTERM)<0 || getppid()==1) return 3;
     channel=atoi(argv[1]);
     argv[1]=argv[0];
     struct fuse_operations operations={.getattr=attributes,.readdir=listing,.open=opening,.create=creating,

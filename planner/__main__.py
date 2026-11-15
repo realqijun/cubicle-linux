@@ -117,6 +117,14 @@ def parser() -> argparse.ArgumentParser:
     launch.add_argument("--run-seconds", type=float, default=900)
     launch.add_argument("--timeout", type=float, default=120, help="Provider and control timeout, seconds")
     commands.add_parser("apply", help="Apply a retained review-only changeset").add_argument("attempt")
+    recovery = commands.add_parser("recover", help="Verify cleanup after owner loss and reconcile; never replays")
+    recovery.add_argument("task")
+    recovery.add_argument("worker")
+    recovery.add_argument("--opencode", type=Path, required=True)
+    recovery.add_argument("--fuse-helper", type=Path, required=True)
+    recovery.add_argument("--runs", type=Path, required=True)
+    recovery.add_argument("--operator-confirms-cleanup", action="store_true",
+                          help="Trusted user attests that every previous worker process has stopped")
     report = commands.add_parser("report")
     report.add_argument("task")
     report.add_argument("output", type=Path)
@@ -153,11 +161,15 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
         return supervisor.status(args.task)
     if command == "applications":
         return supervisor.applications(args.task)
-    if command in ("run", "apply"):
-        from .launcher import Runtime, apply_retained, run_task
+    if command in ("run", "apply", "recover"):
+        from .launcher import Runtime, apply_retained, recover, run_task
 
         if command == "apply":
             return apply_retained(args.state, args.attempt)
+        if command == "recover":
+            supervisor.close()
+            return recover(args.state, args.task, args.worker, Runtime(args.opencode, args.fuse_helper, args.runs),
+                           operator_confirmed=args.operator_confirms_cleanup)
         from .connector import ConnectorConfig, ProviderConfig
 
         provider = ProviderConfig(args.provider_url, api_key_env=args.api_key_env)

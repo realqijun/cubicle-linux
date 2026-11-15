@@ -158,6 +158,65 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "authority_lost")
         self.assertEqual(result["attempt_state"], "failed")
 
+    def kill_owner_mid_run(self, task: str) -> str:
+        marker = f"planner-owner-{os.getpid()}-{time.monotonic_ns()}"
+        script = ("import time; from pathlib import Path\n"
+                  "Path('/workspace/src/started.txt').write_text('1')\n"
+                  f"time.sleep(120)  # {marker}\n")
+        with ScriptedProvider([shell(script)]) as provider:
+            owner = subprocess.Popen([sys.executable, "-m", "planner", "--json", "--state", str(self.state),
+                                      *self.run_args(task, provider)], cwd=Path(__file__).parents[2],
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            deadline = time.monotonic() + 120
+            while not list(self.runs.glob("*/fs/backing/src/started.txt")):
+                self.assertLess(time.monotonic(), deadline, "Worker never started")
+                time.sleep(0.2)
+            owner.kill()
+            owner.wait()
+        deadline = time.monotonic() + 15
+        while subprocess.run(["pgrep", "-f", marker], capture_output=True).returncode != 1:
+            self.assertLess(time.monotonic(), deadline, "Worker descendants survived owner death")
+            time.sleep(0.2)
+        mount = str(next(self.runs.glob("*/fs/mount")))
+        while any(line.split()[4] == mount for line in Path("/proc/self/mountinfo").read_text().splitlines()):
+            self.assertLess(time.monotonic(), deadline, "Mediated mount survived owner death")
+            time.sleep(0.2)
+        self.assertFalse((self.project / "src/started.txt").exists())
+        return marker
+
+    def recover_args(self, task: str) -> list[str]:
+        paths = runtime_paths()
+        return ["recover", task, "worker", "--opencode", str(paths["opencode"]),
+                "--fuse-helper", str(paths["fuse_helper"]), "--runs", str(self.runs)]
+
+    def test_owner_death_stops_worker_and_recovery_verifies_before_reuse(self) -> None:
+        task = self.approved_task()
+        self.kill_owner_mid_run(task)
+        self.assertEqual(self.cli("attempts", task)[0]["state"], "running")  # Recorded honestly as unresolved.
+        blocked = self.cli("run", *self.run_args(task, ScriptedProvider([]))[1:], check=False)
+        self.assertEqual(blocked["returncode"], 2)  # Unresolved attempt prevents a second owner.
+        [recovered] = self.cli(*self.recover_args(task))
+        self.assertEqual((recovered["state"], recovered["cleanup_evidence"]), ("reconciled", "cleanup_observed"))
+        self.assertEqual(recovered["application"]["state"], "not_applied")
+        self.unchanged("src/app.py")
+        steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"})]
+        with ScriptedProvider(steps) as provider:
+            result = self.cli(*self.run_args(task, provider))
+        self.assertEqual(result["application"]["state"], "applied")
+        self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
+
+    def test_recovery_after_expiry_does_not_revive_authority(self) -> None:
+        task = self.approved_task(seconds=40)
+        self.kill_owner_mid_run(task)
+        expires = self.cli("status", task)["expires"]
+        time.sleep(max(0.0, expires - time.time() + 1))
+        [recovered] = self.cli(*self.recover_args(task))
+        self.assertEqual(recovered["cleanup_evidence"], "cleanup_observed")
+        self.assertEqual((recovered["state"], recovered["reason"]), ("interrupted", "authority_invalid"))
+        with ScriptedProvider([]) as provider:
+            self.assertEqual(self.cli(*self.run_args(task, provider), check=False)["returncode"], 2)
+            self.assertEqual(provider.bodies, [])
+
     def test_unavailable_runtime_blocks_before_any_provider_request(self) -> None:
         task = self.approved_task()
         with ScriptedProvider([]) as provider:

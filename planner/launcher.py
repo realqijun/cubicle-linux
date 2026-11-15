@@ -9,7 +9,10 @@ conflicts and uncertain cleanup leave the original project untouched.
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
+import json
+import os
 from pathlib import Path
+import subprocess
 import threading
 import time
 from typing import Any
@@ -47,6 +50,129 @@ class _Authority:
         item = self.supervisor.attempt(self.attempt)
         if item["state"] != "running" or item["expires"] <= self.supervisor.clock():
             raise PermissionError("Execution attempt is no longer running")
+
+
+def _start_time(pid: int) -> str | None:
+    """Kernel start time distinguishes a live process from a reused PID."""
+    try:
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[19]
+    except (OSError, IndexError):
+        return None
+
+
+def _namespace(pid: int) -> str | None:
+    """PID namespace of the jail init, i.e. the first child of the outer bwrap."""
+    try:
+        child = int(Path(f"/proc/{pid}/task/{pid}/children").read_text().split()[0])
+        return os.readlink(f"/proc/{child}/ns/pid")
+    except (OSError, IndexError, ValueError):
+        return None
+
+
+class _Processes:
+    """Trusted per-attempt record so a restarted operator can verify cleanup."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.data: dict[str, Any] = {"processes": {}, "namespace": None, "mount": None}
+        self.add("launcher", os.getpid())
+
+    def add(self, name: str, pid: int | None) -> None:
+        if pid is not None:
+            self.data["processes"][name] = {"pid": pid, "start": _start_time(pid)}
+        self.write()
+
+    def write(self) -> None:
+        temporary = self.path.with_suffix(".tmp")
+        with open(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600), "w") as stream:
+            json.dump(self.data, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, self.path)
+
+
+def _alive(record: dict[str, Any]) -> bool:
+    return record["start"] is not None and _start_time(record["pid"]) == record["start"]
+
+
+def _cleanup_observed(run: Path) -> tuple[bool, str]:
+    """Verify recorded processes, the worker PID namespace and the mount are gone."""
+    try:
+        data = json.loads((run / "processes.json").read_text())
+    except (OSError, ValueError):
+        return False, "process_record_missing"
+    processes = data["processes"]
+    if "worker" not in processes or data.get("namespace") is None:
+        return False, "worker_identity_unrecorded"
+    if any(_alive(record) for record in processes.values()):
+        return False, "recorded_process_alive"
+    for entry in Path("/proc").iterdir():
+        if entry.name.isdigit():
+            try:
+                if os.readlink(entry / "ns" / "pid") == data["namespace"]:
+                    return False, "worker_namespace_alive"
+            except OSError:
+                continue
+    mount = data.get("mount")
+    if mount:
+        with open("/proc/self/mountinfo", encoding="utf-8") as table:
+            if any(line.split()[4] == mount for line in table):
+                subprocess.run(["fusermount3", "-u", mount], capture_output=True, timeout=30, check=False)
+                with open("/proc/self/mountinfo", encoding="utf-8") as again:
+                    if any(line.split()[4] == mount for line in again):
+                        return False, "mount_remains"
+    return True, "cleanup_observed"
+
+
+def recover(state: Path, task: str, worker: str, runtime: Runtime, *,
+            operator_confirmed: bool = False) -> list[dict[str, Any]]:
+    """After owner loss: verify cleanup, reconcile records, never replay edits.
+
+    ``operator_confirmed`` is the trusted user's attestation when automated
+    evidence is incomplete; it never revives expired or revoked authority.
+    """
+    from .changeset import application_status
+    from .native.confined_opencode import runtime_status
+
+    supervisor = Supervisor(state)
+    try:
+        runs = runtime.runs.resolve()
+        pending = [item for item in supervisor.attempts(task)
+                   if item["state"] in ("prepared", "verified", "running", "stopping")]
+        for item in pending:
+            try:
+                launcher = json.loads((runs / item["id"] / "processes.json").read_text())["processes"]["launcher"]
+            except (OSError, ValueError, KeyError):
+                continue
+            if _alive(launcher):
+                raise ValueError("An execution owner for this task is still running")
+        supervisor.reconcile(task)
+        backend, connector = runtime_status(runtime.opencode, runtime.fuse_helper)
+        results = []
+        for item in supervisor.attempts(task):
+            if item["worker"] != worker or item["state"] != "interrupted":
+                continue
+            run = runs / item["id"]
+            observed, evidence = _cleanup_observed(run)
+            try:
+                application = supervisor.application(item["id"])
+            except ValueError:
+                application = None
+            if application and application["state"] == "applying":
+                status = application_status(supervisor, Path(application["journal"]))
+                supervisor.record_application(item["id"], mode=application["mode"], state="interrupted",
+                                              reason="owner_lost_during_application:" + status["state"],
+                                              changes=application["changes"], journal=application["journal"])
+            elif application is None:
+                supervisor.record_application(item["id"], mode="auto", state="not_applied", reason="owner_lost")
+            recovered = supervisor.recover_attempt(item["id"], backend, connector,
+                                                   cleanup_verified=observed or operator_confirmed)
+            results.append({"attempt": item["id"], "state": recovered["state"], "reason": recovered["reason"],
+                            "cleanup_evidence": evidence, "operator_confirmed": operator_confirmed,
+                            "application": supervisor.application(item["id"])})
+        return results
+    finally:
+        supervisor.close()
 
 
 def _classify(error: BaseException) -> str:
@@ -164,8 +290,11 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         outcome, cleaned, unmounted, failure = "runtime_error", False, False, ""
         filesystem = MediatedWorkspace(policy, grant, run / "fs", helper=runtime.fuse_helper, check_authority=lost)
         changes: Changeset | None = None
+        processes = _Processes(run / "processes.json")
         try:
             with filesystem:
+                processes.add("filesystem", filesystem.pid)
+                processes.data["mount"] = str(filesystem.mount)
                 changes = Changeset(supervisor, task, worker, filesystem.backing, run / "journal.jsonl")
                 changes.save(run / "baseline.json")
                 with BrokerServer(broker_factory) as broker:
@@ -178,6 +307,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                     try:
                         with confined:
                             assert confined.server is not None and confined.process is not None
+                            processes.data["namespace"] = _namespace(confined.process.pid)
+                            processes.add("worker", confined.process.pid)
                             session = confined.server.submit(prompt, config.model)
                             deadline = time.monotonic() + runtime.run_seconds
                             while True:

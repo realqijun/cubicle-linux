@@ -111,6 +111,10 @@ class MediatedWorkspace:
                 self._mounted = False
 
     @property
+    def pid(self) -> int | None:
+        return self._process.pid if self._process else None
+
+    @property
     def mounted(self) -> bool:
         return self.mount.exists() and self._is_mounted()
 
