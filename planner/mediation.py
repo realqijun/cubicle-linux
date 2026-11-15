@@ -15,6 +15,7 @@ from uuid import uuid4
 
 from .context import AdmittedCall, ContextHandle, ModelContext
 from .connector import PINNED_VERSION, REQUIRED_HOOKS
+from .native.mediatedfs import INPUTS
 from .provenance import Note, Provenance
 from .records import Action, Decision, Operation
 from .supervisor import Supervisor
@@ -44,7 +45,8 @@ class _Request:
 class WorkerBroker:
     def __init__(self, supervisor: Supervisor, store: Provenance,
                  task_id: str, worker_id: str, *, provider_origins: tuple[str, ...] = (),
-                 worker_project: str | None = None, sensitive_exposure: threading.Event | None = None) -> None:
+                 worker_project: str | None = None, sensitive_exposure: threading.Event | None = None,
+                 external_inputs: dict[str, str] | None = None) -> None:
         supervisor.check_worker(task_id, worker_id)
         self.supervisor, self.task_id, self.worker_id = supervisor, task_id, worker_id
         self.project = str(supervisor.policy(task_id).root)
@@ -55,6 +57,9 @@ class WorkerBroker:
         # Shell tools hide which file they read; once the confined filesystem
         # served an approved sensitive read, all later tool output is sensitive.
         self.sensitive_exposure = sensitive_exposure
+        # Worker-visible copy path -> approved external source, so decisions and
+        # provenance name the true resource rather than a project-looking path.
+        self.external_inputs = dict(external_inputs or {})
         store.register_task(task_id, self.project)
         self.context = ModelContext(store, task_id, worker_id)
         self._tools: dict[str, _Tool] = {}
@@ -83,6 +88,12 @@ class WorkerBroker:
         path = PurePosixPath(resource)
         if ".." in path.parts:
             raise MediationDenied("outside_worker_project")
+        if not path.is_absolute():
+            path = self.worker_project / path
+        if str(path) in self.external_inputs:
+            return self.external_inputs[str(path)]
+        if path.parts[:len(self.worker_project.parts) + 1] == (*self.worker_project.parts, INPUTS):
+            raise MediationDenied("unbound_external_input")
         if path.is_absolute():
             try:
                 return path.relative_to(self.worker_project).as_posix()

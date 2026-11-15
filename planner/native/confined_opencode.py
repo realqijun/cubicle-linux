@@ -168,6 +168,7 @@ class ConfinedOpenCode:
         try:
             # Short operator-owned path: AF_UNIX names are limited to 108 bytes.
             transport = Path(self._stack.enter_context(tempfile.TemporaryDirectory(prefix="planner-t-")))
+            self.transport = transport
             transport.chmod(0o700)
             parsed = urlsplit(self.bridge.endpoint)
             assert parsed.port is not None and parsed.hostname is not None

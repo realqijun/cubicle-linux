@@ -18,9 +18,13 @@ import subprocess
 import sys
 import threading
 import time
+from typing import NoReturn
 
 from planner.policy import Policy
 from planner.records import Action, Grant, Operation
+
+# Reserved worker-visible directory for approved external read-only copies.
+INPUTS = ".planner-inputs"
 
 _REQUEST = struct.Struct("=IIIIQQ4096s4096s")
 _RESPONSE = struct.Struct("=iI")
@@ -31,7 +35,8 @@ class MediatedWorkspace:
 
     def __init__(self, policy: Policy, grant: Grant, output: Path, *, helper: Path,
                  check_authority: Callable[[], object] | None = None, timeout: float = 10,
-                 exceptions: Sequence[tuple[str, str, str, bool]] = ()) -> None:
+                 exceptions: Sequence[tuple[str, str, str, bool]] = (),
+                 inputs: dict[str, Path] | None = None) -> None:
         """``exceptions`` are approvals reserved for this attempt, as
         (operation, relative path, lifetime, sensitive). A once-only approval
         permits exactly one open of that file; a later open is refused."""
@@ -42,8 +47,10 @@ class MediatedWorkspace:
         self.output, self.helper = output.resolve(), helper.resolve(strict=True)
         if self.output.is_relative_to(policy.root) or policy.root.is_relative_to(self.output):
             raise ValueError("Mediator output must be separate from project")
-        if policy.external_inputs:
-            raise ValueError("External-input operation binding is not implemented by this candidate")
+        # name -> trusted read-only copy of an external input approved for this attempt.
+        self.inputs = {name: path.resolve(strict=True) for name, path in (inputs or {}).items()}
+        if any("/" in name or name in ("", ".", "..") for name in self.inputs):
+            raise ValueError("Input names must be single path components")
         self.backing, self.mount = self.output / "backing", self.output / "mount"
         self.check_authority, self.timeout = check_authority, timeout
         self.exceptions = {(operation, name): {"lifetime": lifetime, "sensitive": sensitive, "state": "unused"}
@@ -72,6 +79,8 @@ class MediatedWorkspace:
             raise
 
     def _start(self) -> "MediatedWorkspace":
+        if os.path.lexists(self.original_policy.root / INPUTS):
+            raise ValueError(f"Project uses the reserved name {INPUTS}")
         self.output.mkdir(mode=0o700)
         # Refuse aliases before copying: copying a hardlink under a permitted
         # name must not erase the fact that it aliases a protected input.
@@ -227,21 +236,59 @@ class MediatedWorkspace:
 
     def _require(self, operation: Operation, name: str) -> None:
         if not self._allowed(operation, name):
-            if len(self.denials) < 1000:
-                self.denials.append((operation, name))
-            else:
-                self.denials_dropped += 1
-            raise PermissionError(errno.EACCES, "Worker operation denied")
+            self._deny(operation, name)
+
+    def _deny(self, operation: Operation, name: str) -> NoReturn:
+        if len(self.denials) < 1000:
+            self.denials.append((operation, name))
+        else:
+            self.denials_dropped += 1
+        raise PermissionError(errno.EACCES, "Worker operation denied")
+
+    def _input(self, op: int, name: str, flags: int) -> bytes:
+        """Read-only external copies: no parent, no siblings, one approved open."""
+        if not self.inputs:
+            raise FileNotFoundError(errno.ENOENT, "No external inputs")
+        if name == INPUTS:
+            path = self.output
+        elif name[len(INPUTS) + 1:] in self.inputs:
+            path = self.inputs[name[len(INPUTS) + 1:]]
+        else:
+            raise FileNotFoundError(errno.ENOENT, "Unknown external input")
+        if op == 1:
+            info = path.lstat()
+            mode = (stat.S_IFDIR | 0o500) if name == INPUTS else (stat.S_IFREG | 0o400)
+            return struct.pack("=10Q", mode, info.st_ino, 1, info.st_uid, info.st_gid,
+                               0 if name == INPUTS else info.st_size, info.st_atime_ns,
+                               info.st_mtime_ns, info.st_ctime_ns, info.st_blocks)
+        if op == 2 and name == INPUTS:
+            return b"".join(os.fsencode(child) + b"\0" for child in sorted(self.inputs))
+        if op == 3 and name != INPUTS:
+            if flags & os.O_ACCMODE != os.O_RDONLY or flags & (os.O_CREAT | os.O_TRUNC | os.O_APPEND):
+                self._deny("write", name)
+            if not self._excepted("read", name):
+                self._deny("read", name)
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            self._next_handle += 1
+            self.handles[self._next_handle] = (descriptor, name, os.O_RDONLY, frozenset({"read"}))
+            return struct.pack("=Q", self._next_handle)
+        raise PermissionError(errno.EACCES, "External inputs are read-only")
 
     def _operation(self, op: int, name: str, other: str, flags: int, mode: int,
                    count: int, handle: int, offset: int, payload: bytes) -> bytes:
+        if name == INPUTS or name.startswith(INPUTS + "/") or other == INPUTS or other.startswith(INPUTS + "/"):
+            if op in (1, 2, 3):
+                return self._input(op, name, flags)
+            if op not in (4, 6):
+                self._deny("write", name)
         path = self._path(name)
         if op == 1:
             info = path.lstat()
             return struct.pack("=10Q", info.st_mode, info.st_ino, info.st_nlink, info.st_uid, info.st_gid,
                                info.st_size, info.st_atime_ns, info.st_mtime_ns, info.st_ctime_ns, info.st_blocks)
         if op == 2:
-            return b"".join(os.fsencode(child.name) + b"\0" for child in path.iterdir())
+            listing = b"".join(os.fsencode(child.name) + b"\0" for child in path.iterdir())
+            return listing + (os.fsencode(INPUTS) + b"\0" if name == "" and self.inputs else b"")
         if op == 3:
             access = flags & os.O_ACCMODE
             needed: list[Operation] = []
@@ -273,10 +320,11 @@ class MediatedWorkspace:
                 os.close(fd)
                 del self.handles[handle]
                 return b""
-            current = self._path(bound).stat()
-            original = os.fstat(fd)
-            if (current.st_dev, current.st_ino) != (original.st_dev, original.st_ino):
-                raise OSError(errno.ESTALE, "Opened file was removed or replaced")
+            if not bound.startswith(INPUTS + "/"):
+                current = self._path(bound).stat()
+                original = os.fstat(fd)
+                if (current.st_dev, current.st_ino) != (original.st_dev, original.st_ino):
+                    raise OSError(errno.ESTALE, "Opened file was removed or replaced")
             operation: Operation = "read" if op == 4 else "write"
             if operation not in excepted:
                 self._require(operation, bound)

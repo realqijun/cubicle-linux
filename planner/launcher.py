@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import threading
 import time
@@ -171,6 +172,7 @@ def recover(state: Path, task: str, worker: str, runtime: Runtime, *,
                                                    cleanup_verified=observed or operator_confirmed)
             if observed:
                 _purge(run)
+                _remove_transport(run)
             results.append({"attempt": item["id"], "state": recovered["state"], "reason": recovered["reason"],
                             "cleanup_evidence": evidence, "operator_confirmed": operator_confirmed,
                             "application": supervisor.application(item["id"])})
@@ -179,11 +181,35 @@ def recover(state: Path, task: str, worker: str, runtime: Runtime, *,
         supervisor.close()
 
 
+def _remove_transport(run: Path) -> None:
+    """A killed owner cannot remove its socket directory; recovery does, once verified."""
+    try:
+        transport = json.loads((run / "processes.json").read_text()).get("transport")
+    except (OSError, ValueError):
+        return
+    if transport and Path(transport).name.startswith("planner-t-") and Path(transport).is_dir():
+        shutil.rmtree(transport)
+
+
 def _purge(run: Path) -> None:
     """The private copy includes denied files; keep only digest metadata once final."""
-    backing = run / "fs" / "backing"
-    if backing.exists():
-        shutil.rmtree(backing)
+    for content in (run / "fs" / "backing", run / "inputs"):
+        if content.exists():
+            shutil.rmtree(content)
+
+
+def _copy_bound_input(source: Path, identity: str, copy: Path) -> Path:
+    """Copy exactly the approved external file; a swapped or linked file is refused."""
+    descriptor = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if (not stat.S_ISREG(info.st_mode) or
+                f"file:{info.st_dev}:{info.st_ino}:{info.st_nlink}" != identity):
+            raise PermissionError("External input changed since approval")
+        copy.parent.mkdir(mode=0o700, exist_ok=True)
+        with open(os.open(copy, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o400), "wb") as target:
+            shutil.copyfileobj(stream, target)
+    return copy
 
 
 def _request_reconsideration(supervisor: Supervisor, task: str, worker: str, attempt: str,
@@ -272,7 +298,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
     cleanup; ``mode='review'`` retains them for ``apply_retained``.
     """
     from .native.confined_opencode import ConfinedOpenCode, runtime_status
-    from .native.mediatedfs import MediatedWorkspace
+    from .native.mediatedfs import INPUTS, MediatedWorkspace
 
     if mode not in ("auto", "review"):
         raise ValueError("Application mode must be auto or review")
@@ -304,6 +330,23 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         fs_exceptions = [(item["operation"], relative[item["id"]], item["lifetime"], bool(item["sensitive"]))
                          for item in inside]
         write_exceptions = {relative[item["id"]]: item["id"] for item in inside if item["operation"] == "write"}
+        inputs: dict[str, Path] = {}
+        broker_inputs: dict[str, str] = {}
+        try:
+            for item in bindings:
+                if item in inside:
+                    continue
+                source = Path(item["resource"])
+                name = source.name if source.name not in inputs else f"{len(inputs)}-{source.name}"
+                inputs[name] = _copy_bound_input(source, item["identity"], run / "inputs" / name)
+                fs_exceptions.append(("read", f"{INPUTS}/{name}", item["lifetime"], bool(item["sensitive"])))
+                broker_inputs[f"/workspace/{INPUTS}/{name}"] = item["resource"]
+        except OSError as error:
+            supervisor.abandon_attempt(attempt, "external_input_unavailable")
+            supervisor.settle_exceptions(attempt)
+            _purge(run)
+            supervisor.record_application(attempt, mode=mode, state="not_applied", reason=str(error))
+            return {**result, "outcome": "blocked", "reason": str(error), "application": supervisor.application(attempt)}
         ready = threading.Event()
         holder: dict[str, Any] = {}
 
@@ -324,7 +367,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
             owner, store = Supervisor(state), Provenance(state.with_suffix(".memory.sqlite"))
             broker = Broker(owner, store, task, worker, worker_project="/workspace",
                             provider_origins=("http://127.0.0.1:18182",),
-                            sensitive_exposure=filesystem.sensitive_exposure)
+                            sensitive_exposure=filesystem.sensitive_exposure, external_inputs=broker_inputs)
             try:
                 yield broker
             finally:
@@ -342,7 +385,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
 
         outcome, cleaned, unmounted, failure = "runtime_error", False, False, ""
         filesystem = MediatedWorkspace(policy, grant, run / "fs", helper=runtime.fuse_helper, check_authority=lost,
-                                       exceptions=fs_exceptions)
+                                       exceptions=fs_exceptions, inputs=inputs)
         changes: Changeset | None = None
         processes = _Processes(run / "processes.json")
         try:
@@ -363,6 +406,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                         with confined:
                             assert confined.server is not None and confined.process is not None
                             processes.data["namespace"] = _namespace(confined.process.pid)
+                            processes.data["transport"] = str(confined.transport)
                             processes.add("worker", confined.process.pid)
                             session = confined.server.submit(prompt, config.model)
                             deadline = time.monotonic() + runtime.run_seconds

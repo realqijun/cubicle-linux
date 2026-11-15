@@ -282,3 +282,44 @@ class ReportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ApplicationReportTests(unittest.TestCase):
+    def test_applied_retained_and_conflicted_outcomes_come_from_records(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "project").mkdir()
+            supervisor = Supervisor(root / "state.sqlite")
+            self.addCleanup(supervisor.close)
+            policy = Policy(root / "project", read=("**",), write=("src/**",), tools=("shell",))
+            task = supervisor.propose(policy)
+            supervisor.approve_task(task)
+            verified = ProtectionStatus(True, "fixture", "fixture", True)
+            outcomes = {}
+            for worker, state in (("applied", "applied"), ("retained", "retained"), ("conflict", "conflicted")):
+                supervisor.approve_worker(Grant(task, worker, ("**",), ("src/**",), ("shell",)))
+                attempt = supervisor.prepare_attempt(task, worker)["id"]
+                supervisor.verify_attempt(attempt, verified, verified)
+                supervisor.start_attempt(attempt)
+                supervisor.finish_attempt(attempt, successful=True, cleanup_verified=True)
+                mode = "review" if state == "retained" else "auto"
+                supervisor.record_application(attempt, mode=mode, state=state, reason="fixture",
+                                              changes=[{"path": "src/a.py", "operation": "modify"}])
+                outcomes[attempt] = state
+            output = root / "report.html"
+            generate(supervisor.export(task), output)
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>',
+                                 output.read_text(), re.S)
+            rendered = json.loads(embedded.group(1))
+            statuses = {node["details"]["attempt"]: node["status"] for node in rendered["nodes"]
+                        if node["kind"] == "application"}
+            self.assertEqual({attempt: statuses[attempt] for attempt in outcomes},
+                             {attempt: {"applied": "applied to source",
+                                        "retained": "executed in copy; retained for review",
+                                        "conflicted": "conflicted; source preserved"}[state]
+                              for attempt, state in outcomes.items()})
+            for attempt in outcomes:
+                self.assertIn({"source": f"attempt:{attempt}", "target": f"application:{attempt}",
+                               "kind": "lifecycle"}, rendered["edges"])
+            with self.assertRaises(ValueError):  # A final outcome cannot be replayed into "applied".
+                supervisor.record_application(next(iter(outcomes)), mode="auto", state="applied", reason="replay")

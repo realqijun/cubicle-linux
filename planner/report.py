@@ -38,6 +38,17 @@ def _attempt_status(attempt: dict[str, Any]) -> str:
     return f"{attempt['state']}; {cleanup}"
 
 
+_APPLICATION_STATUS = {
+    "applied": "applied to source",
+    "retained": "executed in copy; retained for review",
+    "conflicted": "conflicted; source preserved",
+    "blocked": "blocked before any source write",
+    "interrupted": "interrupted; needs reconciliation",
+    "applying": "unverified; application owner did not finish",
+    "not_applied": "not applied",
+}
+
+
 def generate(data: dict[str, Any], output: Path) -> None:
     provenance = data.get("provenance", data)
     nodes: list[dict[str, Any]] = []
@@ -161,6 +172,19 @@ def generate(data: dict[str, Any], output: Path) -> None:
                 previous = event_id
             else:
                 missing.append(f"Lifecycle event attempt binding mismatch for {event_id}")
+    attempt_ids = {str(item["id"]) for item in data.get("attempts", [])}
+    for application in data.get("applications", []):
+        node_id = f"application:{application['attempt']}"
+        details = {key: application[key] for key in ("attempt", "task", "worker", "mode", "state", "reason",
+                   "changes", "updated") if key in application}
+        nodes.append({"id": node_id, "task": str(application["task"]), "worker": str(application["worker"]),
+                      "kind": "application", "label": f"Source application · {application['mode']}",
+                      "status": _APPLICATION_STATUS.get(str(application["state"]), "unverified"),
+                      "time": application.get("updated"), "details": details})
+        if str(application["attempt"]) in attempt_ids:
+            edges.append({"source": f"attempt:{application['attempt']}", "target": node_id, "kind": "lifecycle"})
+        else:
+            missing.append(f"Application {node_id} has no recorded execution attempt")
     for approval in data.get("approvals", []):
         details = {key: approval[key] for key in ("id", "task", "worker", "operation", "resource", "tool",
                    "lifetime", "expires", "state", "sensitive", "revision", "sources") if key in approval}
@@ -229,7 +253,11 @@ def generate(data: dict[str, Any], output: Path) -> None:
     if not revisions:
         missing.append("Policy revision history and its lifecycle timestamps were not supplied.")
     missing.append("Approval records are current snapshots; approval lifecycle timestamps are unavailable.")
-    missing.append("Decision records do not establish executed effects. No effect evidence was supplied.")
+    if data.get("applications"):
+        missing.append("Decision records do not establish executed effects; only application records "
+                       "describe changes to the original project.")
+    else:
+        missing.append("Decision records do not establish executed effects. No effect evidence was supplied.")
     embedded = json.dumps({"nodes": nodes, "edges": valid_edges, "missing": missing}, ensure_ascii=True)
     embedded = embedded.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     template = (Path(__file__).parent / "report" / "template.html").read_text(encoding="utf-8")
