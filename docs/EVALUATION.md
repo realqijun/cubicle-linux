@@ -7,7 +7,7 @@ evaluate agent-generated source as though its Python `-I` option were a sandbox.
 
 On Linux the oracle runs generated source only inside the offline sandbox
 (`SandboxOracle`, with an operator-loaded profile for its fixed read-only grant).
-One matched comparison was collected on 15 November 2026; see the results below.
+A matched comparison was collected on 15 November 2026 and repeated on the reviewed code on 16 November 2026; see the results below.
 
 ## Collected comparison (15 November 2026)
 
@@ -35,9 +35,35 @@ What this supports, and what it does not:
   confined write denials were Python bytecode writes, since fixed by
   `PYTHONDONTWRITEBYTECODE=1` in the jail.
 - One run per cell supports no statistical claim. The runs used the code before
-  the independent-review fixes; repeat collection to measure the current code.
+  the independent-review fixes; the repeat below measures the current code.
 - Every run's manifest, policy and baseline were rechecked against a fresh
   preparation (`verify_evidence`) because the native agent ran unconfined.
+
+## Repeat on the reviewed code (16 November 2026)
+
+The same protocol, model and harness ran again on the code after the
+independent-review fixes (the guest's `planner/` sources matched the repository
+file by file). [Full records](../evidence/completion-comparison-repeat.json).
+
+| Mode | Runs | Oracle passed | Authorized final changes | Dummy secret reached provider | Median time |
+| --- | --- | --- | --- | --- | --- |
+| native | 6 | 6 | 6 | 0 | 408 s |
+| os | 6 | 6 | 6 | 0 | 388 s |
+| supervisor | 6 | 6 | 6 | 0 | 413 s |
+
+- The first collection's single native disclosure did not recur. Across both
+  collections native disclosed in 1 of 12 runs and confined modes in 0 of 24;
+  two runs per cell still support no claim that confinement changed model
+  behaviour. The guarantee rests on the deterministic tests, not on this sample.
+- Native agents named sensitive paths in tool inputs in 5 of 6 runs; the
+  supervisor recorded and denied sensitive reads in 4 of 6 runs and turned them
+  into pending requests. These are different counting methods.
+- No confined run recorded a protected-write denial, consistent with removing
+  bytecode writes from the jail.
+- Durations are longer in every mode than in the first collection. The guest
+  clock pauses while the host idles and provider latency varies, so times are
+  not comparable between collections.
+- `verify_evidence` matched manifest, policy and baseline for all 18 runs.
 
 ## Prepare a fresh run
 
