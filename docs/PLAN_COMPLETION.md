@@ -422,8 +422,10 @@ Windows (section 9, portability) remain open. Evidence:
 | 9. macOS | Blocked externally: no Xcode, no code-signing identity with the FSKit entitlement, extension approval in System Settings and a privileged cleanup helper need the user. FSKit candidate sources type-check against the macOS 27 SDK. | [assessment](MACOS_BACKEND_ASSESSMENT.md) |
 | 9. Windows | Blocked externally: no Windows instance available | — |
 
-Open items that are not external: the last full Ubuntu suite after the review
-fixes had two test-fixture errors (fixed, rerun pending VM prerequisites), and the
-comparison should be repeated with the reviewed code and more runs per cell
-before drawing behavioural conclusions. The checked-in architecture SVG predates
-the connected runtime; its Mermaid source is current.
+The final complete Ubuntu suite on one source state passed: 235 tests, 209 passed,
+26 skipped (macOS-only, case-insensitive-only, Node absent on the guest, and the
+real-provider gate), 0 failures. Earlier failed attempts are kept in the evidence
+with their causes. On 16 November the user chose to defer macOS and Windows; both
+stay open requirements of the original plan, not completed work. The comparison
+should be repeated with the reviewed code and more runs per cell before drawing
+behavioural conclusions.

@@ -5,11 +5,77 @@ confined OpenCode worker over a FUSE-mediated private copy and applies checked
 edits to the original project. The offline runner remains for plain commands.
 See the [connected runtime](CONNECTED_RUNTIME.md) for the full sequence.
 
-![Planner supervisor components and trust boundaries](diagrams/architecture.svg)
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeCSS: 'text { font-family: Arial, Helvetica, sans-serif !important; }'
+  themeVariables:
+    fontFamily: 'Arial, Helvetica, sans-serif'
+    fontSize: 16px
+    primaryColor: '#eef4f1'
+    primaryTextColor: '#20332e'
+    primaryBorderColor: '#5f8175'
+    lineColor: '#627a72'
+    clusterBkg: '#fafbf9'
+    clusterBorder: '#bfcfc6'
+    edgeLabelBackground: '#ffffff'
+  flowchart:
+    htmlLabels: false
+    curve: basis
+    nodeSpacing: 28
+    rankSpacing: 45
+---
+flowchart TB
+    cli["Operator CLI"]
+    sourceProject["Original project"]
+    supervisor["Trusted supervisor: policy, approvals, broker and model admission"]
+    launcher["Launcher: attempt lifecycle, cleanup evidence, recovery"]
+    changeset["Checked changeset application"]
 
-**The checked-in SVG predates the connected runtime and still shows the launcher
-as pending.** The [Mermaid source](diagrams/architecture.mmd) is current; render
-it with the command below to refresh the image.
+    subgraph jail ["Tested Ubuntu boundary: Bubblewrap + AppArmor + seccomp"]
+        opencode["OpenCode 2.2.5 + hook bridge + tools + descendants"]
+        mount["/workspace mount"]
+    end
+
+    mediator["FUSE mediator: every file operation checked"]
+    copy["Private copy in run storage"]
+    relay["Fixed provider relay"]
+    provider["Configured model provider"]
+
+    subgraph storage ["Protected supervisor storage"]
+        state[("Control and application records")]
+        provenance[("Origins + project notes")]
+    end
+
+    report["Offline provenance report"]
+
+    cli -->|"Review, approve, run"| supervisor
+    supervisor -->|"Verified attempt"| launcher
+    sourceProject -->|"Copy at preparation"| copy
+    launcher -->|"Mount, start, stop"| jail
+    opencode -->|"File operations"| mount
+    mount --> mediator
+    mediator -->|"Allowed operations only"| copy
+    opencode <-->|"Blocking hook admission"| supervisor
+    opencode -->|"Admitted requests"| relay
+    relay --> provider
+    launcher -->|"After verified cleanup"| changeset
+    copy --> changeset
+    changeset -->|"Authorized, conflict-free edits"| sourceProject
+    supervisor -->|"Persist authority and decisions"| state
+    supervisor -->|"Record origins"| provenance
+    state -->|"Read-only export"| report
+    provenance -->|"Read-only export"| report
+
+    classDef output fill:#f1f3f8,stroke:#7c87a1,color:#29364c
+    class sourceProject,copy,provider,report output
+    style jail fill:#f1f7f3,stroke:#5f8175
+```
+
+The diagram shows components and trust boundaries of the connected Ubuntu
+runtime. Grey nodes are data or external systems; the green group is the jail.
 
 ## Offline command flow
 
@@ -79,13 +145,5 @@ in [known limitations](KNOWN_LIMITATIONS.md). Start with the
 
 ## Editing the diagram
 
-[Mermaid source](diagrams/architecture.mmd) is the editable source;
-[SVG](diagrams/architecture.svg) is the checked-in rendering. Regenerate the SVG
-with Mermaid CLI (rendered here with version 12.2.0) after changing the source:
-
-```sh
-mmdc -i docs/diagrams/architecture.mmd -o docs/diagrams/architecture.svg \
-  -b white --size 1600 --no-font-embed
-```
-
-The renderer is documentation tooling, not a supervisor runtime dependency.
+The diagram above is Mermaid source embedded in this file; GitHub and most
+Markdown viewers render it directly, so there is no separate image to regenerate.

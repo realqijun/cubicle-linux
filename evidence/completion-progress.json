@@ -286,6 +286,76 @@
         "Node absent on VM (bridge tests pass on macOS)": 9,
         "real provider gate not enabled": 1
       }
+    },
+    {
+      "case": "full_ubuntu_suite_after_reboot",
+      "at": "2026-11-16T15:58Z",
+      "environment": {
+        "system": "Linux",
+        "distribution": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-149-generic",
+        "python": "3.12.3",
+        "opencode": "2.2.5",
+        "opencode_sha256": "8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050",
+        "fuse_bridge_sha256": "59dfa06f3ea765cefdbbfb8ca3a39d058afc6bf74133734ad97b5b2696236a11",
+        "runtime_location": "~/planner-runtime (restored after reboot, with the user's approval)"
+      },
+      "tests": 235,
+      "passed": 200,
+      "failed": 9,
+      "skipped": 26,
+      "outcome": "failed",
+      "reason": "All nine failed closed with 'Authenticated hook registration unavailable' (no dispatch, nothing applied). The freshly booted guest ran unattended-upgrade at ~100% CPU on 4 vCPUs."
+    },
+    {
+      "case": "full_ubuntu_suite_after_system_upgrade",
+      "at": "2026-11-16T16:56Z",
+      "environment": {
+        "system": "Linux",
+        "distribution": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-149-generic",
+        "python": "3.12.3",
+        "opencode": "2.2.5",
+        "opencode_sha256": "8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050",
+        "fuse_bridge_sha256": "59dfa06f3ea765cefdbbfb8ca3a39d058afc6bf74133734ad97b5b2696236a11",
+        "runtime_location": "~/planner-runtime (restored after reboot, with the user's approval)"
+      },
+      "tests": 235,
+      "passed": 202,
+      "failed": 7,
+      "skipped": 26,
+      "outcome": "failed",
+      "system_change": "unattended-upgrade installed libc6, libmount1, systemd, util-linux, openssl and others; bubblewrap 0.9.0-1ubuntu0.3, apparmor 4.0.1really4.0.1-0ubuntu0.24.04.4, fuse3 3.14.0-5build1, libseccomp2 2.5.5-1ubuntu3.1 and the running kernel were unchanged; reboot-required is flagged and the guest was not rebooted",
+      "reason": "Same fail-closed hook timeout on an idle guest. Measured boot-to-hook registration was 16.6-19.5 s over four runs, against the tests' 30 s control timeout. Tests raised to the CLI default (120 s); stop tests now measure promptness from the actual trigger (<30 s) and give expiry a 90 s lifetime so the worker starts first. No product code changed."
+    },
+    {
+      "case": "full_ubuntu_suite_final",
+      "at": "2026-11-16T18:00Z",
+      "environment": {
+        "system": "Linux",
+        "distribution": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-149-generic",
+        "python": "3.12.3",
+        "opencode": "2.2.5",
+        "opencode_sha256": "8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050",
+        "fuse_bridge_sha256": "59dfa06f3ea765cefdbbfb8ca3a39d058afc6bf74133734ad97b5b2696236a11",
+        "runtime_location": "~/planner-runtime (restored after reboot, with the user's approval)"
+      },
+      "gates": "PLANNER_RUN_LINUX_PROBES=1 PLANNER_RUN_FUSE_PROBES=1 PLANNER_RUN_CONFINED_OPENCODE=1",
+      "tests": 235,
+      "passed": 209,
+      "failed": 0,
+      "skipped": 26,
+      "outcome": "passed",
+      "source_manifest_sha256": "d79daa100c8d249f3c8dc9b57dfa57bc31a654b9e4c0654df268322d9ae200f0",
+      "source_manifest": "sha256 of the LC_ALL=C-sorted per-file sha256 list of planner/**/*.py, *.c, *.mjs (57 files), identical on host and guest",
+      "skips": {
+        "macOS-only diagnostics": 14,
+        "case-insensitive filesystem only": 2,
+        "Node absent on the guest (bridge tests pass on macOS)": 9,
+        "real-provider gate not enabled": 1
+      },
+      "scope": "One complete run on a single source state after the independent-review fixes and the guest system upgrade."
     }
   ]
 }

@@ -60,7 +60,7 @@ class RuntimeCase(unittest.TestCase):
         return ["run", task, worker, "--prompt", "Change VALUE to 2 in src/app.py.",
                 "--model", "fixture/model", "--provider-url", provider.url,
                 "--opencode", str(paths["opencode"]), "--fuse-helper", str(paths["fuse_helper"]),
-                "--runs", str(self.runs), "--timeout", "30", *extra]
+                "--runs", str(self.runs), "--timeout", "120", *extra]
 
     def unchanged(self, *names: str) -> None:
         for name in names:
@@ -80,19 +80,25 @@ class RuntimeCase(unittest.TestCase):
                   f"Path('/workspace/{area}/started.txt').write_text('1')\n"
                   f"time.sleep(120)  # {marker}\n"
                   f"Path('/workspace/{area}/late.txt').write_text('1')\n")
+        triggered: list[float] = []
         def stopper() -> None:
-            deadline = time.monotonic() + 120
+            deadline = time.monotonic() + 240
             while time.monotonic() < deadline and not list(self.runs.glob(f"*/fs/backing/{area}/started.txt")):
                 time.sleep(0.2)
+            self.assertTrue(list(self.runs.glob(f"*/fs/backing/{area}/started.txt")), "Worker never started")
             if stop:
                 self.cli(*[task if part == "TASK" else part for part in stop])
+                triggered.append(time.time())
+            else:  # Expiry: the trigger is the recorded task deadline.
+                triggered.append(self.cli("status", task)["expires"])
         thread = threading.Thread(target=stopper)
         with ScriptedProvider([shell(script)]) as provider:
             thread.start()
-            started = time.monotonic()
             result = self.cli(*self.run_args(task, provider, worker=worker))
             thread.join()
-        self.assertLess(time.monotonic() - started, 100, "Worker was not stopped promptly")
+        # Promptness from the stop trigger, not launch: startup time varies by host.
+        self.assertTrue(triggered, "Stop was never triggered")
+        self.assertLess(time.time() - triggered[0], 30, "Worker was not stopped promptly")
         survivors = subprocess.run(["pgrep", "-f", marker], capture_output=True)
         self.assertEqual(survivors.returncode, 1, "A worker descendant survived")
         self.assertFalse((self.project / area / "started.txt").exists())
@@ -188,7 +194,7 @@ class LauncherTests(RuntimeCase):
         self.assertEqual((result["outcome"], result["attempt_state"]), ("authority_lost", "cancelled"))
 
     def test_expiry_stops_descendants_and_prevents_application(self) -> None:
-        result, _ = self.stop_during_run([], seconds=30)
+        result, _ = self.stop_during_run([], seconds=90)
         self.assertEqual(result["outcome"], "authority_lost")
         self.assertEqual(result["attempt_state"], "failed")
 
@@ -494,7 +500,7 @@ class ReviewRuntimeTests(RuntimeCase):
         paths = runtime_paths()
         with ScriptedProvider([]) as provider, patch.object(Supervisor, "reserve_exceptions", cancel_then_reserve):
             result = run_task(self.state, task, "worker", "unused",
-                              ConnectorConfig("fixture/model", timeout_seconds=30,
+                              ConnectorConfig("fixture/model", timeout_seconds=120,
                                               provider=ProviderConfig(provider.url)),
                               Runtime(paths["opencode"], paths["fuse_helper"], self.runs))
         self.assertTrue(result["outcome"].startswith("runtime_error"), result)
@@ -533,7 +539,7 @@ class ReviewRuntimeTests(RuntimeCase):
             thread.start()
             started = time.monotonic()
             result = run_task(self.state, task, "worker", "unused",
-                              ConnectorConfig("fixture/model", timeout_seconds=30,
+                              ConnectorConfig("fixture/model", timeout_seconds=120,
                                               provider=ProviderConfig(provider.url)),
                               Runtime(paths["opencode"], paths["fuse_helper"], self.runs))
             thread.join()
