@@ -1,25 +1,26 @@
 # Planner supervisor
 
 Planner checks coding-agent file permissions, limits delegated authority, and
-records where model inputs came from. Its Ubuntu sandbox runs offline commands
-in a private workspace and keeps edits separate for review.
+records where model inputs came from. On Ubuntu it runs a model-connected
+OpenCode worker against a mediated private copy of the project and applies the
+worker's authorized, conflict-free edits back to the original.
 
 [Architecture](docs/ARCHITECTURE.md) · [Usage](docs/USAGE.md) ·
-[Ubuntu setup](docs/LINUX_SANDBOX.md) · [Limitations](docs/KNOWN_LIMITATIONS.md)
+[Connected runtime](docs/CONNECTED_RUNTIME.md) · [Limitations](docs/KNOWN_LIMITATIONS.md)
 
 ## What works
 
 | Area | Status |
 | --- | --- |
 | Policies, approvals, delegation and provenance | Implemented and tested through public APIs |
-| Ubuntu offline sandbox | 23 contract checks pass on the recorded Ubuntu guest |
-| OpenCode 2.2.5 bridge | Four integration fixtures pass with a local provider |
-| Full model-connected launcher and live-project execution | Gated; integration and acceptance remain |
+| Connected Linux runtime: plan, approve, confined OpenCode, apply | Accepted on Ubuntu 24.04.3 x86-64 with a fixed-provider fixture and real LaaS |
+| Exceptions, single-use edits, external inputs, recovery | Tested end to end on the same guest |
+| Ubuntu offline sandbox | Contract checks pass on the recorded guest |
+| macOS and Windows | Not supported; external prerequisites block acceptance |
 
-The sandbox uses Bubblewrap, AppArmor and seccomp. It has no provider network
-access or automatic merge. Read the [sandbox restrictions](docs/LINUX_SANDBOX.md)
-before running a task. Recorded results and source hashes are in the
-[review log](docs/REVIEW.md) and [evidence](evidence/linux-private-workspace.json).
+The connected runtime combines a FUSE policy mediator with Bubblewrap, AppArmor
+and seccomp. Read the [runtime guide](docs/CONNECTED_RUNTIME.md) before running a
+task. Results and source hashes are in [evidence](evidence/completion-progress.json).
 
 ## Try it
 
@@ -39,8 +40,8 @@ python3 -m planner --state "$planner_state" assign TASK worker --read 'src/**' -
 python3 -m planner --state "$planner_state" decide TASK worker write src/refunds.py
 ```
 
-Follow [Ubuntu setup and execution](docs/LINUX_SANDBOX.md) to run a command under
-an approved `shell` grant. The [usage guide](docs/USAGE.md) covers custom TOML
+Follow the [connected runtime guide](docs/CONNECTED_RUNTIME.md) to run a worker,
+or [the offline sandbox guide](docs/LINUX_SANDBOX.md) for a plain command. The [usage guide](docs/USAGE.md) covers custom TOML
 policies, exceptions, delegation, recovery and memory.
 
 Generate an example provenance report with
@@ -53,7 +54,7 @@ development tool. Real connector diagnostics require OpenCode **2.2.5**.
 
 ```sh
 python3 -W error::ResourceWarning -m unittest discover -s planner/tests
-python3 -m mypy --config-file pyproject.toml planner
+python3 -m mypy --config-file pyproject.toml   # strict; passes
 ```
 
 Loopback tests need permission to bind local sockets. Platform-specific skips

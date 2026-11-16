@@ -402,3 +402,28 @@ acceptance, and ProviderRelay's own HTTPS upstream path (the real run used a loo
 recording forwarder as its oracle). Application is
 still invoked by the test, not by an automatic launcher. Sections C–E, the amendments
 in section 9, and macOS/Windows remain open.
+
+## 11. Implementation status — 16 November 2026
+
+Linux sections A–E are implemented and tested on the Ubuntu guest; macOS and
+Windows (section 9, portability) remain open. Evidence:
+[progress](../evidence/completion-progress.json),
+[comparison](../evidence/completion-comparison.json). Operator guide:
+[connected runtime](CONNECTED_RUNTIME.md).
+
+| Plan item | State | Evidence |
+| --- | --- | --- |
+| A. Checked changesets | Done: files and directories, conflicts, collisions, aliases, journalled progress, no replay; withheld deny-read placeholders and complete blind replacement | `test_changeset`, `test_launcher` |
+| B. Confined model-capable worker | Done: FUSE mediator + bubblewrap/AppArmor/seccomp, hook gate before dispatch, fixed relays; fixture and real LaaS; repository config/plugins/instructions never load; no host-side session persistence | `test_confined_opencode`, `IsolationTests`, real-provider run |
+| C. Planning, delegation, reconsideration | Done: `plan` → review → `approve-task --assign` → `run`; denied operations become requests; once-only approvals bound to one attempt, one open and one applied edit; delegated children within template; refused/stale/substituted/replayed stay denied | `ReconsiderationTests`, `test_reconsideration`, delegation test |
+| D. Lifecycle, recovery, provenance | Done: cancel/revoke/expiry/owner death/broker loss/repeated denials stop the namespace; `recover` verifies observed cleanup, never replays or revives; report shows application outcomes | `LauncherTests`, `ReviewRuntimeTests`, `test_report` |
+| E. Acceptance and evaluation | Done once: confined oracle, frozen protocol, 18-run matched comparison with real LaaS, CLI demonstration, strict mypy, independent review with all findings fixed | `test_evaluation`, `test_comparison`, evidence |
+| 9. Directories, external inputs, blind writes, single-use binding | Done on Linux | as above |
+| 9. macOS | Blocked externally: no Xcode, no code-signing identity with the FSKit entitlement, extension approval in System Settings and a privileged cleanup helper need the user. FSKit candidate sources type-check against the macOS 27 SDK. | [assessment](MACOS_BACKEND_ASSESSMENT.md) |
+| 9. Windows | Blocked externally: no Windows instance available | — |
+
+Open items that are not external: the last full Ubuntu suite after the review
+fixes had two test-fixture errors (fixed, rerun pending VM prerequisites), and the
+comparison should be repeated with the reviewed code and more runs per cell
+before drawing behavioural conclusions. The checked-in architecture SVG predates
+the connected runtime; its Mermaid source is current.

@@ -60,6 +60,10 @@ class MediatedWorkspace:
             raise ValueError("Unsupported exception binding")
         # Set when an approved sensitive read is served; derived output is sensitive.
         self.sensitive_exposure = threading.Event()
+        # Deny-read files are withheld: an empty placeholder keeps the name and
+        # mode so reads are refused, but no protected bytes enter run storage.
+        self.placeholders: set[str] = set()
+        self._pristine: set[str] = set()
         self.handles: dict[int, tuple[int, str, int, frozenset[str]]] = {}
         self._next_handle = 1
         self._process: subprocess.Popen[bytes] | None = None
@@ -90,7 +94,25 @@ class MediatedWorkspace:
                 raise ValueError("Alias/special-file support is not validated")
             if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
                 raise ValueError("Hardlinked input requires explicit handling")
-        shutil.copytree(self.original_policy.root, self.backing)
+        withheld: dict[str, int] = {}
+
+        def withhold(directory: str, names: list[str]) -> set[str]:
+            skipped = set()
+            for name in names:
+                path = Path(directory) / name
+                relative = path.relative_to(self.original_policy.root).as_posix()
+                if (path.is_file() and self.original_policy.is_sensitive((relative,))
+                        and ("read", relative) not in self.exceptions):
+                    skipped.add(name)
+                    withheld[relative] = stat.S_IMODE(path.lstat().st_mode)
+            return skipped
+        shutil.copytree(self.original_policy.root, self.backing, ignore=withhold)
+        for relative, mode in withheld.items():
+            descriptor = os.open(self.backing / relative, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
+            os.close(descriptor)
+            os.chmod(self.backing / relative, mode)
+        self.placeholders = set(withheld)
+        self._pristine = set(withheld)
         self.mount.mkdir()
         self.policy = replace(self.original_policy, root=self.backing)
         owner, bridge = socket.socketpair()
@@ -225,13 +247,21 @@ class MediatedWorkspace:
         return self.policy.decide(Action(self.grant.task_id, self.grant.worker_id,
                                         operation, name, "shell"), self.grant).allowed
 
-    def _excepted(self, operation: Operation, name: str) -> bool:
+    def _usable(self, operation: Operation, name: str) -> bool:
         entry = self.exceptions.get((operation, name))
-        if entry is None or (entry["lifetime"] == "once" and entry["state"] != "unused"):
-            return False
+        return entry is not None and (entry["lifetime"] == "task" or entry["state"] == "unused")
+
+    def _spend(self, operation: Operation, name: str) -> None:
+        """Mark an exception used only after the open it permitted succeeded."""
+        entry = self.exceptions[(operation, name)]
         entry["state"] = "open"
         if operation == "read" and entry["sensitive"]:
             self.sensitive_exposure.set()
+
+    def _excepted(self, operation: Operation, name: str) -> bool:
+        if not self._usable(operation, name):
+            return False
+        self._spend(operation, name)
         return True
 
     def _require(self, operation: Operation, name: str) -> None:
@@ -298,11 +328,15 @@ class MediatedWorkspace:
                 needed.append("write")
             denied = [operation for operation in needed if not self._allowed(operation, name)]
             for operation in denied:
-                if self.exceptions.get((operation, name)) is None:
-                    self._require(operation, name)
-            if not all(self._excepted(operation, name) for operation in denied):
-                self._require(denied[0], name)
+                if not self._usable(operation, name):
+                    self._deny(operation, name)
+            if "write" in needed and name in self._pristine and not flags & os.O_TRUNC:
+                self._deny("write", name)  # A blind writer replaces withheld bytes, never extends them.
             descriptor = os.open(path, flags | os.O_NOFOLLOW, mode & 0o777)
+            for operation in denied:
+                self._spend(operation, name)
+            if "write" in needed:
+                self._pristine.discard(name)
             self._next_handle += 1
             self.handles[self._next_handle] = (descriptor, name, access, frozenset(denied))
             return struct.pack("=Q", self._next_handle)
@@ -345,6 +379,8 @@ class MediatedWorkspace:
             descendants = [path, *path.rglob("*")] if path.is_dir() else [path]
             for item in descendants:
                 before = item.relative_to(self.backing).as_posix()
+                if before in self._pristine:
+                    self._deny("write", before)  # Moving a stand-in would lose the withheld original.
                 after = (target / item.relative_to(path)).relative_to(self.backing).as_posix()
                 self._require("write", before)
                 self._require("write", after)
@@ -360,10 +396,14 @@ class MediatedWorkspace:
             path.mkdir(mode=mode & 0o777)
         elif op == 8:
             path.unlink()
+            self._pristine.discard(name)
         elif op == 9:
             path.rmdir()
         elif op == 11:
+            if name in self._pristine and offset:
+                self._deny("write", name)
             os.truncate(path, offset)
+            self._pristine.discard(name)
         else:
             raise OSError(errno.ENOSYS, "Unsupported filesystem operation")
         return b""

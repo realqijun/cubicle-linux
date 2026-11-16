@@ -1,8 +1,8 @@
 # Known limitations and remaining work
 
-The [Ubuntu offline sandbox](LINUX_SANDBOX.md) is tested on the recorded guest.
-The full model-connected agent launcher and live-project `Backend` remain gated.
-Skipped tests and approval records do not establish execution or containment.
+The [connected runtime](CONNECTED_RUNTIME.md) and the [offline sandbox](LINUX_SANDBOX.md)
+are accepted on Ubuntu 24.04.3 x86-64 only. The generic live-project `Backend`
+stays gated. Skipped tests and approval records do not establish containment.
 
 ## Ubuntu offline sandbox
 
@@ -30,42 +30,32 @@ The final [recorded contract](../evidence/linux-private-workspace.json) passes
 Repeat its contract tests after kernel, AppArmor, Bubblewrap or relevant code
 changes. See [the runner guide](LINUX_SANDBOX.md) for exact setup and restrictions.
 
-## Model-connected launcher
+## Connected runtime
 
-The OpenCode 2.2.5 bridge, broker and context admission are implemented and tested
-with fixed provider fixtures. Full-runtime acceptance still requires:
+Accepted on one Ubuntu guest; see its [limits](CONNECTED_RUNTIME.md#limits). Also:
 
-1. Connect confinement, private no-task server startup and authenticated hook
-   verification before dispatching a reviewed prompt. OpenCode can log plugin
-   setup failure and continue without the plugin.
-2. Provide reviewed model-provider transport and worker/broker isolation inside
-   confinement. Preserve current fail-closed handling of unsupported transports,
-   tools, attachments, plugins and ambiguous context lineage.
-3. Verify system/managed configuration discovery and harness-wide session, log,
-   cache, attachment and truncated-output persistence. In-memory records and
-   stripping child environment variables do not alone establish isolation.
-4. Wire process ownership, cancellation, grant expiry, exception replacement,
-   connector loss, storage failure and cleanup evidence into durable attempt
-   records and recovery. A database state change does not terminate a process.
-5. Run the pinned connector fixtures inside confinement with positive controls,
-   observe actual effects and retain failed attempts. Then collect matched
-   native/OS/supervisor agent comparisons using the frozen evaluation settings.
-
-The current fixed-provider diagnostic is an integration check; it is not a
-matched autonomous-agent evaluation. [Connector details](OPENCODE.md) and
-[control-plane lifecycle](CONTROL_PLANE.md) describe the existing interfaces.
+- The AppArmor and seccomp profile is a candidate specific to this runtime; its
+  name is a hash of the runtime sources, so changes require reloading it.
+- Harness persistence was checked on the host side (no session content survives
+  in operator storage) and for repository configuration discovery; OpenCode's
+  own state lives on tmpfs inside the jail and is discarded.
+- Matched comparison results are single runs per cell; see [evaluation](EVALUATION.md).
 
 ## Other execution modes and platforms
 
 - **Live project:** `Backend.run()` refuses all launches. A backend needs its own
   complete contract for dynamic path denials, aliases, file replacement, runtime
   resources, inherited handles and descendants before this gate can open.
-- **macOS:** the disposable Seatbelt candidate passes 12/14 probes; live hardlink
-  injection and detached-descendant lifetime fail. It remains diagnostic-only.
-  [Evidence](../evidence/macos-candidate.json) retains the failures.
-- **Windows and other Linux environments:** no acceptance results establish
-  support. Do not infer support from an executable, kernel feature or container
-  being present.
+- **macOS:** not supported. The Seatbelt candidate still fails 2/14 probes
+  ([evidence](../evidence/macos-candidate.json)). The FSKit candidate sources
+  type-check against the macOS 27 SDK, but building, signing and enabling the
+  extension needs Xcode, a code-signing identity with the FSKit module
+  entitlement, and the user's approval in System Settings; detached-descendant
+  cleanup needs a privileged helper. None is available on the test host. See
+  the [assessment](MACOS_BACKEND_ASSESSMENT.md).
+- **Windows:** not supported; no Windows instance was available for acceptance.
+- **Other Linux environments:** no acceptance results establish support. Do not
+  infer support from an executable, kernel feature or container being present.
 
 The earlier decision to defer platform testing is historical. Ubuntu testing
 resumed on 13 November 2026; the successful private-workspace mode does not

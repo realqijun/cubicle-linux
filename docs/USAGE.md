@@ -1,10 +1,9 @@
 # Policies and terminal use
 
 Run commands from the repository root with Python 3.11+. The trusted operator
-CLI creates and inspects control-plane records; it does not currently launch an
-accepted autonomous worker. Use the separate [Ubuntu offline runner](LINUX_SANDBOX.md)
-for private-workspace commands under a `shell` grant. See
-[known limitations](KNOWN_LIMITATIONS.md) for remaining launcher acceptance.
+CLI creates and inspects control-plane records and, on the accepted Ubuntu
+runtime, launches confined workers with `run`. See the
+[connected runtime](CONNECTED_RUNTIME.md) for setup and the run sequence.
 
 ## State and policy
 
@@ -62,6 +61,11 @@ Append `--json` before the command for machine-readable output.
 | `status TASK` / `history TASK` | Inspect task state and decisions |
 | `revise TASK --policy PATH` | Replace the proposal and require fresh review |
 | `revoke TASK WORKER` / `cancel TASK` | Revoke worker descendants or the entire task |
+| `plan PROJECT --prompt TEXT --model M --provider-url URL` | Ask a model for a template-bounded proposal |
+| `approve-task TASK --revision N --assign WORKER` | Approve and assign exactly the reviewed scopes |
+| `run TASK WORKER --prompt TEXT ...` | Run one confined attempt; `--mode review` retains edits |
+| `apply ATTEMPT` / `applications TASK` | Apply a retained changeset / list application outcomes |
+| `recover TASK WORKER ...` | Verify cleanup after owner loss, then reconcile |
 | `export TASK` | Export readable metadata |
 | `report TASK /absolute/report.html` | Generate a report from actual task records |
 
@@ -74,8 +78,10 @@ with `exception ID`, then use `approve-exception ID` or `refuse-exception ID`.
 Approval is available only through the trusted operator channel.
 
 An exception binds task, worker, operation, tool, normalized resource, filesystem
-identity, policy revision, and expiry. The default lifetime is one authorization
-dispatch; `--lifetime task` lasts only for that task. Single-use consumption is
+identity, policy revision, and expiry. With the connected runtime a once-only
+approval is reserved for the next attempt and allows exactly one open of the file;
+a write approval is consumed when that staged edit is applied. Outside a run it is
+consumed by one authorization dispatch. `--lifetime task` lasts only for that task. Single-use consumption is
 atomic across SQLite connections. Failed multi-resource checks consume none of
 their approvals. A dispatched approval is not restored after an execution failure.
 The original denial remains in the policy.

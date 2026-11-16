@@ -18,6 +18,10 @@ from .records import Action
 from .supervisor import Supervisor
 
 
+class ApplicationConflict(ValueError):
+    """The original changed since preparation; the user's version is preserved."""
+
+
 def application_status(supervisor: Supervisor, journal: Path) -> dict[str, object]:
     """Inspect durable effects after restart; never replay an interrupted edit.
 
@@ -142,11 +146,14 @@ class Changeset:
 
     def __init__(self, supervisor: Supervisor, task: str, worker: str,
                  workspace: Path, journal: Path, *, attempt: str | None = None,
-                 exceptions: dict[str, str] | None = None) -> None:
+                 exceptions: dict[str, str] | None = None, placeholders: set[str] | None = None) -> None:
         """``exceptions`` maps a relative path to the write approval reserved for
         ``attempt``; only that exact staged edit may use it, once."""
         self.supervisor = supervisor
         self.attempt, self.exceptions = attempt, dict(exceptions or {})
+        # Withheld deny-read files: the copy holds an empty stand-in. Unchanged it
+        # is ignored; fully replaced it is a blind write checked like any other.
+        self.placeholders = set(placeholders or ())
         if self.exceptions and attempt is None:
             raise ValueError('Exception-bound edits require their attempt')
         grant = supervisor.check_worker(task, worker, "shell")
@@ -172,8 +179,8 @@ class Changeset:
             self.parents[name] = (info.st_dev, info.st_ino)
         for name, copied in self.baseline.items():
             source = _file(policy.root / name)
-            if source.digest != copied.digest:
-                raise ValueError('Original changed during preparation')
+            if name not in self.placeholders and source.digest != copied.digest:
+                raise ApplicationConflict('Original changed during preparation')
             self.original[name] = source
         self.used = False
 
@@ -184,7 +191,7 @@ class Changeset:
                 'baseline': {name: asdict(value) for name, value in self.baseline.items()},
                 'original': {name: asdict(value) for name, value in self.original.items()},
                 'directories': self.directories, 'parents': self.parents,
-                'attempt': self.attempt, 'exceptions': self.exceptions}
+                'attempt': self.attempt, 'exceptions': self.exceptions, 'placeholders': sorted(self.placeholders)}
         descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(descriptor, 'w', encoding='utf-8') as stream:
             json.dump(data, stream)
@@ -210,6 +217,7 @@ class Changeset:
         self.directories = {name: tuple(value) for name, value in data['directories'].items()}
         self.parents = {name: tuple(value) for name, value in data['parents'].items()}
         self.attempt, self.exceptions = data['attempt'], data['exceptions']
+        self.placeholders = set(data['placeholders'])
         self.used = self.journal.exists()
         return self
 
@@ -217,7 +225,7 @@ class Changeset:
         for name, identity in self.parents.items():
             info = (self.policy.root / name).lstat()
             if not stat.S_ISDIR(info.st_mode) or (info.st_dev, info.st_ino) != identity:
-                raise ValueError('Original directory identity changed')
+                raise ApplicationConflict('Original directory identity changed')
 
     def preview(self) -> tuple[Change, ...]:
         """Reject the entire changeset on any conflict or unsupported operation."""
@@ -250,7 +258,7 @@ class Changeset:
                 if after is None or after.mode & ~0o777:
                     raise ValueError('Unsupported new file metadata')
             elif _file(target) != self.original[name]:
-                raise ValueError('Original file changed since preparation')
+                raise ApplicationConflict('Original file changed since preparation')
             changes.append(Change(name, 'add' if before is None else
                                   'delete' if after is None else 'modify'))
         for name in removed:
@@ -345,7 +353,7 @@ class Changeset:
                 elif change.operation == 'rmdir':
                     pass  # Identity checked above; rmdir itself refuses a non-empty directory.
                 elif _file(target) != self.original[change.path]:
-                    raise ValueError('Original changed during application')
+                    raise ApplicationConflict('Original changed during application')
                 # Consumes a once-only exception before the write; an interruption
                 # after this point is reconciled, never replayed with that approval.
                 self._authorize((change,), consume=True)

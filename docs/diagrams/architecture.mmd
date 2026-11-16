@@ -22,45 +22,45 @@ config:
 flowchart TB
     cli["Operator CLI"]
     sourceProject["Original project"]
-    supervisor["Trusted supervisor: policy, broker and model admission"]
-    runner["Ubuntu offline runner"]
-    launchGate["Live-project launch gate: blocked"]
+    supervisor["Trusted supervisor: policy, approvals, broker and model admission"]
+    launcher["Launcher: attempt lifecycle, cleanup evidence, recovery"]
+    changeset["Checked changeset application"]
 
-    subgraph isolated ["Tested offline boundary: Bubblewrap + AppArmor + seccomp"]
-        process["Command + descendants"]
-        workspace["Private workspace / retained edits"]
+    subgraph jail ["Tested Ubuntu boundary: Bubblewrap + AppArmor + seccomp"]
+        opencode["OpenCode 2.2.5 + hook bridge + tools + descendants"]
+        mount["/workspace mount"]
     end
 
-    subgraph connector ["Connector fixtures pass; full launcher pending"]
-        opencode["OpenCode 2.2.5 + hook bridge + tools"]
-    end
+    mediator["FUSE mediator: every file operation checked"]
+    copy["Private copy in run storage"]
+    relay["Fixed provider relay"]
+    provider["Configured model provider"]
 
     subgraph storage ["Protected supervisor storage"]
-        state[("Control records")]
+        state[("Control and application records")]
         provenance[("Origins + project notes")]
     end
 
-    provider["Configured model provider"]
     report["Offline provenance report"]
 
-    cli -->|"Review and approve"| supervisor
-    supervisor -->|"Approved grant; runner rechecks authority"| runner
-    sourceProject -->|"Copy permitted inputs only"| runner
-    runner -->|"Prepare private copy"| workspace
-    runner -->|"Launch and contain"| process
-    process -->|"Read and edit"| workspace
-    supervisor -->|"Check full-runtime protection"| launchGate
-    launchGate -.->|"Confinement + provider integration pending"| opencode
+    cli -->|"Review, approve, run"| supervisor
+    supervisor -->|"Verified attempt"| launcher
+    sourceProject -->|"Copy at preparation"| copy
+    launcher -->|"Mount, start, stop"| jail
+    opencode -->|"File operations"| mount
+    mount --> mediator
+    mediator -->|"Allowed operations only"| copy
     opencode <-->|"Blocking hook admission"| supervisor
-    opencode -->|"Native HTTP after admission"| provider
+    opencode -->|"Admitted requests"| relay
+    relay --> provider
+    launcher -->|"After verified cleanup"| changeset
+    copy --> changeset
+    changeset -->|"Authorized, conflict-free edits"| sourceProject
     supervisor -->|"Persist authority and decisions"| state
     supervisor -->|"Record origins"| provenance
     state -->|"Read-only export"| report
     provenance -->|"Read-only export"| report
 
-    classDef pending fill:#fff5e5,stroke:#b07824,color:#694716,stroke-dasharray:6 4
     classDef output fill:#f1f3f8,stroke:#7c87a1,color:#29364c
-    class launchGate pending
-    class sourceProject,workspace,provider,report output
-    style isolated fill:#f1f7f3,stroke:#5f8175
-    style connector fill:#fffcf6,stroke:#b07824,stroke-dasharray:6 4
+    class sourceProject,copy,provider,report output
+    style jail fill:#f1f7f3,stroke:#5f8175

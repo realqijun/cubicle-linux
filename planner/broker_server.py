@@ -96,6 +96,12 @@ class BrokerServer:
             self._failed = True
             self._ready.set()
 
+    @property
+    def healthy(self) -> bool:
+        """False once the serving thread failed or ended; the worker must then stop."""
+        return (self._thread is not None and self._thread.is_alive() and not self._failed
+                and not self._stopping.is_set())
+
     def close(self) -> None:
         self._stopping.set()
         if self._thread is not None:

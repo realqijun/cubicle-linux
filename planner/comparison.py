@@ -8,6 +8,7 @@ runtime records (denied operations). Only counts and booleans are persisted.
 
 from collections.abc import Iterator
 from datetime import datetime, timezone
+import hashlib
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -231,11 +232,15 @@ def collect(run: Path, *, provider_url: str, credential: str | None, opencode: P
     with RecordingForwarder(provider_url, credential) as forwarder:
         config = ConnectorConfig(model, executable=str(opencode), timeout_seconds=300,
                                  provider=ProviderConfig(forwarder.url, api_key_env=TOKEN_ENV))
-        if mode == "native":
-            observed = _native(workspace, prompt, policy, config, seconds)
-        else:
-            observed = _confined(run, workspace, prompt, policy, config, opencode, helper, seconds,
-                                 mediated=mode == "supervisor")
+        observed: dict[str, Any]
+        try:
+            if mode == "native":
+                observed = _native(workspace, prompt, policy, config, seconds)
+            else:
+                observed = _confined(run, workspace, prompt, policy, config, opencode, helper, seconds,
+                                     mediated=mode == "supervisor")
+        except Exception as error:  # A failed run still reports what reached the provider.
+            observed = {"error": type(error).__name__}
         record = {"mode": mode, "model": model, "harness_release": PINNED_VERSION,
                   "duration_seconds": round(time.monotonic() - started, 1),
                   "provider_requests": forwarder.requests,
@@ -245,6 +250,35 @@ def collect(run: Path, *, provider_url: str, credential: str | None, opencode: P
     manifest["agent_run"] = "collected"
     (run / "comparison.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return record
+
+
+def _evidence(run: Path) -> str:
+    """Digest of the evaluator's inputs that collection must not change."""
+    manifest = json.loads((run / "comparison.json").read_text(encoding="utf-8"))
+    manifest.pop("agent_run")
+    return hashlib.sha256(json.dumps(manifest, sort_keys=True).encode() +
+                          (run / "baseline.json").read_bytes()).hexdigest()
+
+
+def verify_evidence(run: Path) -> bool:
+    """Recheck a collected run against a fresh, deterministic preparation.
+
+    An unconfined native agent runs as the operator's user, so the manifest and
+    baseline beside its workspace must be proven unchanged before scoring.
+    """
+    manifest = json.loads((run / "comparison.json").read_text(encoding="utf-8"))
+    with tempfile.TemporaryDirectory() as directory:
+        fresh = prepare_run(Path(directory) / "fresh", manifest["scenario"], mode=manifest["mode"],
+                            model=manifest["model"], harness_release=manifest["harness_release"],
+                            policy=comparison_policy(Path(directory)))
+        expected = json.loads((fresh / "comparison.json").read_text(encoding="utf-8"))
+        same_baseline = (fresh / "baseline.json").read_bytes() == (run / "baseline.json").read_bytes()
+    keys = ("scenario", "mode", "model", "harness_release", "benchmark_sha256", "initial_workspace",
+            "matched_configuration", "scoring")
+    without_root = {k: v for k, v in manifest["policy"].items() if k not in ("root", "root_identity")}
+    expected_policy = {k: v for k, v in expected["policy"].items() if k not in ("root", "root_identity")}
+    return (same_baseline and without_root == expected_policy
+            and all(manifest[key] == expected[key] for key in keys))
 
 
 def matrix(output: Path, *, model: str, provider_url: str, credential: str | None, opencode: Path,
@@ -274,11 +308,17 @@ def matrix(output: Path, *, model: str, provider_url: str, credential: str | Non
                                                if k not in ("root", "root_identity")}
             (run / "comparison.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             entry: dict[str, Any] = {"scenario": scenario, "mode": mode, "run": str(run)}
+            pinned = _evidence(run)  # Held in this process, out of the agent's reach.
             try:
                 entry["agent"] = collect(run, provider_url=provider_url, credential=credential,
                                          opencode=opencode, helper=helper, seconds=seconds)
             except Exception as error:  # Preserve failed attempts as results, not omissions.
                 entry["agent"] = {"error": type(error).__name__}
+            if _evidence(run) != pinned or not verify_evidence(run):
+                entry["evaluation"] = {"status": "evidence_tampered"}
+                results.append(entry)
+                (output / "results.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+                continue
             evaluation = evaluate_run(run)
             entry["evaluation"] = {key: evaluation.get(key) for key in (
                 "status", "legitimate_completion", "authorized_final_changes", "protected_paths_changed",

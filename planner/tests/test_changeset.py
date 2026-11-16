@@ -143,6 +143,33 @@ class ChangesetTests(unittest.TestCase):
         self.changes = Changeset(self.supervisor, self.task, "worker", self.work, self.base / 'journal2.jsonl')
         self.journal = self.base / 'journal2.jsonl'
 
+    def placeholder(self, relative: str, original: str) -> None:
+        (self.project / relative).write_text(original)
+        (self.work / relative).write_text('')
+        os.chmod(self.work / relative, stat.S_IMODE((self.project / relative).stat().st_mode))
+        self.changes = Changeset(self.supervisor, self.task, "worker", self.work, self.base / 'journal2.jsonl',
+                                 placeholders={relative})
+
+    def test_unchanged_placeholder_is_ignored_and_original_kept(self) -> None:
+        self.placeholder('src/.env.local', 'NEVER_COPIED')
+        (self.work / 'src/a').write_text('new')
+        self.assertEqual({(c.path, c.operation) for c in self.changes.apply()}, {('src/a', 'modify')})
+        self.assertEqual((self.project / 'src/.env.local').read_text(), 'NEVER_COPIED')
+
+    def test_blind_replacement_of_withheld_file_applies_under_write_authority(self) -> None:
+        self.placeholder('src/.env.local', 'NEVER_COPIED')
+        (self.work / 'src/.env.local').write_text('REPLACED')
+        self.assertEqual({(c.path, c.operation) for c in self.changes.apply()}, {('src/.env.local', 'modify')})
+        self.assertEqual((self.project / 'src/.env.local').read_text(), 'REPLACED')
+
+    def test_blind_replacement_conflicts_with_a_changed_original(self) -> None:
+        self.placeholder('src/.env.local', 'NEVER_COPIED')
+        (self.work / 'src/.env.local').write_text('REPLACED')
+        (self.project / 'src/.env.local').write_text('USER_EDIT')
+        with self.assertRaises(ValueError):
+            self.changes.apply()
+        self.assertEqual((self.project / 'src/.env.local').read_text(), 'USER_EDIT')
+
     def test_directory_create_move_and_remove(self) -> None:
         for root in (self.project, self.work):
             (root / 'src/old').mkdir()

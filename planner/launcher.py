@@ -6,7 +6,7 @@ Application uses the worker's current ordinary authority; changes outside it,
 conflicts and uncertain cleanup leave the original project untouched.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import asdict, dataclass, replace
 import json
@@ -20,7 +20,7 @@ import time
 from typing import Any
 
 from .broker_server import BrokerServer
-from .changeset import Changeset
+from .changeset import ApplicationConflict, Changeset
 from .connector import BridgeConfig, Connector, ConnectorConfig
 from .mediation import WorkerBroker
 from .provenance import Provenance
@@ -44,11 +44,13 @@ class Runtime:
 class _Authority:
     """Monitor-thread view: the worker grant and its attempt must stay live."""
 
-    def __init__(self, state: Path, task: str, worker: str, attempt: str) -> None:
+    def __init__(self, state: Path, task: str, worker: str, attempt: str,
+                 drain: Callable[[Supervisor], None]) -> None:
         self.supervisor = Supervisor(state)
-        self.task, self.worker, self.attempt = task, worker, attempt
+        self.task, self.worker, self.attempt, self.drain = task, worker, attempt, drain
 
     def check(self) -> None:
+        self.drain(self.supervisor)
         self.supervisor.check_worker(self.task, self.worker)
         item = self.supervisor.attempt(self.attempt)
         if item["state"] != "running" or item["expires"] <= self.supervisor.clock():
@@ -98,7 +100,7 @@ def _alive(record: dict[str, Any]) -> bool:
     return record["start"] is not None and _start_time(record["pid"]) == record["start"]
 
 
-def _cleanup_observed(run: Path) -> tuple[bool, str]:
+def _cleanup_observed(run: Path, *, include_owner: bool = True) -> tuple[bool, str]:
     """Verify recorded processes, the worker PID namespace and the mount are gone."""
     try:
         data = json.loads((run / "processes.json").read_text())
@@ -107,7 +109,7 @@ def _cleanup_observed(run: Path) -> tuple[bool, str]:
     processes = data["processes"]
     if "worker" not in processes or data.get("namespace") is None:
         return False, "worker_identity_unrecorded"
-    if any(_alive(record) for record in processes.values()):
+    if any(_alive(record) for name, record in processes.items() if include_owner or name != "launcher"):
         return False, "recorded_process_alive"
     for entry in Path("/proc").iterdir():
         if entry.name.isdigit():
@@ -153,29 +155,46 @@ def recover(state: Path, task: str, worker: str, runtime: Runtime, *,
         backend, connector = runtime_status(runtime.opencode, runtime.fuse_helper)
         results = []
         for item in supervisor.attempts(task):
-            if item["worker"] != worker or item["state"] != "interrupted":
+            if item["worker"] != worker:
                 continue
-            run = runs / item["id"]
-            observed, evidence = _cleanup_observed(run)
             try:
-                application = supervisor.application(item["id"])
+                application: dict[str, Any] | None = supervisor.application(item["id"])
             except ValueError:
                 application = None
-            if application and application["state"] == "applying":
-                status = application_status(supervisor, Path(application["journal"]))
+            applying = application is not None and application["state"] == "applying"
+            if item["state"] != "interrupted" and not applying:
+                continue
+            run = runs / item["id"]
+            if applying and item["state"] != "interrupted":
+                # The worker finished; only the application owner may have died.
+                try:
+                    owner = json.loads((run / "processes.json").read_text())["processes"]["launcher"]
+                except (OSError, ValueError, KeyError):
+                    owner = None
+                if owner is not None and _alive(owner):
+                    raise ValueError("An application owner for this task is still running")
+            if application is not None and applying:
+                try:
+                    status = application_status(supervisor, Path(application["journal"]))["state"]
+                except (OSError, ValueError):
+                    status = "no_write_started"  # The journal precedes every write to the original.
                 supervisor.record_application(item["id"], mode=application["mode"], state="interrupted",
-                                              reason=f"owner_lost_during_application:{status['state']}",
+                                              reason=f"owner_lost_during_application:{status}",
                                               changes=application["changes"], journal=application["journal"])
             elif application is None:
                 supervisor.record_application(item["id"], mode="auto", state="not_applied", reason="owner_lost")
-            recovered = supervisor.recover_attempt(item["id"], backend, connector,
-                                                   cleanup_verified=observed or operator_confirmed)
-            if observed:
-                _purge(run)
-                _remove_transport(run)
-            results.append({"attempt": item["id"], "state": recovered["state"], "reason": recovered["reason"],
-                            "cleanup_evidence": evidence, "operator_confirmed": operator_confirmed,
-                            "application": supervisor.application(item["id"])})
+            entry = {"attempt": item["id"], "operator_confirmed": operator_confirmed}
+            if item["state"] == "interrupted":
+                observed, evidence = _cleanup_observed(run)
+                recovered = supervisor.recover_attempt(item["id"], backend, connector,
+                                                       cleanup_verified=observed or operator_confirmed)
+                if observed:
+                    _purge(run)
+                    _remove_transport(run)
+                entry.update(state=recovered["state"], reason=recovered["reason"], cleanup_evidence=evidence)
+            else:
+                entry.update(state=item["state"], reason=item["reason"], cleanup_evidence="worker_already_finished")
+            results.append({**entry, "application": supervisor.application(item["id"])})
         return results
     finally:
         supervisor.close()
@@ -246,12 +265,7 @@ def _request_reconsideration(supervisor: Supervisor, task: str, worker: str, att
 
 
 def _classify(error: BaseException) -> str:
-    if isinstance(error, (PermissionError,)):
-        return "blocked"
-    text = str(error)
-    if "changed" in text or "collides" in text or "appeared" in text:
-        return "conflicted"
-    return "blocked"
+    return "conflicted" if isinstance(error, (ApplicationConflict, FileExistsError)) else "blocked"
 
 
 def apply_retained(state: Path, attempt_id: str) -> dict[str, Any]:
@@ -332,36 +346,33 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         runs.mkdir(mode=0o700, parents=True, exist_ok=True)
         run = runs / attempt
         run.mkdir(mode=0o700)
-        bindings = supervisor.reserve_exceptions(attempt)
-        inside = [item for item in bindings if Path(item["resource"]).is_relative_to(policy.root)]
-        relative = {item["id"]: Path(item["resource"]).relative_to(policy.root).as_posix() for item in inside}
-        fs_exceptions = [(item["operation"], relative[item["id"]], item["lifetime"], bool(item["sensitive"]))
-                         for item in inside]
-        write_exceptions = {relative[item["id"]]: item["id"] for item in inside if item["operation"] == "write"}
-        inputs: dict[str, Path] = {}
-        broker_inputs: dict[str, str] = {}
-        try:
-            for item in bindings:
-                if item in inside:
-                    continue
-                source = Path(item["resource"])
-                name = source.name if source.name not in inputs else f"{len(inputs)}-{source.name}"
-                inputs[name] = _copy_bound_input(source, item["identity"], run / "inputs" / name)
-                fs_exceptions.append(("read", f"{INPUTS}/{name}", item["lifetime"], bool(item["sensitive"])))
-                broker_inputs[f"/workspace/{INPUTS}/{name}"] = item["resource"]
-        except OSError as error:
-            supervisor.abandon_attempt(attempt, "external_input_unavailable")
-            supervisor.settle_exceptions(attempt)
-            _purge(run)
-            supervisor.record_application(attempt, mode=mode, state="not_applied", reason=str(error))
-            return {**result, "outcome": "blocked", "reason": str(error), "application": supervisor.application(attempt)}
         ready = threading.Event()
-        holder: dict[str, Any] = {}
+        holder: dict[str, Any] = {"recorded": 0}
+        broker_inputs: dict[str, str] = {}
+        bindings: list[dict[str, Any]] = []
+        filesystem: Any = None
+        changes: Changeset | None = None
+        processes = _Processes(run / "processes.json")
+        outcome, cleaned, failure = "runtime_error", False, ""
+
+        def original(name: str) -> str:
+            """Record the logical resource, not the worker-visible copy."""
+            return broker_inputs.get(f"/workspace/{name}", str(policy.root / name))
 
         def lost() -> None:
             confined = holder.get("runtime")
             if confined is not None and confined.authority_lost:
                 raise PermissionError("Worker authority lost")
+
+        def drain(owner: Supervisor) -> None:
+            """Record new mediator refusals; repeated identical ones suspend the worker."""
+            if filesystem is None:
+                return
+            start, end = holder["recorded"], len(filesystem.denials)
+            if end > start:
+                owner.record_filesystem_denials(task, worker, [(operation, original(name)) for operation, name
+                                                               in filesystem.denials[start:end]])
+                holder["recorded"] = end
 
         class Broker(WorkerBroker):
             def handle_request(self, envelope: dict[str, Any]) -> dict[str, Any]:
@@ -385,26 +396,39 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
 
         @contextmanager
         def authority_factory() -> Iterator[_Authority]:
-            authority = _Authority(state, task, worker, attempt)
+            authority = _Authority(state, task, worker, attempt, drain)
             try:
                 yield authority
             finally:
                 authority.supervisor.close()
 
-        outcome, cleaned, unmounted, failure = "runtime_error", False, False, ""
-        filesystem = MediatedWorkspace(policy, grant, run / "fs", helper=runtime.fuse_helper, check_authority=lost,
-                                       exceptions=fs_exceptions, inputs=inputs)
-        changes: Changeset | None = None
-        processes = _Processes(run / "processes.json")
         try:
+            bindings = supervisor.reserve_exceptions(attempt)
+            inside = [item for item in bindings if Path(item["resource"]).is_relative_to(policy.root)]
+            relative = {item["id"]: Path(item["resource"]).relative_to(policy.root).as_posix() for item in inside}
+            fs_exceptions = [(item["operation"], relative[item["id"]], item["lifetime"], bool(item["sensitive"]))
+                             for item in inside]
+            write_exceptions = {relative[item["id"]]: item["id"] for item in inside if item["operation"] == "write"}
+            inputs: dict[str, Path] = {}
+            for item in bindings:
+                if item in inside:
+                    continue
+                source = Path(item["resource"])
+                name = source.name if source.name not in inputs else f"{item['id'][:12]}-{source.name}"
+                inputs[name] = _copy_bound_input(source, item["identity"], run / "inputs" / name)
+                fs_exceptions.append(("read", f"{INPUTS}/{name}", item["lifetime"], bool(item["sensitive"])))
+                broker_inputs[f"/workspace/{INPUTS}/{name}"] = item["resource"]
+            filesystem = MediatedWorkspace(policy, grant, run / "fs", helper=runtime.fuse_helper,
+                                           check_authority=lost, exceptions=fs_exceptions, inputs=inputs)
             with filesystem:
                 processes.add("filesystem", filesystem.pid)
                 processes.data["mount"] = str(filesystem.mount)
                 changes = Changeset(supervisor, task, worker, filesystem.backing, run / "journal.jsonl",
-                                    attempt=attempt, exceptions=write_exceptions)
+                                    attempt=attempt, exceptions=write_exceptions,
+                                    placeholders=filesystem.placeholders)
                 changes.save(run / "baseline.json")
                 with ExitStack() as mediation:
-                    bridge = None
+                    bridge, broker = None, None
                     if mediated:
                         broker = mediation.enter_context(BrokerServer(broker_factory))
                         bridge = BridgeConfig(broker.endpoint, broker.token)
@@ -427,6 +451,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                                 time.sleep(runtime.poll_seconds)
                                 if confined.authority_lost:
                                     outcome = "authority_lost"
+                                elif broker is not None and not broker.healthy:
+                                    outcome = "connector_lost"  # Leaving the loop kills the namespace.
                                 elif confined.process.poll() is not None:
                                     outcome = "worker_exited"
                                 elif not confined.server.active(session):
@@ -436,7 +462,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                                 else:
                                     continue
                                 break
-                    except Exception as error:  # Every failure still reaches finish_attempt.
+                    except Exception as error:  # Every failure still reaches the closing records.
                         outcome = "authority_lost" if confined.authority_lost else f"runtime_error:{type(error).__name__}"
                         failure = f"{type(error).__name__}: {error}"[:500]
                     cleaned = confined.cleaned
@@ -444,24 +470,33 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
             if outcome == "runtime_error":
                 outcome = f"runtime_error:{type(error).__name__}"
             failure = failure or f"{type(error).__name__}: {error}"[:500]
-        finally:
-            unmounted = not filesystem.mounted
-        if supervisor.attempt(attempt)["state"] in ("running", "stopping"):
-            supervisor.finish_attempt(attempt, successful=outcome == "completed",
-                                      cleanup_verified=cleaned and unmounted)
+        unmounted = filesystem is None or not filesystem.mounted
+        if "worker" in processes.data["processes"]:
+            observed, _ = _cleanup_observed(run, include_owner=False)  # Observed, not assumed.
         else:
+            observed = cleaned  # The worker never reached a recorded start.
+        current = supervisor.attempt(attempt)["state"]
+        if current in ("running", "stopping"):
+            supervisor.finish_attempt(attempt, successful=outcome == "completed",
+                                      cleanup_verified=cleaned and unmounted and observed)
+        elif current in ("prepared", "verified"):
             supervisor.abandon_attempt(attempt, outcome)
+        # Otherwise cancellation, revocation or recovery already closed the record.
         supervisor.settle_exceptions(attempt)
-        supervisor.record_filesystem_denials(task, worker, filesystem.denials, filesystem.denials_dropped)
+        drain(supervisor)
+        if filesystem is not None and filesystem.denials_dropped:
+            supervisor.record_filesystem_denials(task, worker, [], filesystem.denials_dropped)
+        denials = list(filesystem.denials) if filesystem is not None else []
         finished = supervisor.attempt(attempt)
         result["exceptions"] = [{"id": item["id"], "operation": item["operation"], "resource": item["resource"],
                                  "lifetime": item["lifetime"], "state": supervisor.exception(item["id"])["state"]}
                                 for item in bindings]
-        result["requests"] = _request_reconsideration(supervisor, task, worker, attempt, filesystem.denials)
+        result["requests"] = _request_reconsideration(supervisor, task, worker, attempt,
+                                                      [(operation, original(name)) for operation, name in denials])
         result.update(outcome=outcome, error=failure, attempt_state=finished["state"],
                       cleanup_verified=finished["cleanup_verified"],
                       filesystem_denials=[{"operation": op, "resource": name}
-                                          for op, name in filesystem.denials[:_SUMMARY_LIMIT]])
+                                          for op, name in denials[:_SUMMARY_LIMIT]])
         if finished["state"] != "finished" or changes is None:
             application = supervisor.record_application(
                 attempt, mode=mode, state="not_applied", reason=f"attempt_{finished['state']}:{outcome}")

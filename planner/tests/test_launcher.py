@@ -123,8 +123,9 @@ class LauncherTests(RuntimeCase):
                          ("applied", [{"path": "src/app.py", "operation": "modify"}]))
         self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
         self.unchanged("README.md", "tests/test_app.py", ".env")
-        denied = {(d["operation"], d["resource"]) for d in self.cli("history", task)
-                  if d["tool"] == "filesystem" and not d["allowed"]}
+        root = Path(self.cli("review", task)["policy"]["root"])
+        denied = {(d["operation"], Path(d["resource"]).relative_to(root).as_posix())
+                  for d in self.cli("history", task) if d["tool"] == "filesystem" and not d["allowed"]}
         self.assertEqual(denied, {("read", ".env"), ("write", "tests/test_app.py")})
         self.assertNotIn("DUMMY_SECRET", provider.tool_results())
 
@@ -154,6 +155,9 @@ class LauncherTests(RuntimeCase):
             result = self.cli(*self.run_args(task, provider, "--mode", "review"))
         self.assertEqual(result["application"]["state"], "retained")
         self.unchanged("src/app.py")
+        for path in (self.base / "operator").rglob("*"):  # Retained copies hold no withheld bytes.
+            if path.is_file():
+                self.assertNotIn(b"DUMMY_SECRET", path.read_bytes(), str(path))
         applied = self.cli("apply", result["attempt"])
         self.assertEqual(applied["state"], "applied")
         self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
@@ -433,3 +437,108 @@ class IsolationTests(RuntimeCase):
                  "--read", "**", "--write", "src/sub/**", *tools)
         stopped, _ = self.stop_during_run(["revoke", "TASK", "worker"], task=task, worker="child2", area="src/sub")
         self.assertEqual((stopped["outcome"], stopped["attempt_state"]), ("authority_lost", "cancelled"))
+
+
+@unittest.skipUnless(RUNTIME_GATE, RUNTIME_REASON)
+class ReviewRuntimeTests(RuntimeCase):
+    """Independent-review findings exercised against the actual runtime."""
+
+    def test_refusing_a_held_sensitive_approval_stops_the_worker_before_use(self) -> None:
+        task = self.approved_task()
+        request = self.cli("request-exception", task, "worker", "read", ".env", "--tool", "shell")
+        self.cli("approve-exception", request["id"], "--confirm-sensitive-provider-disclosure")
+        script = ("import time; from pathlib import Path\n"
+                  "Path('/workspace/src/started.txt').write_text('1')\n"
+                  "time.sleep(20)\n"
+                  "print(Path('/workspace/.env').read_text())\n")
+        def refuse() -> None:
+            deadline = time.monotonic() + 120
+            while time.monotonic() < deadline and not list(self.runs.glob("*/fs/backing/src/started.txt")):
+                time.sleep(0.2)
+            self.cli("refuse-exception", request["id"])
+        thread = threading.Thread(target=refuse)
+        with ScriptedProvider([shell(script)]) as provider:
+            thread.start()
+            result = self.cli(*self.run_args(task, provider))
+            thread.join()
+        self.assertEqual((result["outcome"], result["attempt_state"]), ("authority_lost", "cancelled"))
+        self.assertNotIn("DUMMY_SECRET", provider.tool_results())
+        self.assertEqual(self.cli("exception", request["id"])["state"], "revoked")
+
+    def test_repeated_identical_shell_denials_suspend_the_worker(self) -> None:
+        task = self.approved_task()
+        steps = [shell("print(open('/workspace/.env').read())") for _ in range(5)]
+        with ScriptedProvider(steps) as provider:
+            result = self.cli(*self.run_args(task, provider))
+        self.assertEqual((result["outcome"], result["attempt_state"]), ("authority_lost", "cancelled"))
+        self.assertEqual(self.cli("worker", task, "worker")["state"], "suspended")
+        self.assertLess(provider._issued, len(steps), "Worker kept retrying after the limit")
+        self.assertNotIn("DUMMY_SECRET", provider.tool_results())
+
+    def test_cancellation_between_verification_and_dispatch_closes_cleanly(self) -> None:
+        from unittest.mock import patch
+        from planner.connector import ConnectorConfig, ProviderConfig
+        from planner.launcher import Runtime, run_task
+        from planner.supervisor import Supervisor
+
+        task = self.approved_task()
+        original = Supervisor.reserve_exceptions
+        def cancel_then_reserve(owner: Supervisor, attempt: str) -> list:
+            bound = original(owner, attempt)
+            other = Supervisor(self.state)
+            try:
+                other.cancel(task)
+            finally:
+                other.close()
+            return bound
+        paths = runtime_paths()
+        with ScriptedProvider([]) as provider, patch.object(Supervisor, "reserve_exceptions", cancel_then_reserve):
+            result = run_task(self.state, task, "worker", "unused",
+                              ConnectorConfig("fixture/model", timeout_seconds=30,
+                                              provider=ProviderConfig(provider.url)),
+                              Runtime(paths["opencode"], paths["fuse_helper"], self.runs))
+        self.assertTrue(result["outcome"].startswith("runtime_error"), result)
+        self.assertEqual(result["attempt_state"], "blocked")
+        self.assertEqual(result["application"]["state"], "not_applied")
+        self.assertEqual(provider.bodies, [])
+        self.assertEqual(list(self.runs.glob("*/fs/backing")), [])
+        self.unchanged("src/app.py", ".env")
+
+    def test_lost_broker_stops_the_worker_and_prevents_application(self) -> None:
+        from unittest.mock import patch
+        from http.server import HTTPServer
+        from planner.connector import ConnectorConfig, ProviderConfig
+        from planner.launcher import Runtime, run_task
+
+        task = self.approved_task()
+        marker = f"planner-broker-{os.getpid()}-{time.monotonic_ns()}"
+        script = ("import time; from pathlib import Path\n"
+                  "Path('/workspace/src/started.txt').write_text('1')\n"
+                  f"time.sleep(120)  # {marker}\n")
+        die = threading.Event()
+        serve = HTTPServer.handle_request
+        def handle(server: HTTPServer) -> None:
+            if die.is_set():
+                raise RuntimeError("broker lost")
+            serve(server)
+        def kill_broker() -> None:
+            deadline = time.monotonic() + 120
+            while time.monotonic() < deadline and not list(self.runs.glob("*/fs/backing/src/started.txt")):
+                time.sleep(0.2)
+            die.set()
+        paths = runtime_paths()
+        thread = threading.Thread(target=kill_broker)
+        with ScriptedProvider([shell(script)]) as provider, \
+                patch("planner.broker_server.HTTPServer.handle_request", handle):
+            thread.start()
+            started = time.monotonic()
+            result = run_task(self.state, task, "worker", "unused",
+                              ConnectorConfig("fixture/model", timeout_seconds=30,
+                                              provider=ProviderConfig(provider.url)),
+                              Runtime(paths["opencode"], paths["fuse_helper"], self.runs))
+            thread.join()
+        self.assertLess(time.monotonic() - started, 100)
+        self.assertEqual(result["outcome"], "connector_lost")
+        self.assertEqual(result["application"]["state"], "not_applied")
+        self.assertEqual(subprocess.run(["pgrep", "-f", marker], capture_output=True).returncode, 1)
+        self.assertFalse((self.project / "src/started.txt").exists())

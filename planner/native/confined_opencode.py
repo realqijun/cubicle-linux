@@ -295,6 +295,8 @@ class ConfinedOpenCode:
         environment["OPENCODE_CONFIG_CONTENT"] = json.dumps(content)
         environment.update(OPENCODE_FILEWATCHER_DISABLE="1", OPENCODE_DISABLE_FFF="1")
         environment["PATH"] = "/usr/bin:/bin"
+        # Bytecode caches would otherwise become changes to apply or denied writes.
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
         seccomp = tempfile.TemporaryFile()
         try:
             _candidate_filter(seccomp.fileno())

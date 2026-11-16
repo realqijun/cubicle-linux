@@ -12,7 +12,9 @@ from planner.supervisor import Supervisor
 VERIFIED = ProtectionStatus(True, "fixture", "verified fixture", True)
 
 
-class ReservationTests(unittest.TestCase):
+class _Fixture(unittest.TestCase):
+    """Shared task, worker and helpers; defines no tests."""
+
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="planner-reservation-")
         self.addCleanup(temporary.cleanup)
@@ -54,6 +56,8 @@ class ReservationTests(unittest.TestCase):
     def write(self, resource: str = "tests/test_app.py") -> bool:
         return self.supervisor.authorize(Action(self.task, "worker", "write", resource, "shell")).allowed
 
+
+class ReservationTests(_Fixture):
     def test_once_approval_binds_one_attempt_and_is_spent_after_dispatch(self) -> None:
         approval = self.approval()
         attempt, bound = self.run_attempt()
@@ -153,3 +157,44 @@ class ReservationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewRegressionTests(_Fixture):
+    """Findings from the independent review, checked at the supervisor boundary."""
+
+    def test_refusing_a_held_approval_stops_the_running_attempt(self) -> None:
+        approval = self.approval()
+        attempt, _ = self.run_attempt()
+        self.supervisor.refuse_exception(approval)
+        self.assertEqual(self.supervisor.attempt(attempt)["state"], "stopping")
+        self.assertFalse(self.write())
+
+    def test_spent_approval_history_cannot_be_rewritten_by_refusal(self) -> None:
+        approval = self.approval()
+        attempt, _ = self.run_attempt()
+        self.finish(attempt)
+        with self.assertRaises(ValueError):
+            self.supervisor.refuse_exception(approval)
+        self.assertEqual(self.supervisor.exception(approval)["state"], "executed")
+
+    def test_repeated_identical_filesystem_denials_suspend_the_worker(self) -> None:
+        attempt, _ = self.run_attempt()
+        secret = str(self.supervisor.policy(self.task).root / ".env")
+        for _ in range(3):
+            self.supervisor.record_filesystem_denials(self.task, "worker", [("read", secret)])
+        self.assertEqual(self.supervisor.worker_status(self.task, "worker")["state"], "suspended")
+        self.assertEqual(self.supervisor.attempt(attempt)["state"], "stopping")
+
+    def test_owner_death_before_the_journal_is_recovered_as_no_write(self) -> None:
+        from planner.launcher import Runtime, recover
+
+        attempt, _ = self.run_attempt()
+        self.finish(attempt)
+        runs = Path(tempfile.mkdtemp(prefix="planner-runs-"))
+        self.addCleanup(lambda: __import__("shutil").rmtree(runs))
+        self.supervisor.record_application(attempt, mode="auto", state="applying", reason="checked",
+                                           journal=str(runs / attempt / "journal.jsonl"))
+        [entry] = recover(self.supervisor.path, self.task, "worker",
+                          Runtime(Path("/missing/opencode"), Path("/missing/helper"), runs))
+        self.assertEqual(entry["application"]["state"], "interrupted")
+        self.assertIn("no_write_started", entry["application"]["reason"])

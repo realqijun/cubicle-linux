@@ -69,3 +69,25 @@ class BrokerServerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BrokerHealthTests(unittest.TestCase):
+    def test_serving_failure_is_reported_so_the_runner_stops_the_worker(self):
+        from unittest.mock import patch
+        import time
+
+        @contextmanager
+        def factory():
+            yield None
+        calls = {"count": 0}
+        def failing(server):
+            calls["count"] += 1
+            if calls["count"] > 3:
+                raise RuntimeError("serving loop failed")
+            time.sleep(0.01)
+        with patch("planner.broker_server.HTTPServer.handle_request", failing):
+            with BrokerServer(factory) as broker:
+                deadline = time.monotonic() + 5
+                while broker.healthy and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertFalse(broker.healthy)

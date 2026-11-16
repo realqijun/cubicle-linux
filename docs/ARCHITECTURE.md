@@ -1,16 +1,15 @@
 # Planner supervisor architecture
 
-The supervisor owns permissions and provenance. The Ubuntu runner executes
-offline commands in a private workspace. The OpenCode bridge checks tools and
-model inputs in integration fixtures; connecting that path to a complete
-confined launcher remains pending.
+The supervisor owns permissions and provenance. On Ubuntu the launcher runs a
+confined OpenCode worker over a FUSE-mediated private copy and applies checked
+edits to the original project. The offline runner remains for plain commands.
+See the [connected runtime](CONNECTED_RUNTIME.md) for the full sequence.
 
 ![Planner supervisor components and trust boundaries](diagrams/architecture.svg)
 
-Solid connections show implemented interfaces exercised by tests or fixed
-provider fixtures. The green group is the tested Ubuntu offline path. The
-dashed connection marks the missing full-runtime launch integration; it does
-not connect the offline runner to a model provider.
+**The checked-in SVG predates the connected runtime and still shows the launcher
+as pending.** The [Mermaid source](diagrams/architecture.mmd) is current; render
+it with the command below to refresh the image.
 
 ## Offline command flow
 
@@ -24,21 +23,22 @@ not connect the offline runner to a model provider.
 
 See [Ubuntu setup and restrictions](LINUX_SANDBOX.md) for the tested contract.
 
-## Connector flow and remaining integration
+## Connected flow
 
 1. The operator reviews a TOML policy and approves exact grants, delegation
    templates, or narrow exceptions through the CLI.
-2. A normal launcher must establish OS protection, boot a private OpenCode server
-   without task data, and verify its hook registration before admitting a task.
-   This runtime integration remains pending.
+2. The launcher verifies the runtime, reserves approved exceptions, mounts the
+   mediated copy, boots a private OpenCode server without task data inside
+   Bubblewrap/AppArmor/seccomp, and verifies hook registration before the prompt.
 3. OpenCode's hook bridge sends worker-bound requests to the authenticated
    loopback broker. The broker checks current authority through the supervisor
    and admits actual model inputs through `ModelContext`.
-4. OpenCode executes its built-in tools and sends native HTTP requests to the
-   configured provider after admission. **The broker is a decision point, not a
-   model-traffic proxy.** The OS backend must independently constrain tools,
-   shell commands, and all descendants.
-5. SQLite retains control records, origins, and permitted project notes. Read-only
+4. OpenCode executes its built-in tools inside the jail; the FUSE mediator checks
+   every file operation by tools, shells and descendants against the same policy.
+   Provider requests leave through a fixed relay after broker admission.
+5. After verified cleanup the changeset applies authorized, conflict-free edits
+   (or retains them in review mode) and records the outcome.
+6. SQLite retains control records, origins, and permitted project notes. Read-only
    exports produce the offline report, which does not participate in enforcement.
 
 ## Components
@@ -49,10 +49,13 @@ See [Ubuntu setup and restrictions](LINUX_SANDBOX.md) for the tested contract.
 | Worker broker | Authenticated protocol, exact tool checks, refusal history, receipt binding | [transport](../planner/broker_server.py), [mediation](../planner/mediation.py) |
 | Model context | Actual in-memory inputs, conservative origin/sensitivity propagation, opaque handles | [context](../planner/context.py) |
 | OpenCode connector | Pinned release, private bootstrap proposal, blocking hooks, explicit provider configuration | [connector](../planner/connector.py), [hook bridge](../planner/opencode/bridge.mjs) |
-| OS backend | Launch gate and required filesystem/process containment | [enforcement](../planner/enforcement.py) |
+| Launcher | Attempt lifecycle, exception reservation, cleanup evidence, recovery, application | [launcher](../planner/launcher.py) |
+| Connected runtime | FUSE mediator, jail, relays, private server bootstrap | [mediator](../planner/native/mediatedfs.py), [runtime](../planner/native/confined_opencode.py) |
+| Changeset | Checked application of files and directories with a progress journal | [changeset](../planner/changeset.py) |
+| Generic live-project gate | Still refuses unconfined live-project commands | [enforcement](../planner/enforcement.py) |
 | Ubuntu offline runner | Private input copy, kernel path rules, detached-descendant cleanup; no model network or automatic merge | [Linux sandbox](../planner/native/linux_sandbox.py) |
 | Persistence and report | SQLite metadata, project memory, inspection and offline visualization | [provenance](../planner/provenance.py), [report](../planner/report.py) |
-| Evaluation | Fresh matched fixtures and independent oracle behind the OS gate | [evaluation](../planner/evaluation.py) |
+| Evaluation | Frozen matched fixtures, confined oracle, native/OS/supervisor collector | [evaluation](../planner/evaluation.py), [comparison](../planner/comparison.py) |
 
 ## Trust boundaries
 

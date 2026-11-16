@@ -11,11 +11,11 @@ import json
 import math
 import sqlite3
 import time
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from uuid import uuid4
 
 from .policy import Policy, canonical_path
-from .records import Action, Decision, Grant, ProtectionStatus
+from .records import Action, Decision, Grant, Operation, ProtectionStatus
 from .connector import Connector, ConnectorConfig
 from .enforcement import Backend, ProtectionUnavailable
 
@@ -536,10 +536,19 @@ class Supervisor:
             self.db.execute("UPDATE approvals SET state='approved' WHERE id=?", (approval_id,))
 
     def refuse_exception(self, approval_id: str) -> None:
+        """Refuse or withdraw an approval. A running attempt that could use it is
+        stopped: a mounted copy cannot be made to forget an approval it holds."""
         with self.db:
             self.db.execute("BEGIN IMMEDIATE")
-            self.exception(approval_id)
+            item = self.exception(approval_id)
+            if item["state"] not in ("requested", "approved", "reserved"):
+                raise ValueError("Approval already spent or closed; its history is kept")
             self.db.execute("UPDATE approvals SET state='revoked' WHERE id=?", (approval_id,))
+            if item["state"] != "requested":
+                running = self.db.execute("""SELECT id FROM attempts WHERE task=? AND worker=?
+                    AND state='running'""", (item["task"], item["worker"])).fetchall()
+                if running:
+                    self._stop_attempts(item["task"], item["worker"], "exception_revoked")
 
     def _use_exception(self, action: Action, decision: Decision) -> Decision:
         if decision.allowed or action.operation not in ("read", "write"):
@@ -712,12 +721,19 @@ class Supervisor:
 
     def record_filesystem_denials(self, task_id: str, worker_id: str,
                                   denials: Sequence[tuple[str, str]], dropped: int = 0) -> None:
-        """Trusted runner records refusals the mediated filesystem enforced in real time."""
+        """Trusted runner records refusals the mediated filesystem enforced in real time.
+
+        Each goes through the same identical-denial limit as broker requests, so a
+        worker retrying a refused file operation is suspended and stopped.
+        """
         with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
             self.status(task_id)
             for operation, resource in denials:
-                self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,?,?,'filesystem',0,?,NULL,?,NULL)",
-                                (task_id, worker_id, operation, resource, "Worker operation denied", self.clock()))
+                action = Action(task_id, worker_id, cast(Operation, operation), resource, "filesystem")
+                decision = Decision(False, "Worker operation denied", resource)
+                self._record_decision(action, decision, None)
+                self._record_request((action,), (decision,))
             if dropped:
                 self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,'mediation','filesystem','filesystem',0,?,NULL,?,NULL)",
                                 (task_id, worker_id, f"{dropped} further denials not itemized", self.clock()))

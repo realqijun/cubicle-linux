@@ -67,7 +67,9 @@ class MediatedFilesystemTests(unittest.TestCase):
 
     def test_allowed_read_and_write_with_denied_actual_secret_read(self) -> None:
         self.assertEqual((self.mount / "src/public.txt").read_text(), "public")
-        self.assertEqual((self.fs.backing / "src/private.txt").read_text(), "DUMMY_SECRET")
+        # Withheld: run storage holds an empty stand-in, never the protected bytes.
+        self.assertEqual((self.fs.backing / "src/private.txt").read_text(), "")
+        self.assertEqual(self.fs.placeholders, {"src/private.txt"})
         with self.assertRaises(PermissionError):
             (self.mount / "src/private.txt").read_text()
         (self.mount / "src/public.txt").write_text("updated")
@@ -93,6 +95,13 @@ class MediatedFilesystemTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             (self.mount / "src").rename(self.mount / "visible")
 
+    def test_blind_writer_must_replace_a_withheld_file_completely(self) -> None:
+        with self.assertRaises(PermissionError):
+            with (self.mount / "src/private.txt").open("a") as stream:
+                stream.write("partial")
+        self.assertEqual((self.fs.backing / "src/private.txt").read_text(), "")
+        self.assertIn(("write", "src/private.txt"), self.fs.denials)
+
     def test_blind_replacement_does_not_grant_read(self) -> None:
         (self.mount / "src/private.txt").write_text("replacement")
         self.assertEqual((self.fs.backing / "src/private.txt").read_text(), "replacement")
@@ -109,7 +118,10 @@ class MediatedFilesystemTests(unittest.TestCase):
                                helper=Path(os.environ["PLANNER_FUSE_BRIDGE"])) as candidate:
             with self.assertRaises(PermissionError):
                 (candidate.mount / "src").rename(candidate.mount / "visible")
-            self.assertEqual((candidate.backing / "src/private.txt").read_text(), "DUMMY_SECRET")
+            with self.assertRaises(PermissionError):  # Moving the stand-in would lose the original.
+                (candidate.mount / "src/private.txt").rename(candidate.mount / "src/other.txt")
+            self.assertEqual((candidate.backing / "src/private.txt").read_text(), "")
+        self.assertEqual((self.fs.original_policy.root / "src/private.txt").read_text(), "DUMMY_SECRET")
 
     def test_new_sensitive_name_stays_unreadable_and_unassigned_write_is_denied(self) -> None:
         (self.mount / "src/.env.new").write_text("new secret")

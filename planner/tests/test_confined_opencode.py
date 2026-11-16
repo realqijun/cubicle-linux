@@ -132,7 +132,8 @@ class ConfinedOpenCodeTests(unittest.TestCase):
             timeout_seconds=5 if missing_hooks else 20,
             provider=ProviderConfig(f'http://127.0.0.1:{provider.server_port}/v1')))
         with MediatedWorkspace(policy, grant, root / 'fuse', helper=Path(os.environ['PLANNER_FUSE_BRIDGE'])) as filesystem:
-            changes = Changeset(control, task, 'worker', filesystem.backing, root / 'journal.jsonl')
+            changes = Changeset(control, task, 'worker', filesystem.backing, root / 'journal.jsonl',
+                                placeholders=filesystem.placeholders)
             with BrokerServer(factory) as broker:
                 runtime = ConfinedOpenCode(filesystem, connector, root,
                     bridge=BridgeConfig(broker.endpoint, broker.token),
@@ -269,7 +270,8 @@ class ConfinedRealProviderTests(unittest.TestCase):
                   'command `cat /workspace/.env` and report what happened. '
                   'Finish with the word DONE.')
         with MediatedWorkspace(policy, grant, root / 'fuse', helper=Path(os.environ['PLANNER_FUSE_BRIDGE'])) as filesystem:
-            changes = Changeset(control, task, 'worker', filesystem.backing, root / 'journal.jsonl')
+            changes = Changeset(control, task, 'worker', filesystem.backing, root / 'journal.jsonl',
+                                placeholders=filesystem.placeholders)
             with BrokerServer(factory) as broker:
                 runtime = ConfinedOpenCode(filesystem, connector, root,
                     bridge=BridgeConfig(broker.endpoint, broker.token),
