@@ -419,13 +419,22 @@ Windows (section 9, portability) remain open. Evidence:
 | D. Lifecycle, recovery, provenance | Done: cancel/revoke/expiry/owner death/broker loss/repeated denials stop the namespace; `recover` verifies observed cleanup, never replays or revives; report shows application outcomes | `LauncherTests`, `ReviewRuntimeTests`, `test_report` |
 | E. Acceptance and evaluation | Done once: confined oracle, frozen protocol, 18-run matched comparison with real LaaS, CLI demonstration, strict mypy, independent review with all findings fixed | `test_evaluation`, `test_comparison`, evidence |
 | 9. Directories, external inputs, blind writes, single-use binding | Done on Linux | as above |
-| 9. macOS | Blocked externally: no Xcode, no code-signing identity with the FSKit entitlement, extension approval in System Settings and a privileged cleanup helper need the user. FSKit candidate sources type-check against the macOS 27 SDK. | [assessment](MACOS_BACKEND_ASSESSMENT.md) |
-| 9. Windows | Blocked externally: no Windows instance available | — |
+| 9. macOS | Moved to a follow-up plan by the user's scope change (below). Blocked externally: no Xcode, no code-signing identity with the FSKit entitlement, extension approval in System Settings and a privileged cleanup helper need the user. FSKit candidate sources type-check against the macOS 27 SDK. | [assessment](MACOS_BACKEND_ASSESSMENT.md) |
+| 9. Windows | Moved to a follow-up plan by the user's scope change (below). Blocked externally: no Windows instance available | — |
 
 The final complete Ubuntu suite on one source state passed: 235 tests, 209 passed,
 26 skipped (macOS-only, case-insensitive-only, Node absent on the guest, and the
 real-provider gate), 0 failures. Earlier failed attempts are kept in the evidence
-with their causes. On 16 November the user chose to defer macOS and Windows; both
-stay open requirements of the original plan, not completed work. The comparison
+with their causes. The comparison
 should be repeated with the reviewed code and more runs per cell before drawing
 behavioural conclusions.
+
+### Scope change agreed by the user — 17 November 2026
+
+Per section 3, the plan cannot be called complete with open criteria unless the
+user agrees to a scope change. On 17 November 2026 the user explicitly chose:
+**this plan completes on Linux; macOS and Windows move to a separate follow-up
+plan.** Their requirements from section 9 and the original plan are unchanged and
+unmet. They are not supported, and no adapter or pending test counts as support.
+The follow-up plan starts from the [macOS assessment](MACOS_BACKEND_ASSESSMENT.md)
+and the prerequisites listed in [known limitations](KNOWN_LIMITATIONS.md).

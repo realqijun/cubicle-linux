@@ -54,6 +54,8 @@ Accepted on one Ubuntu guest; see its [limits](CONNECTED_RUNTIME.md#limits). Als
   cleanup needs a privileged helper. None is available on the test host. See
   the [assessment](MACOS_BACKEND_ASSESSMENT.md).
 - **Windows:** not supported; no Windows instance was available for acceptance.
+- macOS and Windows support moved to a follow-up plan by the user's scope
+  decision of 17 November 2026; see [the completion plan](PLAN_COMPLETION.md).
 - **Other Linux environments:** no acceptance results establish support. Do not
   infer support from an executable, kernel feature or container being present.
 
