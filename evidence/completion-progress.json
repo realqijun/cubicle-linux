@@ -364,6 +364,26 @@
       "code": "planner/ at c05bc7b, guest source manifest identical to the repository (sha256 fe33395e...)",
       "record": "completion-comparison-repeat.json",
       "note": "Repeat requested in section 11 after the independent-review fixes. Two runs per cell in total; no statistical claim."
+    },
+    {
+      "case": "opencode_bridge_tests_with_node",
+      "at": "2026-11-17",
+      "environment": {
+        "system": "macOS (Darwin 27.0.0)",
+        "node": "v22.23.4",
+        "python": "3.15.2"
+      },
+      "command": "python3 -m unittest planner.tests.test_opencode_bridge",
+      "tests": 9,
+      "passed": 9,
+      "skipped": 0,
+      "failed": 0,
+      "source": {
+        "method": "sha256 of sha256 of every git-tracked file under planner/, sorted (LC_ALL=C)",
+        "sha256": "3a10ec08a2444b8eb497c8661436893540253ececab1802e985eed56c3d1b06f",
+        "commit": "5464c0a"
+      },
+      "note": "These 9 tests skip on the Ubuntu guest because Node is not installed there; the bridge is the JavaScript plugin loaded by OpenCode and its tests are platform-independent."
     }
   ]
 }

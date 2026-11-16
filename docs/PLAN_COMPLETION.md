@@ -425,7 +425,9 @@ Windows (section 9, portability) remain open. Evidence:
 
 The final complete Ubuntu suite on one source state passed: 235 tests, 209 passed,
 26 skipped (macOS-only, case-insensitive-only, Node absent on the guest, and the
-real-provider gate), 0 failures. Earlier failed attempts are kept in the evidence
+real-provider gate), 0 failures. The 9 Node-gated bridge tests pass with Node 22
+on the macOS host on the same sources, and the real-provider gate is covered by
+the separately recorded real-provider run. Earlier failed attempts are kept in the evidence
 with their causes. The comparison was repeated on the reviewed code with the same
 outcome on completion and authorization and no disclosure in any mode. Two runs
 per cell still support no behavioural conclusion; more runs per cell are needed
