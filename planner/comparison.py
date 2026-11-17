@@ -154,6 +154,47 @@ def _mentions(text: str, policy: Policy) -> tuple[bool, bool]:
     return sensitive, protected
 
 
+_CHILD_SUBREAPER = 36  # prctl(PR_SET_CHILD_SUBREAPER)
+
+
+def _subreaper(enabled: bool) -> None:
+    """Adopt, rather than lose to init, every process the native agent orphans."""
+    import ctypes
+
+    if ctypes.CDLL(None, use_errno=True).prctl(_CHILD_SUBREAPER, int(enabled), 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "Cannot contain native agent descendants")
+
+
+def _children() -> list[int]:
+    me, found = str(os.getpid()), []
+    for entry in Path("/proc").iterdir():
+        if entry.name.isdigit():
+            try:
+                if (entry / "stat").read_text().rsplit(")", 1)[1].split()[1] == me:
+                    found.append(int(entry.name))
+            except (OSError, IndexError):
+                continue
+    return found
+
+
+def _stop_orphans(seconds: float = 10) -> None:
+    """Kill and reap adopted descendants until none remain; detached sessions included."""
+    deadline = time.monotonic() + seconds
+    while children := _children():
+        if time.monotonic() > deadline:
+            raise RuntimeError("Native agent descendants could not be stopped")
+        for pid in children:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        for pid in children:
+            try:
+                os.waitpid(pid, 0)
+            except ChildProcessError:
+                pass
+
+
 def _native(workspace: Path, prompt: str, policy: Policy, config: ConnectorConfig,
             seconds: float) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="planner-native-") as directory:
@@ -163,16 +204,25 @@ def _native(workspace: Path, prompt: str, policy: Policy, config: ConnectorConfi
         settings["permissions"] = native_permissions(policy, workspace)
         launch.env["OPENCODE_CONFIG_CONTENT"] = json.dumps(settings)
         launch.env.update(OPENCODE_FILEWATCHER_DISABLE="1", OPENCODE_DISABLE_FFF="1")
-        process = subprocess.Popen(launch.argv, cwd=launch.cwd, env=launch.env, stdin=subprocess.DEVNULL,
-                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-                                   start_new_session=True)
+        # Descendants that outlive the agent, even in their own sessions, must not
+        # reach the evaluator's inputs. This limits lifetime only, not permissions.
+        _subreaper(True)
         try:
-            stdout, _ = process.communicate(timeout=seconds)
-            outcome = "completed" if process.returncode == 0 else f"exit_{process.returncode}"
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            stdout, _ = process.communicate()
-            outcome = "timeout"
+            process = subprocess.Popen(launch.argv, cwd=launch.cwd, env=launch.env, stdin=subprocess.DEVNULL,
+                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                                       start_new_session=True)
+            try:
+                stdout, _ = process.communicate(timeout=seconds)
+                outcome = "completed" if process.returncode == 0 else f"exit_{process.returncode}"
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+                _stop_orphans()  # An adopted descendant may still hold stdout open.
+                stdout, _ = process.communicate()
+                outcome = "timeout"
+            _stop_orphans()
+        finally:
+            _subreaper(False)
     calls = list(_tool_calls(stdout))
     flags = [_mentions(json.dumps(call.get("input", call.get("state", {}))), policy) for call in calls]
     return {"outcome": outcome, "tool_calls": len(calls),
@@ -252,27 +302,32 @@ def collect(run: Path, *, provider_url: str, credential: str | None, opencode: P
     return record
 
 
-def _evidence(run: Path) -> str:
+def _inputs(run: Path) -> tuple[bytes, bytes]:
+    """The evaluator's manifest and baseline, read once."""
+    return (run / "comparison.json").read_bytes(), (run / "baseline.json").read_bytes()
+
+
+def _evidence(inputs: tuple[bytes, bytes]) -> str:
     """Digest of the evaluator's inputs that collection must not change."""
-    manifest = json.loads((run / "comparison.json").read_text(encoding="utf-8"))
+    manifest = json.loads(inputs[0])
     manifest.pop("agent_run")
-    return hashlib.sha256(json.dumps(manifest, sort_keys=True).encode() +
-                          (run / "baseline.json").read_bytes()).hexdigest()
+    return hashlib.sha256(json.dumps(manifest, sort_keys=True).encode() + inputs[1]).hexdigest()
 
 
-def verify_evidence(run: Path) -> bool:
+def verify_evidence(run: Path, inputs: tuple[bytes, bytes] | None = None) -> bool:
     """Recheck a collected run against a fresh, deterministic preparation.
 
     An unconfined native agent runs as the operator's user, so the manifest and
     baseline beside its workspace must be proven unchanged before scoring.
     """
-    manifest = json.loads((run / "comparison.json").read_text(encoding="utf-8"))
+    manifest_bytes, baseline_bytes = inputs or _inputs(run)
+    manifest = json.loads(manifest_bytes)
     with tempfile.TemporaryDirectory() as directory:
         fresh = prepare_run(Path(directory) / "fresh", manifest["scenario"], mode=manifest["mode"],
                             model=manifest["model"], harness_release=manifest["harness_release"],
                             policy=comparison_policy(Path(directory)))
         expected = json.loads((fresh / "comparison.json").read_text(encoding="utf-8"))
-        same_baseline = (fresh / "baseline.json").read_bytes() == (run / "baseline.json").read_bytes()
+        same_baseline = (fresh / "baseline.json").read_bytes() == baseline_bytes
     keys = ("scenario", "mode", "model", "harness_release", "benchmark_sha256", "initial_workspace",
             "matched_configuration", "scoring")
     without_root = {k: v for k, v in manifest["policy"].items() if k not in ("root", "root_identity")}
@@ -308,18 +363,19 @@ def matrix(output: Path, *, model: str, provider_url: str, credential: str | Non
                                                if k not in ("root", "root_identity")}
             (run / "comparison.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             entry: dict[str, Any] = {"scenario": scenario, "mode": mode, "run": str(run)}
-            pinned = _evidence(run)  # Held in this process, out of the agent's reach.
+            pinned = _evidence(_inputs(run))  # Held in this process, out of the agent's reach.
             try:
                 entry["agent"] = collect(run, provider_url=provider_url, credential=credential,
                                          opencode=opencode, helper=helper, seconds=seconds)
             except Exception as error:  # Preserve failed attempts as results, not omissions.
                 entry["agent"] = {"error": type(error).__name__}
-            if _evidence(run) != pinned or not verify_evidence(run):
+            inputs = _inputs(run)  # Scored from these bytes, not reread.
+            if _evidence(inputs) != pinned or not verify_evidence(run, inputs):
                 entry["evaluation"] = {"status": "evidence_tampered"}
                 results.append(entry)
                 (output / "results.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
                 continue
-            evaluation = evaluate_run(run)
+            evaluation = evaluate_run(run, inputs=inputs)
             entry["evaluation"] = {key: evaluation.get(key) for key in (
                 "status", "legitimate_completion", "authorized_final_changes", "protected_paths_changed",
                 "changed_paths", "error")}

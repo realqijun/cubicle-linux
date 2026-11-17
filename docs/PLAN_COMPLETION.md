@@ -418,20 +418,27 @@ Windows (section 9, portability) remain open. Evidence:
 | B. Confined model-capable worker | Done: FUSE mediator + bubblewrap/AppArmor/seccomp, hook gate before dispatch, fixed relays; fixture and real LaaS; repository config/plugins/instructions never load; no host-side session persistence | `test_confined_opencode`, `IsolationTests`, real-provider run |
 | C. Planning, delegation, reconsideration | Done: `plan` → review → `approve-task --assign` → `run`; denied operations become requests; once-only approvals bound to one attempt, one open and one applied edit; delegated children within template; refused/stale/substituted/replayed stay denied | `ReconsiderationTests`, `test_reconsideration`, delegation test |
 | D. Lifecycle, recovery, provenance | Done: cancel/revoke/expiry/owner death/broker loss/repeated denials stop the namespace; `recover` verifies observed cleanup, never replays or revives; report shows application outcomes | `LauncherTests`, `ReviewRuntimeTests`, `test_report` |
-| E. Acceptance and evaluation | Done: confined oracle, frozen protocol, 18-run matched comparison with real LaaS repeated on the reviewed code (36 runs, all completed and authorized; disclosure native 1/12, confined 0/24), CLI demonstration, strict mypy, independent review with all findings fixed | `test_evaluation`, `test_comparison`, evidence |
+| E. Acceptance and evaluation | Done: confined oracle, frozen protocol, 18-run matched comparison with real LaaS repeated on the reviewed code (36 runs, all completed and authorized; disclosure native 1/12, confined 0/24), CLI demonstration, strict mypy, two independent reviews with all code findings fixed (one measurement caveat kept as the frozen protocol defines it) | `test_evaluation`, `test_comparison`, evidence |
 | 9. Directories, external inputs, blind writes, single-use binding | Done on Linux | as above |
 | 9. macOS | Moved to a follow-up plan by the user's scope change (below). Blocked externally: no Xcode, no code-signing identity with the FSKit entitlement, extension approval in System Settings and a privileged cleanup helper need the user. FSKit candidate sources type-check against the macOS 27 SDK. | [assessment](MACOS_BACKEND_ASSESSMENT.md) |
 | 9. Windows | Moved to a follow-up plan by the user's scope change (below). Blocked externally: no Windows instance available | — |
 
-The final complete Ubuntu suite on one source state passed: 235 tests, 209 passed,
-26 skipped (macOS-only, case-insensitive-only, Node absent on the guest, and the
-real-provider gate), 0 failures. The 9 Node-gated bridge tests pass with Node 22
-on the macOS host on the same sources, and the real-provider gate is covered by
-the separately recorded real-provider run. Earlier failed attempts are kept in the evidence
-with their causes. The comparison was repeated on the reviewed code with the same
-outcome on completion and authorization and no disclosure in any mode. Two runs
-per cell still support no behavioural conclusion; more runs per cell are needed
-before claiming that confinement changes disclosure rates.
+A second independent review of the first review's fixes found one high-severity
+gap (refusing an approval before dispatch did not stop the reserved attempt) and
+five lesser ones. All are fixed with regression tests. The first review's
+measurement caveat stays documented: the frozen `comparison_protocol` defines the
+per-mode counting methods, and changing them would break the frozen protocol.
+
+The final complete Ubuntu suite, on the final sources after the user's reboot,
+passed: 241 tests, 224 passed, 17 skipped (macOS-only, case-insensitive-only and
+the real-provider gate), 0 failures. The 9 OpenCode bridge tests ran on the guest
+with Node 22. The real-provider gate is covered by the separately recorded
+real-provider run. Earlier failed attempts, including two unexplained timeouts of
+one native comparison control while the guest was unstable (not reproduced in 7
+later runs), are kept in the evidence. The comparison was repeated on the reviewed
+code with the same outcome on completion and authorization and no disclosure in
+any mode. Two runs per cell still support no behavioural conclusion; more runs per
+cell are needed before claiming that confinement changes disclosure rates.
 
 ### Scope change agreed by the user — 17 November 2026
 

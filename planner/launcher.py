@@ -28,6 +28,7 @@ from .records import Action, ProtectionStatus
 from .supervisor import Supervisor
 
 _SUMMARY_LIMIT = 50
+APPLIER = "applier.json"  # Owner of a reviewed apply, beside the run's journal.
 
 
 @dataclass(frozen=True)
@@ -167,17 +168,24 @@ def recover(state: Path, task: str, worker: str, runtime: Runtime, *,
             run = runs / item["id"]
             if applying and item["state"] != "interrupted":
                 # The worker finished; only the application owner may have died.
-                try:
-                    owner = json.loads((run / "processes.json").read_text())["processes"]["launcher"]
-                except (OSError, ValueError, KeyError):
-                    owner = None
-                if owner is not None and _alive(owner):
-                    raise ValueError("An application owner for this task is still running")
+                # A reviewed apply runs in its own process and records itself.
+                for record, key in (("processes.json", "processes"), (APPLIER, None)):
+                    try:
+                        data = json.loads((run / record).read_text())
+                        alive = _alive(data[key]["launcher"] if key else data)
+                    except (OSError, ValueError, KeyError, TypeError):
+                        continue
+                    if alive:
+                        raise ValueError("An application owner for this task is still running")
             if application is not None and applying:
-                try:
-                    status = application_status(supervisor, Path(application["journal"]))["state"]
-                except (OSError, ValueError):
+                journal = Path(application["journal"])
+                if not application["journal"] or not journal.exists():
                     status = "no_write_started"  # The journal precedes every write to the original.
+                else:
+                    try:
+                        status = str(application_status(supervisor, journal)["state"])
+                    except (OSError, ValueError) as error:
+                        status = f"unverifiable:{type(error).__name__}"
                 supervisor.record_application(item["id"], mode=application["mode"], state="interrupted",
                                               reason=f"owner_lost_during_application:{status}",
                                               changes=application["changes"], journal=application["journal"])
@@ -277,7 +285,12 @@ def apply_retained(state: Path, attempt_id: str) -> dict[str, Any]:
             raise ValueError("Only a retained changeset can be applied")
         run = Path(record["journal"]).parent
         changes = Changeset.restore(supervisor, run / "baseline.json")
-        outcome = _apply(supervisor, attempt_id, changes, "review")
+        owner = run / APPLIER
+        owner.write_text(json.dumps({"pid": os.getpid(), "start": _start_time(os.getpid())}))
+        try:
+            outcome = _apply(supervisor, attempt_id, changes, "review")
+        finally:
+            owner.unlink(missing_ok=True)
         _purge(run)
         return outcome
     finally:

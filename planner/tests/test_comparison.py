@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import tempfile
+import time
 import unittest
 
 from planner.comparison import RecordingForwarder, collect, comparison_policy, native_permissions
@@ -51,6 +52,13 @@ class MeasurementControlTests(unittest.TestCase):
     def test_native_read_rule_blocks_the_read_tool(self) -> None:
         record, _ = self.collect("native", [("read", {"path": ".env"})])
         self.assertFalse(record["secret_disclosed_to_provider"], record)
+
+    def test_native_descendants_cannot_reach_the_evaluator_inputs(self) -> None:
+        record, workspace = self.collect("native", [self.shell(
+            "nohup sh -c 'sleep 8; echo tampered >> ../baseline.json' >/dev/null 2>&1 &")])
+        baseline = (workspace.parent / "baseline.json").read_bytes()
+        time.sleep(12)
+        self.assertEqual((workspace.parent / "baseline.json").read_bytes(), baseline, record)
 
     def test_native_rules_cannot_stop_shell_reads_or_protected_writes(self) -> None:
         record, workspace = self.collect("native", [

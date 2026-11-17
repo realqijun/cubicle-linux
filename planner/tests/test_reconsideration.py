@@ -1,5 +1,6 @@
 """Exception reservation, settlement and application binding at the supervisor API."""
 
+import json
 from pathlib import Path
 import os
 import tempfile
@@ -155,10 +156,6 @@ class ReservationTests(_Fixture):
         self.assertTrue(self.write())
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ReviewRegressionTests(_Fixture):
     """Findings from the independent review, checked at the supervisor boundary."""
 
@@ -169,10 +166,45 @@ class ReviewRegressionTests(_Fixture):
         self.assertEqual(self.supervisor.attempt(attempt)["state"], "stopping")
         self.assertFalse(self.write())
 
-    def test_spent_approval_history_cannot_be_rewritten_by_refusal(self) -> None:
+    def test_refusal_before_dispatch_blocks_the_reserved_attempt(self) -> None:
+        approval = self.approval()
+        attempt = self.attempt()
+        [bound] = self.supervisor.reserve_exceptions(attempt)
+        self.assertEqual(bound["id"], approval)
+        self.supervisor.refuse_exception(approval)
+        self.assertEqual(self.supervisor.attempt(attempt)["state"], "blocked")
+        with self.assertRaises(ValueError):
+            self.supervisor.start_attempt(attempt)
+        self.assertFalse(self.write())
+
+    def test_staged_write_can_be_withdrawn_until_application_starts(self) -> None:
         approval = self.approval()
         attempt, _ = self.run_attempt()
         self.finish(attempt)
+        self.supervisor.refuse_exception(approval)
+        self.assertEqual(self.supervisor.exception(approval)["state"], "withdrawn")
+        with self.assertRaises(PermissionError):
+            self.supervisor.check_application_exception(
+                approval, attempt, self.project / "tests/test_app.py", consume=False)
+        with self.assertRaises(ValueError):
+            self.supervisor.refuse_exception(approval)
+
+    def test_staged_write_cannot_be_withdrawn_once_application_started(self) -> None:
+        approval = self.approval()
+        attempt, _ = self.run_attempt()
+        self.finish(attempt)
+        self.supervisor.record_application(attempt, mode="auto", state="applying", reason="checked")
+        with self.assertRaises(ValueError):
+            self.supervisor.refuse_exception(approval)
+        self.assertEqual(self.supervisor.exception(approval)["state"], "executed")
+
+    def test_spent_read_history_cannot_be_rewritten_by_refusal(self) -> None:
+        approval = self.supervisor.request_exception(
+            Action(self.task, "worker", "read", "tests/other.py", "shell"), lifetime="once")
+        self.supervisor.approve_exception(approval)
+        attempt, _ = self.run_attempt()
+        self.finish(attempt)
+        self.assertEqual(self.supervisor.exception(approval)["state"], "executed")
         with self.assertRaises(ValueError):
             self.supervisor.refuse_exception(approval)
         self.assertEqual(self.supervisor.exception(approval)["state"], "executed")
@@ -198,3 +230,41 @@ class ReviewRegressionTests(_Fixture):
                           Runtime(Path("/missing/opencode"), Path("/missing/helper"), runs))
         self.assertEqual(entry["application"]["state"], "interrupted")
         self.assertIn("no_write_started", entry["application"]["reason"])
+
+    @unittest.skipUnless(Path("/proc/self/stat").exists(), "Process start times come from /proc")
+    def test_recovery_waits_for_a_live_reviewed_apply(self) -> None:
+        from planner.launcher import APPLIER, Runtime, _start_time, recover
+
+        attempt, _ = self.run_attempt()
+        self.finish(attempt)
+        runs = Path(tempfile.mkdtemp(prefix="planner-runs-"))
+        self.addCleanup(lambda: __import__("shutil").rmtree(runs))
+        (runs / attempt).mkdir()
+        (runs / attempt / APPLIER).write_text(json.dumps({"pid": os.getpid(), "start": _start_time(os.getpid())}))
+        self.supervisor.record_application(attempt, mode="review", state="applying", reason="checked",
+                                           journal=str(runs / attempt / "journal.jsonl"))
+        with self.assertRaises(ValueError):
+            recover(self.supervisor.path, self.task, "worker",
+                    Runtime(Path("/missing/opencode"), Path("/missing/helper"), runs))
+        self.assertEqual(self.supervisor.application(attempt)["state"], "applying")
+
+    def test_unreadable_journal_is_not_reported_as_no_write(self) -> None:
+        from planner.launcher import Runtime, recover
+
+        attempt, _ = self.run_attempt()
+        self.finish(attempt)
+        runs = Path(tempfile.mkdtemp(prefix="planner-runs-"))
+        self.addCleanup(lambda: __import__("shutil").rmtree(runs))
+        journal = runs / attempt / "journal.jsonl"
+        journal.mkdir(parents=True)  # Present but unreadable as a journal.
+        self.supervisor.record_application(attempt, mode="auto", state="applying", reason="checked",
+                                           journal=str(journal))
+        [entry] = recover(self.supervisor.path, self.task, "worker",
+                          Runtime(Path("/missing/opencode"), Path("/missing/helper"), runs))
+        self.assertEqual(entry["application"]["state"], "interrupted")
+        self.assertIn("unverifiable:", entry["application"]["reason"])
+        self.assertNotIn("no_write_started", entry["application"]["reason"])
+
+
+if __name__ == "__main__":
+    unittest.main()

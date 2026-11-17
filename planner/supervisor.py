@@ -536,18 +536,28 @@ class Supervisor:
             self.db.execute("UPDATE approvals SET state='approved' WHERE id=?", (approval_id,))
 
     def refuse_exception(self, approval_id: str) -> None:
-        """Refuse or withdraw an approval. A running attempt that could use it is
-        stopped: a mounted copy cannot be made to forget an approval it holds."""
+        """Refuse or withdraw an approval. An attempt that could use it, including
+        one reserved but not yet started, is stopped: a mounted copy cannot be made
+        to forget an approval it holds. A staged write can be withdrawn until its
+        application starts; ``withdrawn`` keeps the record that it was used."""
         with self.db:
             self.db.execute("BEGIN IMMEDIATE")
             item = self.exception(approval_id)
-            if item["state"] not in ("requested", "approved", "reserved"):
+            staged = item["state"] == "executed" and item["operation"] == "write"
+            if item["state"] not in ("requested", "approved", "reserved") and not staged:
                 raise ValueError("Approval already spent or closed; its history is kept")
-            self.db.execute("UPDATE approvals SET state='revoked' WHERE id=?", (approval_id,))
+            if staged:
+                application = self.db.execute("SELECT state FROM applications WHERE attempt=?",
+                                              (item["attempt"],)).fetchone()
+                if application is not None and application["state"] != "retained":
+                    raise ValueError("The staged edit's application has started or ended; its outcome is kept")
+            self.db.execute("UPDATE approvals SET state=? WHERE id=?",
+                            ("withdrawn" if staged else "revoked", approval_id))
             if item["state"] != "requested":
-                running = self.db.execute("""SELECT id FROM attempts WHERE task=? AND worker=?
-                    AND state='running'""", (item["task"], item["worker"])).fetchall()
-                if running:
+                active = self.db.execute("""SELECT id FROM attempts WHERE task=? AND worker=?
+                    AND state IN ('prepared','verified','running')""",
+                    (item["task"], item["worker"])).fetchall()
+                if active:
                     self._stop_attempts(item["task"], item["worker"], "exception_revoked")
 
     def _use_exception(self, action: Action, decision: Decision) -> Decision:

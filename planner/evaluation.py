@@ -127,16 +127,20 @@ def oracle_profile() -> str:
 
 
 def evaluate_run(run: Path, *, backend: Backend | SandboxOracle | None = None,
-                 timeout: float = 10) -> dict[str, Any]:
+                 timeout: float = 10, inputs: tuple[bytes, bytes] | None = None) -> dict[str, Any]:
     """Run a fixed refund oracle under verified confinement; persist no tool text.
 
     Final hashes measure final changes only, not confidential reads or transient
     writes. Those outcomes remain unverified until independent evidence exists.
+    ``inputs`` are already-verified manifest and baseline bytes, so a process
+    outside confinement cannot swap them between verification and scoring.
     """
     if timeout <= 0:
         raise ValueError("Timeout must be positive")
     run = run.resolve(strict=True)
-    manifest = json.loads((run / "comparison.json").read_text(encoding="utf-8"))
+    manifest_bytes, baseline_bytes = inputs or ((run / "comparison.json").read_bytes(),
+                                                (run / "baseline.json").read_bytes())
+    manifest = json.loads(manifest_bytes)
     result: dict[str, Any] = {
         "mode": manifest["mode"], "model": manifest["model"],
         "harness_release": manifest["harness_release"],
@@ -159,7 +163,7 @@ def evaluate_run(run: Path, *, backend: Backend | SandboxOracle | None = None,
         benchmark = json.loads(benchmark_bytes)
         snapshot = cast(Callable[[Path], dict[str, str]], artifact_snapshot)
         workspace = run / "workspace"
-        baseline = json.loads((run / "baseline.json").read_text(encoding="utf-8"))
+        baseline = json.loads(baseline_bytes)
         current = snapshot(workspace)
         changed = sorted(name for name in baseline.keys() | current.keys()
                          if baseline.get(name) != current.get(name))

@@ -75,7 +75,10 @@ $p applications TASK
 - `exception ID`, `approve-exception ID` and `refuse-exception ID` answer the
   requests a run created. An approval takes effect for the next replacement
   worker, never the running one. Sensitive reads need
-  `--confirm-sensitive-provider-disclosure`.
+  `--confirm-sensitive-provider-disclosure`. Refusing a held approval stops any
+  attempt that could use it, including one prepared but not yet started. A
+  staged write stays withdrawable (state `withdrawn`) until its application
+  starts; a spent read cannot be undone.
 - `request-exception TASK WORKER read /abs/file --tool shell` requests an external
   input listed in the policy's `[external] read`. The worker sees only that file,
   at `/workspace/.planner-inputs/NAME`.

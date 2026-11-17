@@ -384,6 +384,74 @@
         "commit": "5464c0a"
       },
       "note": "These 9 tests skip on the Ubuntu guest because Node is not installed there; the bridge is the JavaScript plugin loaded by OpenCode and its tests are platform-independent."
+    },
+    {
+      "case": "second_independent_review",
+      "at": "2026-11-17",
+      "scope": "git diff ab8fc1a..c05bc7b -- planner (the fixes for the first review)",
+      "result": "9 of 12 original findings closed; 1 and 2 partially closed; 8 documented only. New findings: A high (refusal before dispatch did not stop a reserved attempt), B (recovery could interrupt a live reviewed apply), C (unreadable journal reported as no write), D (staged write could not be withdrawn), E (native descendants could alter evaluator inputs after the check), F (unittest.main before a test class).",
+      "fixes": "A-F fixed with regression tests; 8 kept as documented because the frozen comparison_protocol defines the per-mode counting methods"
+    },
+    {
+      "case": "full_ubuntu_suite_after_review_fixes",
+      "at": "2026-11-17",
+      "environment": {
+        "system": "Linux",
+        "distribution": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-149-generic",
+        "python": "3.12.3",
+        "opencode": "2.2.5",
+        "node": "v22.23.4 (official linux-x64 tarball, sha256 1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce verified against SHASUMS256.txt; unpacked under ~/planner-runtime/node, on PATH only for the test run)",
+        "state": "after the user's reboot that applied the pending package updates"
+      },
+      "tests": 241,
+      "passed": 223,
+      "failed": 1,
+      "skipped": 17,
+      "outcome": "failed",
+      "failure": "test_native_descendants_cannot_reach_the_evaluator_inputs: a detached shell-tool child survived killpg (OpenCode starts tools in their own session); replaced with a child subreaper that adopts, kills and reaps every orphan"
+    },
+    {
+      "case": "comparison_tests_with_subreaper",
+      "at": "2026-11-17",
+      "environment": {
+        "system": "Linux",
+        "distribution": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-149-generic",
+        "python": "3.12.3",
+        "opencode": "2.2.5",
+        "node": "v22.23.4 (official linux-x64 tarball, sha256 1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce verified against SHASUMS256.txt; unpacked under ~/planner-runtime/node, on PATH only for the test run)",
+        "state": "after the user's reboot that applied the pending package updates"
+      },
+      "result": "descendant test passed; test_native_rules_cannot_stop_shell_reads_or_protected_writes failed twice (timeout, 0 provider requests, wall time above the 120 s limit), then passed 1 of 1 detached and 6 of 6 in a loop after a VM restart (21-25 s each)",
+      "cause": "not determined; both failures occurred while the guest was unstable (one SSH stream was cut and the guest restarted shortly after). Not reproduced in 7 later runs."
+    },
+    {
+      "case": "full_ubuntu_suite_final_after_reboot",
+      "at": "2026-11-17T18:42Z",
+      "environment": {
+        "system": "Linux",
+        "distribution": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-149-generic",
+        "python": "3.12.3",
+        "opencode": "2.2.5",
+        "node": "v22.23.4 (official linux-x64 tarball, sha256 1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce verified against SHASUMS256.txt; unpacked under ~/planner-runtime/node, on PATH only for the test run)",
+        "state": "after the user's reboot that applied the pending package updates"
+      },
+      "gates": "PLANNER_RUN_LINUX_PROBES=1 PLANNER_RUN_FUSE_PROBES=1 PLANNER_RUN_CONFINED_OPENCODE=1",
+      "tests": 241,
+      "passed": 224,
+      "failed": 0,
+      "skipped": 17,
+      "outcome": "passed",
+      "skips": {
+        "macOS-only diagnostics": 14,
+        "case-insensitive filesystem only": 2,
+        "real-provider gate not enabled": 1
+      },
+      "source_manifest": "sha256 of the LC_ALL=C-sorted per-file sha256 list of all 70 git-tracked files under planner/, identical on host and guest",
+      "source_manifest_sha256": "b4ecdcfbdd28f683e0639027aa110246635fcb0ea5004760e18bef2453d07caf",
+      "scope": "One complete run on the final sources, after the second review's fixes and the reboot; Node bridge tests ran on the guest."
     }
   ]
 }
