@@ -10,7 +10,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-from planner.changeset import Changeset, application_status
+from planner.changeset import ApplicationConflict, Changeset, application_status
 from planner.policy import Policy
 from planner.records import Grant
 from planner.supervisor import Supervisor
@@ -74,6 +74,28 @@ class ChangesetTests(unittest.TestCase):
         state = application_status(self.supervisor, self.journal)
         self.assertEqual(state['state'], 'conflict')
         self.assertEqual((self.project / 'src/a').read_text(), 'later user edit')
+
+    def test_steps_never_reached_are_interrupted_not_conflicts(self) -> None:
+        (self.work / 'src/new').mkdir()
+        (self.work / 'src/new/x').write_text('created')
+        self.apply()
+        events = self.journal.read_text().splitlines()
+        cut = next(i for i, line in enumerate(events)
+                   if (json.loads(line)['event'], json.loads(line).get('path')) == ('applied', 'src/new'))
+        self.journal.write_text('\n'.join(events[:cut + 1]) + '\n')
+        (self.project / 'src/new/x').unlink()  # The owner died before this step.
+        state = application_status(self.supervisor, self.journal)
+        self.assertEqual(state['state'], 'interrupted')
+        self.assertEqual({item['path']: item['current'] for item in state['files']},
+                         {'src/new': 'matches_expected', 'src/new/x': 'matches_baseline'})
+
+    def test_content_changed_after_review_is_refused(self) -> None:
+        (self.work / 'src/a').write_text('reviewed')
+        reviewed = self.changes.preview()
+        (self.work / 'src/a').write_text('swapped')
+        with self.assertRaises(ApplicationConflict):
+            self.changes.apply(reviewed)
+        self.assertNotIn((self.project / 'src/a').read_text(), ('reviewed', 'swapped'))
 
     def test_truncated_or_unfinished_journal_never_claims_completion(self) -> None:
         (self.work / 'src/a').write_text('new')
@@ -161,6 +183,13 @@ class ChangesetTests(unittest.TestCase):
         (self.work / 'src/.env.local').write_text('REPLACED')
         self.assertEqual({(c.path, c.operation) for c in self.changes.apply()}, {('src/.env.local', 'modify')})
         self.assertEqual((self.project / 'src/.env.local').read_text(), 'REPLACED')
+
+    def test_deleting_a_withheld_stand_in_never_deletes_the_original(self) -> None:
+        self.placeholder('src/.env.local', 'NEVER_COPIED')
+        (self.work / 'src/.env.local').unlink()
+        with self.assertRaises(PermissionError):
+            self.changes.apply()
+        self.assertEqual((self.project / 'src/.env.local').read_text(), 'NEVER_COPIED')
 
     def test_blind_replacement_conflicts_with_a_changed_original(self) -> None:
         self.placeholder('src/.env.local', 'NEVER_COPIED')

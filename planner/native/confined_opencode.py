@@ -23,6 +23,7 @@ import socketserver
 import subprocess
 import tempfile
 import threading
+import uuid
 from collections.abc import Callable, Mapping
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -232,14 +233,17 @@ class ConfinedOpenCode:
                         length = int(self.headers.get("Content-Length", "0"))
                         if not 0 <= length <= limit or self.headers.get("Transfer-Encoding"):
                             raise ValueError("Invalid private API body")
-                        request = {"method": self.command, "path": self.path,
+                        request = {"id": uuid.uuid4().hex, "method": self.command, "path": self.path,
                                    "body": self.rfile.read(length).decode("utf-8"),
                                    "headers": {"Authorization": self.headers.get("Authorization", ""),
                                                "Content-Type": "application/json"}}
                         with channel_lock:
                             owner._channel.sendall(json.dumps(request).encode() + b"\n")
                             with owner._channel.makefile("rb") as stream:
-                                result = json.loads(stream.readline(8 * 1024 * 1024))
+                                # Skip late answers to requests that already timed out.
+                                while (result := json.loads(stream.readline(8 * 1024 * 1024))
+                                       ).get("id") != request["id"]:
+                                    pass
                         raw = result["body"].encode("utf-8")
                         self.send_response(result["status"])
                         self.send_header("Content-Type", "application/json")
@@ -337,8 +341,6 @@ class ConfinedOpenCode:
         self._stop.set()
         if self._monitor is not None:
             self._monitor.join(10)
-            if self._monitor.is_alive():
-                raise RuntimeError("Authority monitor did not stop")
         try:
             self._stack.close()
         finally:
@@ -351,6 +353,9 @@ class ConfinedOpenCode:
                     self.process.kill()
                 self.process.wait(timeout=10)
             self.cleaned = True
+        # Raised only after the jail is gone, so a stuck monitor cannot keep it alive.
+        if self._monitor is not None and self._monitor.is_alive():
+            raise RuntimeError("Authority monitor did not stop")
 
     def __exit__(self, *args: object) -> None:
         self.close()

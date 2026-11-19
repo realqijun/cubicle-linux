@@ -177,7 +177,8 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
         supervisor.close()  # The runner owns its own connections and threads.
         return run_task(args.state, args.task, args.worker, args.prompt,
                         ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
-                        Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds),
+                        Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds,
+                                denial_limit=args.denial_limit),
                         credential=credential, mode=args.mode)
     if command == "revise":
         root = Path(supervisor.status(args.task)["policy"]["root"])

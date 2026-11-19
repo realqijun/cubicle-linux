@@ -553,7 +553,8 @@ class Supervisor:
                     raise ValueError("The staged edit's application has started or ended; its outcome is kept")
             self.db.execute("UPDATE approvals SET state=? WHERE id=?",
                             ("withdrawn" if staged else "revoked", approval_id))
-            if item["state"] != "requested":
+            # A staged edit belongs to a finished attempt; no running one can use it.
+            if item["state"] != "requested" and not staged:
                 active = self.db.execute("""SELECT id FROM attempts WHERE task=? AND worker=?
                     AND state IN ('prepared','verified','running')""",
                     (item["task"], item["worker"])).fetchall()

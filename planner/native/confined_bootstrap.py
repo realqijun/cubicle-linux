@@ -45,6 +45,9 @@ def control_loop(channel: socket.socket, port: int) -> None:
     with channel.makefile("rwb") as stream:
         while line := stream.readline(8 * 1024 * 1024):
             request: dict[str, Any] = json.loads(line)
+            # Every request gets exactly one answer carrying its id, so one
+            # failure cannot end the channel or shift later answers.
+            result: dict[str, Any] = {"id": request.get("id"), "status": 502, "body": ""}
             connection = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
             try:
                 connection.request(request["method"], request["path"],
@@ -53,11 +56,13 @@ def control_loop(channel: socket.socket, port: int) -> None:
                 raw = response.read(4 * 1024 * 1024 + 1)
                 if len(raw) > 4 * 1024 * 1024:
                     raise ValueError("Oversized private API response")
-                result = {"status": response.status, "body": raw.decode("utf-8")}
-                stream.write(json.dumps(result).encode() + b"\n")
-                stream.flush()
+                result.update(status=response.status, body=raw.decode("utf-8"))
+            except (OSError, ValueError, KeyError, TypeError, http.client.HTTPException):
+                pass
             finally:
                 connection.close()
+            stream.write(json.dumps(result).encode() + b"\n")
+            stream.flush()
 
 
 def main() -> None:

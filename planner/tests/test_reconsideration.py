@@ -189,6 +189,15 @@ class ReviewRegressionTests(_Fixture):
         with self.assertRaises(ValueError):
             self.supervisor.refuse_exception(approval)
 
+    def test_withdrawing_a_staged_write_leaves_a_later_run_alone(self) -> None:
+        approval = self.approval()
+        first, _ = self.run_attempt()
+        self.finish(first)
+        second, _ = self.run_attempt()
+        self.supervisor.refuse_exception(approval)
+        self.assertEqual(self.supervisor.exception(approval)["state"], "withdrawn")
+        self.assertEqual(self.supervisor.attempt(second)["state"], "running")
+
     def test_staged_write_cannot_be_withdrawn_once_application_started(self) -> None:
         approval = self.approval()
         attempt, _ = self.run_attempt()

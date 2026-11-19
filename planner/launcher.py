@@ -20,9 +20,10 @@ import time
 from typing import Any
 
 from .broker_server import BrokerServer
-from .changeset import ApplicationConflict, Changeset
+from .changeset import ApplicationConflict, Change, Changeset
 from .connector import BridgeConfig, Connector, ConnectorConfig
 from .mediation import WorkerBroker
+from .native.mediatedfs import mounted
 from .provenance import Provenance
 from .records import Action, ProtectionStatus
 from .supervisor import Supervisor
@@ -40,14 +41,15 @@ class Runtime:
     runs: Path
     run_seconds: float = 900
     poll_seconds: float = 0.5
+    denial_limit: int = 3  # Identical denials before suspension, as the CLI configures.
 
 
 class _Authority:
     """Monitor-thread view: the worker grant and its attempt must stay live."""
 
     def __init__(self, state: Path, task: str, worker: str, attempt: str,
-                 drain: Callable[[Supervisor], None]) -> None:
-        self.supervisor = Supervisor(state)
+                 drain: Callable[[Supervisor], None], *, denial_limit: int = 3) -> None:
+        self.supervisor = Supervisor(state, denial_limit=denial_limit)
         self.task, self.worker, self.attempt, self.drain = task, worker, attempt, drain
 
     def check(self) -> None:
@@ -120,13 +122,10 @@ def _cleanup_observed(run: Path, *, include_owner: bool = True) -> tuple[bool, s
             except OSError:
                 continue
     mount = data.get("mount")
-    if mount:
-        with open("/proc/self/mountinfo", encoding="utf-8") as table:
-            if any(line.split()[4] == mount for line in table):
-                subprocess.run(["fusermount3", "-u", mount], capture_output=True, timeout=30, check=False)
-                with open("/proc/self/mountinfo", encoding="utf-8") as again:
-                    if any(line.split()[4] == mount for line in again):
-                        return False, "mount_remains"
+    if mount and mounted(mount):
+        subprocess.run(["fusermount3", "-u", mount], capture_output=True, timeout=30, check=False)
+        if mounted(mount):
+            return False, "mount_remains"
     return True, "cleanup_observed"
 
 
@@ -288,7 +287,8 @@ def apply_retained(state: Path, attempt_id: str) -> dict[str, Any]:
         owner = run / APPLIER
         owner.write_text(json.dumps({"pid": os.getpid(), "start": _start_time(os.getpid())}))
         try:
-            outcome = _apply(supervisor, attempt_id, changes, "review")
+            reviewed = tuple(Change(**change) for change in record["changes"])
+            outcome = _apply(supervisor, attempt_id, changes, "review", reviewed)
         finally:
             owner.unlink(missing_ok=True)
         _purge(run)
@@ -297,21 +297,26 @@ def apply_retained(state: Path, attempt_id: str) -> dict[str, Any]:
         supervisor.close()
 
 
-def _apply(supervisor: Supervisor, attempt_id: str, changes: Changeset, mode: str) -> dict[str, Any]:
+def _apply(supervisor: Supervisor, attempt_id: str, changes: Changeset, mode: str,
+           reviewed: tuple[Change, ...] | None = None) -> dict[str, Any]:
     journal = str(changes.journal)
     try:
-        preview = [asdict(change) for change in changes.preview()]
-    except (ValueError, OSError) as error:
+        checked = changes.preview()
+        if reviewed is not None and checked != reviewed:
+            raise ApplicationConflict("Changes differ from the reviewed changeset")
+        preview = [asdict(change) for change in checked]
+    except Exception as error:  # Any refusal is an outcome, never a missing record.
         return supervisor.record_application(attempt_id, mode=mode, state=_classify(error),
-                                             reason=str(error), journal=journal)
+                                             reason=f"{type(error).__name__}: {error}", journal=journal)
     supervisor.record_application(attempt_id, mode=mode, state="applying", reason="checked",
                                   changes=preview, journal=journal)
     try:
-        applied = [asdict(change) for change in changes.apply()]
-    except (ValueError, OSError) as error:
+        applied = [asdict(change) for change in changes.apply(checked)]
+    except Exception as error:  # Never leave a record in 'applying' behind a live owner.
         # No journal means preflight refused before any write to the original.
         state = "interrupted" if changes.journal.exists() else _classify(error)
-        return supervisor.record_application(attempt_id, mode=mode, state=state, reason=str(error),
+        return supervisor.record_application(attempt_id, mode=mode, state=state,
+                                             reason=f"{type(error).__name__}: {error}",
                                              changes=preview, journal=journal)
     return supervisor.record_application(attempt_id, mode=mode, state="applied", reason="complete",
                                          changes=applied, journal=journal)
@@ -337,7 +342,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
     if provider is None or bool(provider.api_key_env) != bool(credential):
         raise ValueError("An explicit provider and its configured credential are required")
     credentials = {provider.api_key_env: credential} if provider.api_key_env and credential else {}
-    supervisor = Supervisor(state)
+    supervisor = Supervisor(state, denial_limit=runtime.denial_limit)
     try:
         policy = supervisor.policy(task)
         grant = supervisor.check_worker(task, worker)
@@ -396,7 +401,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
 
         @contextmanager
         def broker_factory() -> Iterator[WorkerBroker]:
-            owner, store = Supervisor(state), Provenance(state.with_suffix(".memory.sqlite"))
+            owner = Supervisor(state, denial_limit=runtime.denial_limit)
+            store = Provenance(state.with_suffix(".memory.sqlite"))
             broker = Broker(owner, store, task, worker, worker_project="/workspace",
                             provider_origins=("http://127.0.0.1:18182",),
                             sensitive_exposure=filesystem.sensitive_exposure, external_inputs=broker_inputs)
@@ -409,7 +415,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
 
         @contextmanager
         def authority_factory() -> Iterator[_Authority]:
-            authority = _Authority(state, task, worker, attempt, drain)
+            authority = _Authority(state, task, worker, attempt, drain, denial_limit=runtime.denial_limit)
             try:
                 yield authority
             finally:
@@ -518,9 +524,10 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                 preview = [asdict(change) for change in changes.preview()]
                 application = supervisor.record_application(attempt, mode=mode, state="retained",
                     reason="awaiting_user_review", changes=preview, journal=str(changes.journal))
-            except (ValueError, OSError) as error:
+            except Exception as error:
                 application = supervisor.record_application(attempt, mode=mode, state=_classify(error),
-                                                            reason=str(error), journal=str(changes.journal))
+                                                            reason=f"{type(error).__name__}: {error}",
+                                                            journal=str(changes.journal))
         else:
             application = _apply(supervisor, attempt, changes, mode)
         if application["state"] != "retained" and unmounted:

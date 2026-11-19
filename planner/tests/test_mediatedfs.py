@@ -102,6 +102,12 @@ class MediatedFilesystemTests(unittest.TestCase):
         self.assertEqual((self.fs.backing / "src/private.txt").read_text(), "")
         self.assertIn(("write", "src/private.txt"), self.fs.denials)
 
+    def test_withheld_stand_in_cannot_be_deleted(self) -> None:
+        with self.assertRaises(PermissionError):
+            (self.mount / "src/private.txt").unlink()
+        self.assertTrue((self.fs.backing / "src/private.txt").exists())
+        self.assertIn(("write", "src/private.txt"), self.fs.denials)
+
     def test_blind_replacement_does_not_grant_read(self) -> None:
         (self.mount / "src/private.txt").write_text("replacement")
         self.assertEqual((self.fs.backing / "src/private.txt").read_text(), "replacement")

@@ -60,10 +60,13 @@ def application_status(supervisor: Supervisor, journal: Path) -> dict[str, objec
         if not parts or Path(name).is_absolute() or any(p in ('.', '..') for p in name.split('/')):
             raise ValueError('Invalid application resource')
         observed = 'unverified'
+        # A step the journal never reached is still in its baseline state.
+        applied = any(item.get('event') == 'applied' and item.get('path') == name for item in events[1:])
         if current and change['operation'] in ('mkdir', 'rmdir'):
             target = policy.root / name
             present = target.is_dir() and not target.is_symlink()
             observed = ('matches_expected' if present == (change['operation'] == 'mkdir') else
+                        'matches_baseline' if not applied else
                         'missing' if change['operation'] == 'mkdir' else 'conflict')
         elif current:
             target, _ = policy.normalize(name)
@@ -79,10 +82,10 @@ def application_status(supervisor: Supervisor, journal: Path) -> dict[str, objec
                                 and actual.mode == expected['mode'] else
                                 'matches_baseline' if before and asdict(actual) == before else 'conflict')
                 else:
-                    observed = 'matches_expected' if change['operation'] == 'delete' else 'missing'
-        files.append({'path': name, 'recorded_applied': any(
-            item.get('event') == 'applied' and item.get('path') == name for item in events[1:]),
-                      'current': observed})
+                    observed = ('matches_expected' if change['operation'] == 'delete' else
+                                'matches_baseline' if change['operation'] == 'add' and not applied else
+                                'missing')
+        files.append({'path': name, 'recorded_applied': applied, 'current': observed})
     state = ('conflict' if any(item['current'] in ('conflict', 'missing') for item in files) else
              'complete' if current and not incomplete and events[-1].get('event') == 'complete' and
              all(item['current'] == 'matches_expected' for item in files) else 'interrupted')
@@ -107,6 +110,18 @@ def _file(path: Path) -> FileState:
             raise ValueError('Only regular files with one link and ordinary permissions can be applied')
         return FileState(hashlib.file_digest(stream, 'sha256').hexdigest(),
                          stat.S_IMODE(info.st_mode), info.st_dev, info.st_ino, info.st_uid, info.st_gid)
+
+
+def _content(path: Path, digest: str | None) -> bytes:
+    """Bytes of a workspace file, only if they are exactly what was previewed."""
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError('Only regular files can be applied')
+        data = stream.read()
+    if hashlib.sha256(data).hexdigest() != digest:
+        raise ApplicationConflict('Workspace content changed since preview')
+    return data
 
 
 def _tree(root: Path) -> tuple[dict[str, FileState], dict[str, tuple[int, int]]]:
@@ -139,6 +154,7 @@ def _sync_directory(path: Path) -> None:
 class Change:
     path: str
     operation: str
+    digest: str | None = None  # Content the original receives, for add and modify.
 
 
 class Changeset:
@@ -246,6 +262,8 @@ class Changeset:
                     raise ValueError('File metadata changes are unsupported')
                 if before.digest == after.digest:
                     continue
+            if after is None and name in self.placeholders:
+                raise PermissionError('Changeset would delete a withheld file the worker never saw')
             if name in self.exceptions:
                 self._exception(name, consume=False)
             elif not self.policy.decide(Action(self.grant.task_id, self.grant.worker_id,
@@ -260,7 +278,8 @@ class Changeset:
             elif _file(target) != self.original[name]:
                 raise ApplicationConflict('Original file changed since preparation')
             changes.append(Change(name, 'add' if before is None else
-                                  'delete' if after is None else 'modify'))
+                                  'delete' if after is None else 'modify',
+                                  None if after is None else after.digest))
         for name in removed:
             self._permitted(name)
             # Copies omit denied files; removing their directory would delete
@@ -299,11 +318,12 @@ class Changeset:
             if any(not decision.allowed or decision.approval_id is not None for decision in decisions):
                 raise PermissionError("Application requires ordinary current worker authority")
 
-    def apply(self) -> tuple[Change, ...]:
+    def apply(self, expected: tuple[Change, ...] | None = None) -> tuple[Change, ...]:
         """Apply once after caller verifies worker cleanup and exclusive tree access.
 
         Each file replacement is atomic; the complete changeset is not. A journal
         with an unfinished operation requires manual reconciliation, never replay.
+        ``expected`` is the reviewed or recorded preview; any difference refuses.
         """
         if sys.platform != 'linux':
             raise RuntimeError('File application metadata contract currently requires Linux')
@@ -311,6 +331,8 @@ class Changeset:
             raise ValueError('Application cannot be replayed')
         self._check_authority()
         changes = self.preview()
+        if expected is not None and changes != expected:
+            raise ApplicationConflict('Changes differ from the reviewed changeset')
         self._authorize(changes)
         for change in changes:
             target = self.policy.root / change.path
@@ -372,7 +394,7 @@ class Changeset:
                     descriptor, temporary = tempfile.mkstemp(prefix='.planner-', dir=target.parent)
                     try:
                         with os.fdopen(descriptor, 'wb') as stream:
-                            stream.write((self.workspace / change.path).read_bytes())
+                            stream.write(_content(self.workspace / change.path, change.digest))
                             mode = self.original[change.path].mode if change.operation == 'modify' else 0o600
                             os.fchown(stream.fileno(), os.geteuid(), os.getegid())
                             os.fchmod(stream.fileno(), mode)

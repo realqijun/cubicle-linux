@@ -30,6 +30,14 @@ _REQUEST = struct.Struct("=IIIIQQ4096s4096s")
 _RESPONSE = struct.Struct("=iI")
 
 
+def mounted(mount: Path | str) -> bool:
+    """Whether the kernel mount table lists this path (Linux, escaped as in mountinfo)."""
+    name = str(mount).replace("\\", r"\134").replace(" ", r"\040")
+    name = name.replace("\t", r"\011").replace("\n", r"\012")
+    with open("/proc/self/mountinfo", encoding="utf-8") as mounts:
+        return any(line.split()[4] == name for line in mounts)
+
+
 class MediatedWorkspace:
     """One worker's single-threaded filesystem; mount only ``mount`` in its jail."""
 
@@ -166,10 +174,7 @@ class MediatedWorkspace:
         # A disconnected FUSE mount can fail stat(), while libfuse may also
         # unmount itself on SIGTERM. Consult the kernel table rather than a
         # stale flag or a successful filesystem lookup.
-        name = str(self.mount).replace("\\", r"\134").replace(" ", r"\040")
-        name = name.replace("\t", r"\011").replace("\n", r"\012")
-        with open("/proc/self/mountinfo", encoding="utf-8") as mounts:
-            return any(line.split()[4] == name for line in mounts)
+        return mounted(self.mount)
 
     def _stop_process(self) -> None:
         if self._process:
@@ -395,6 +400,8 @@ class MediatedWorkspace:
         if op == 7:
             path.mkdir(mode=mode & 0o777)
         elif op == 8:
+            if name in self._pristine:
+                self._deny("write", name)  # Deleting a stand-in would delete the withheld original.
             path.unlink()
             self._pristine.discard(name)
         elif op == 9:
