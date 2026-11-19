@@ -429,8 +429,12 @@ five lesser ones. All are fixed with regression tests. The first review's
 measurement caveat stays documented: the frozen `comparison_protocol` defines the
 per-mode counting methods, and changing them would break the frozen protocol.
 
-The final complete Ubuntu suite, on the final sources after the user's reboot,
-passed: 241 tests, 224 passed, 17 skipped (macOS-only, case-insensitive-only and
+A pre-merge review of the whole branch found 10 further defects, including one
+that let a deleted withheld stand-in delete the protected original; all are
+fixed with regression tests.
+
+The final complete Ubuntu suite, on the merged sources (commit `01f1858`),
+passed: 246 tests, 229 passed, 17 skipped (macOS-only, case-insensitive-only and
 the real-provider gate), 0 failures. The 9 OpenCode bridge tests ran on the guest
 with Node 22. The real-provider gate is covered by the separately recorded
 real-provider run. Earlier failed attempts, including two unexplained timeouts of
