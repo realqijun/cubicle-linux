@@ -17,6 +17,7 @@ worker's authorized, conflict-free edits back to the original.
 | Exceptions, single-use edits, external inputs, recovery | Tested end to end on the same guest |
 | Ubuntu offline sandbox | Contract checks pass on the recorded guest |
 | macOS and Windows | Not supported; external prerequisites block acceptance |
+| Other Linux distributions or architectures | Untested; see [platform limits](docs/KNOWN_LIMITATIONS.md#other-execution-modes-and-platforms) |
 
 The connected runtime combines a FUSE policy mediator with Bubblewrap, AppArmor
 and seccomp. Read the [runtime guide](docs/CONNECTED_RUNTIME.md) before running a

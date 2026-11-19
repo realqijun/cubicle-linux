@@ -1,10 +1,11 @@
 # Enforcement status
 
-Planner has two execution interfaces with different contracts:
+Planner has three execution interfaces with different contracts:
 
 | Interface | Current behavior |
 | --- | --- |
 | `LinuxSandbox` / `python3 -m planner.native.linux_sandbox` | Runs offline commands in a private copy under Bubblewrap, AppArmor and seccomp. Edits stay in the copy. |
+| `python3 -m planner run` | Runs a model-connected OpenCode worker against a FUSE-mediated private copy under Bubblewrap, AppArmor and seccomp, then applies authorized edits. See the [connected runtime](CONNECTED_RUNTIME.md). |
 | `Backend.check()` / `Backend.run()` | The live-project gate remains closed on every platform. `run()` raises `ProtectionUnavailable` before spawning the command. |
 
 A successful policy decision authorizes a proposed operation; it does not
@@ -66,10 +67,10 @@ universal limitation of macOS.
 
 ## Remaining acceptance
 
-Windows has no implemented or validated backend here. The full OpenCode launcher,
-live-project policy semantics, provider access, storage isolation and matched
-agent comparisons still need integration and independent acceptance. The
-[remaining work](KNOWN_LIMITATIONS.md) distinguishes these gaps from the tested
-Ubuntu offline mode. Initial connection failures and exploratory diagnostics
+Windows has no implemented or validated backend here. The live-project
+`Backend` gate stays closed. The connected runtime is accepted only on the
+recorded Ubuntu guest; other Linux hosts need their own suite run, and no
+Landlock layer is applied. The [remaining work](KNOWN_LIMITATIONS.md)
+distinguishes these gaps from the tested Ubuntu modes. Initial connection failures and exploratory diagnostics
 remain historical context in the review records; they are not the current
 platform status.

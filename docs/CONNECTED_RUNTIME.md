@@ -2,8 +2,10 @@
 
 The connected runtime runs a model-connected OpenCode 2.2.5 worker against a
 private copy of the project, then applies its authorized edits to the original.
-It is accepted on Ubuntu 24.04.3 x86-64 only. Other platforms stay blocked; see
-[known limitations](KNOWN_LIMITATIONS.md).
+It is accepted on Ubuntu 24.04.3 x86-64 only. macOS and Windows are blocked.
+Other Linux hosts are untested: the startup check verifies prerequisites, not
+the distribution or architecture. See
+[known limitations](KNOWN_LIMITATIONS.md#other-execution-modes-and-platforms).
 
 ## How a run works
 
@@ -134,4 +136,5 @@ isolation and a real LaaS run.
 - One worker per attempt. Native OpenCode subagents are unavailable; delegated
   children are separate supervisor-launched workers.
 - Owner death leaves an `interrupted` record until `recover` runs.
+- No Landlock rules are applied; see [known limitations](KNOWN_LIMITATIONS.md#connected-runtime).
 - Model output quality is outside the guarantee; authorized edits can be wrong.

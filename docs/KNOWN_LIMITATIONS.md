@@ -40,6 +40,10 @@ Accepted on one Ubuntu guest; see its [limits](CONNECTED_RUNTIME.md#limits). Als
   in operator storage) and for repository configuration discovery; OpenCode's
   own state lives on tmpfs inside the jail and is discarded.
 - Matched comparison results are single runs per cell; see [evaluation](EVALUATION.md).
+- No Landlock rules are applied. Filesystem confinement comes from the
+  Bubblewrap mount namespace, the FUSE mediator and AppArmor. Landlock, the
+  Linux counterpart to OpenBSD's `unveil`, could add an independent
+  kernel-enforced path restriction, but it is not implemented.
 
 ## Other execution modes and platforms
 
@@ -56,8 +60,15 @@ Accepted on one Ubuntu guest; see its [limits](CONNECTED_RUNTIME.md#limits). Als
 - **Windows:** not supported; no Windows instance was available for acceptance.
 - macOS and Windows support moved to a follow-up plan by the user's scope
   decision of 17 November 2026; see [the completion plan](PLAN_COMPLETION.md).
-- **Other Linux environments:** no acceptance results establish support. Do not
-  infer support from an executable, kernel feature or container being present.
+- **Other Linux environments:** no acceptance results establish support. The
+  connected runtime's startup check tests for Linux, `bwrap`, `aa-exec`, FUSE,
+  the helper, the exact loaded AppArmor profile and OpenCode 2.2.5. It does not
+  check the distribution or CPU architecture, so a host that provides all of
+  these, such as another AppArmor distribution, can launch a worker without an
+  accepted result. Hosts without AppArmor, such as SELinux-based Fedora and
+  RHEL, are blocked. Do not infer support from an executable, kernel feature or
+  container being present; supporting another host means running the full
+  suite there and recording the evidence.
 
 The earlier decision to defer platform testing is historical. Ubuntu testing
 resumed on 13 November 2026; the successful private-workspace mode does not
