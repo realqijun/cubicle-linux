@@ -50,8 +50,9 @@ def control_loop(channel: socket.socket, port: int) -> None:
             result: dict[str, Any] = {"id": request.get("id"), "status": 502, "body": ""}
             connection = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
             try:
+                # http.client would encode a str body as Latin-1; prompts are UTF-8.
                 connection.request(request["method"], request["path"],
-                                   request["body"], request["headers"])
+                                   request["body"].encode("utf-8"), request["headers"])
                 response = connection.getresponse()
                 raw = response.read(4 * 1024 * 1024 + 1)
                 if len(raw) > 4 * 1024 * 1024:

@@ -1,5 +1,6 @@
 """Prompt-to-application through the public CLI and the actual confined runtime."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -125,8 +126,10 @@ class LauncherTests(RuntimeCase):
         self.assertTrue(result["cleanup_verified"])
         self.assertIn("CHILD_CHECKS_OK", provider.tool_results())
         application = result["application"]
-        self.assertEqual((application["state"], application["changes"]),
-                         ("applied", [{"path": "src/app.py", "operation": "modify"}]))
+        self.assertEqual((application["state"], [(c["path"], c["operation"]) for c in application["changes"]]),
+                         ("applied", [("src/app.py", "modify")]))
+        self.assertEqual(application["changes"][0]["digest"],
+                         hashlib.sha256(b"VALUE = 2\n").hexdigest())  # Exactly the applied bytes.
         self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
         self.unchanged("README.md", "tests/test_app.py", ".env")
         root = Path(self.cli("review", task)["policy"]["root"])
@@ -296,7 +299,8 @@ class ReconsiderationTests(RuntimeCase):
         self.assertIn("DENIED /workspace/tests/test_app.py", results)
         self.assertIn("DENIED /workspace/tests/other.py", results)
         self.assertEqual(second["application"]["state"], "applied", second)
-        self.assertEqual(second["application"]["changes"], [{"path": "tests/test_app.py", "operation": "modify"}])
+        self.assertEqual([(c["path"], c["operation"]) for c in second["application"]["changes"]],
+                         [("tests/test_app.py", "modify")])
         self.assertEqual((self.project / "tests/test_app.py").read_text(), "APPROVED\n")
         self.assertEqual(self.cli("exception", request["id"])["state"], "applied")
         self.unchanged("src/app.py", ".env")
