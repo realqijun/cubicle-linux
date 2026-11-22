@@ -25,8 +25,12 @@ task. Results and source hashes are in [evidence](evidence/completion-progress.j
 
 ## Try it
 
-Requires Python 3.11+. Run commands from this repository root. Keep the trusted
-state database outside the target project and outside worker access.
+**Fresh Ubuntu 24.04 machine:** follow the [quick start](docs/QUICKSTART.md).
+Two scripts install the runtime and run a guided demo.
+
+The control-plane commands below need only Python 3.11+. Run commands from this
+repository root. Keep the trusted state database outside the target project and
+outside worker access.
 
 ```sh
 planner_state=/tmp/planner-control/control.sqlite

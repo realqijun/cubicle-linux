@@ -15,3 +15,6 @@
 - Keep evidence with its source hashes and failed attempts. Open runtime gates
   only after their required contract passes; fix independent review findings
   before claiming completion.
+- `scripts/install-ubuntu.sh` and `scripts/demo.sh` (guide: docs/QUICKSTART.md)
+  install and demo the connected runtime on Ubuntu 24.04. Re-test both on the
+  Ubuntu guest (SSH localhost:2222) after changing either script or the runtime.
