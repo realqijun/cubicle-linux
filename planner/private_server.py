@@ -115,6 +115,13 @@ class PrivateServer:
         self._request(f"/api/session/{session_id}/prompt", {"text": prompt})
         return session_id
 
+    @property
+    def url(self) -> str:
+        """Client connection address, available only after hook verification."""
+        if not self._initialized or not self._ready():
+            raise RuntimeError("Client connection requires authenticated hook readiness")
+        return self._url
+
     def active(self, session_id: str) -> bool:
         """Whether the pinned server still reports the session as running."""
         sessions = self._request("/api/session/active").get("data")

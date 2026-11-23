@@ -116,6 +116,16 @@ def parser() -> argparse.ArgumentParser:
                         help="auto applies authorized conflict-free edits; review retains them")
     launch.add_argument("--run-seconds", type=float, default=900)
     launch.add_argument("--timeout", type=float, default=120, help="Provider and control timeout, seconds")
+    hook = commands.add_parser("hook", help="OpenCode with direct file-tool checks only; no OS confinement")
+    hook.add_argument("task")
+    hook.add_argument("worker")
+    hook.add_argument("--model", required=True, help="Explicit provider/model")
+    hook.add_argument("--provider-url", required=True)
+    hook.add_argument("--api-key-env")
+    hook.add_argument("--opencode", type=Path, required=True, help="Pinned OpenCode 2.2.5 binary")
+    hook.add_argument("--prompt", help="Run one prompt; omit to open the interactive CLI")
+    hook.add_argument("--run-seconds", type=float, default=3600)
+    hook.add_argument("--timeout", type=float, default=30)
     commands.add_parser("apply", help="Apply a retained review-only changeset").add_argument("attempt")
     recovery = commands.add_parser("recover", help="Verify cleanup after owner loss and reconcile; never replays")
     recovery.add_argument("task")
@@ -161,6 +171,20 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
         return supervisor.status(args.task)
     if command == "applications":
         return supervisor.applications(args.task)
+    if command == "hook":
+        from .connector import ConnectorConfig, ProviderConfig
+        from .pretool import run_hook
+
+        provider = ProviderConfig(args.provider_url, api_key_env=args.api_key_env)
+        credential = os.environ.get(args.api_key_env) if args.api_key_env else None
+        supervisor.close()
+        print("Hook-only mode: direct file edits; shell/search disabled; no OS confinement or context provenance.",
+              file=sys.stderr)
+        return run_hook(args.state, args.task, args.worker,
+                        ConnectorConfig(args.model, executable=str(args.opencode),
+                                        timeout_seconds=args.timeout, provider=provider),
+                        prompt=args.prompt, credential=credential, run_seconds=args.run_seconds,
+                        denial_limit=args.denial_limit)
     if command in ("run", "apply", "recover"):
         from .launcher import Runtime, apply_retained, recover, run_task
 

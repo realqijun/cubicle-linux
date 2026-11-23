@@ -7,6 +7,8 @@ runtime, launches confined workers with `run`. See the
 
 ## State and policy
 
+The optional [hook-only CLI](#hook-only-opencode) uses the same reviewed records.
+
 Every command requires `--state PATH`. Keep this SQLite file and its sibling
 `.memory.sqlite` outside the approved project and outside worker access. The
 operator CLI must not be exposed as a worker tool.
@@ -143,3 +145,52 @@ is not included. The
 intentionally buggy workload is an evaluation fixture, not a green application
 suite. The [evaluation guide](EVALUATION.md) describes independent scoring,
 matched configurations, and which results remain unverified.
+
+## Hook-only OpenCode
+
+`hook` opens the interactive OpenCode CLI with a small tool adapter connected to the existing supervisor.
+It is an explicit, less protective mode: it changes the approved original project directly, without OS confinement, checked write-back, model-context provenance, or a claim of complete interception.
+The normal `run` command and its Linux protection gates are unchanged.
+
+Create and review a task as usual.
+For a first file-only session:
+
+```sh
+python3 -m planner --state /tmp/planner-control/control.sqlite propose /absolute/project --template source
+python3 -m planner --state /tmp/planner-control/control.sqlite review TASK
+python3 -m planner --state /tmp/planner-control/control.sqlite approve-task TASK --revision 1
+python3 -m planner --state /tmp/planner-control/control.sqlite assign TASK worker --read '**' --write 'src/**' --tool file
+python3 -m planner --state /tmp/planner-control/control.sqlite hook TASK worker \
+  --opencode /absolute/path/to/opencode \
+  --model provider/model --provider-url https://your-provider.example/v1
+```
+
+Replace `TASK` with the returned task ID and supply your actual model and provider endpoint.
+Add `--api-key-env YOUR_KEY_VARIABLE` when the provider needs a credential from that environment variable.
+The launcher does not import your ordinary OpenCode credentials, plugins, or project configuration.
+No global OpenCode settings are changed; typing plain `opencode` continues to use your ordinary setup.
+Python 3.11+ and OpenCode **2.2.5** are required.
+
+Add `--prompt 'Your task'` for one noninteractive session.
+Without it, the launcher verifies a private server's hook registration before connecting the terminal UI.
+Only one root session is bound to a worker; start a new launch to use another session.
+The default run limit is one hour (`--run-seconds`).
+An idle session or a clean terminal exit does not establish task correctness.
+
+The adapter exposes only direct `read`, `write`, and `edit` tools.
+Permission checks use the existing reviewed task, grant, denials, and narrow exceptions; OpenCode's write/edit tools require both read and write access.
+Native permission prompts cannot override supervisor denials.
+Completion hooks release tool tickets without sending tool output to the supervisor.
+Hook mode does not record model inputs or reconstruct their provenance.
+
+Shell commands, search/glob, directory reads, subagents, MCP tools, attachment resolution, and other tools are disabled.
+A tool hook cannot reliably enumerate all file accesses inside those operations.
+Consequently the agent cannot run your test commands in this mode; run them separately yourself, or use the full Linux runtime for shell-enabled work.
+
+The launcher rejects incompatible binaries and withholds task submission and the UI until the expected hooks register.
+Missing supervisor responses block tool calls, and the launcher checks current authority while the session runs.
+This does not isolate the harness or supervisor at OS level, prevent races with external filesystem changes, cover arbitrary built-in harness accesses, or guarantee descendant cleanup after an abrupt owner death.
+Hook-only availability on a host is not acceptance of the full macOS or Windows confinement contract.
+
+Run `python3 -W error::ResourceWarning -m unittest planner.tests.test_pretool -v` to exercise hook permissions, tickets, and a real pinned OpenCode against a local dummy provider.
+These tests make no paid provider calls; the real binary tests require permission to bind local sockets.

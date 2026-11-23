@@ -8,6 +8,10 @@ worker's authorized, conflict-free edits back to the original.
 [Architecture](docs/ARCHITECTURE.md) · [Usage](docs/USAGE.md) ·
 [Connected runtime](docs/CONNECTED_RUNTIME.md) · [Limitations](docs/KNOWN_LIMITATIONS.md)
 
+For a lighter CLI workflow, see [hook-only mode](docs/USAGE.md#hook-only-opencode).
+It checks direct file tools against an approved task, disables shell/search, and edits the original project directly.
+It does not provide OS confinement or model-context provenance and does not replace the Linux connected runtime.
+
 ## What works
 
 | Area | Status |

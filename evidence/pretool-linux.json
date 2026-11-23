@@ -1,0 +1,694 @@
+{
+  "schema": 1,
+  "scope": "Follow-up Linux validation of the hook adapter on the existing localhost VM.",
+  "source_archive_sha256": "846883556d500160ecd20c21faf81fc7c6ba0304f9e05fed59ee1a46e96543b3",
+  "preflight": {
+    "source_files_verified": 109,
+    "kernel": "6.8.0-149-generic",
+    "python": "3.12.3",
+    "connected_profile_loaded": true,
+    "offline_profile_loaded": false,
+    "oracle_profile_loaded": false,
+    "node_available": false
+  },
+  "approval_review": {
+    "action": "Rerun installer, reload profiles, and download temporary Node runtime",
+    "result": "rejected",
+    "reason": "Testing authorization did not cover broad persistent package/AppArmor changes and software downloads.",
+    "executed": false
+  },
+  "temporary_profiles_approval": "explicitly granted by user; only two temporary profiles loaded",
+  "attempts": [
+    {
+      "at": "2026-11-23T08:25:46.682992+00:00",
+      "scope": "Linux suite with existing connected/FUSE protection; offline/oracle profiles unavailable and Node absent. No packages or AppArmor policy changed.",
+      "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3",
+      "sources": {
+        "README.md": "d8adbfb996e612c1b2371c640f68fc99d985e1859a58fb0dd69eb600b9c102a4",
+        "artifact/README.md": "e2e382f7f97c88eb83e74bdab7121c297e9b82e1fbe232f9a6b83b97fa1dc5d5",
+        "artifact/scenarios/benign-quotation.json": "917d72b7ebb9e9bb4d4d888deed0276638ac91071e0761fbf4877f1a1227e052",
+        "artifact/scenarios/documentation-injection.json": "8011a727e239df83584ddab52cb3e5a7ce434b11667baafa7a78b26152908cd7",
+        "artifact/scenarios/normal.json": "8943f90b8343c6d61adcdbe3d7855e97dadbaf015a032742ffa86f63d2cc704b",
+        "artifact/scenarios/tool-output-injection.json": "67df3c0a116d94f3e7e8bd6dbd5b59ea119627541a7a68280d2d4021b3f916be",
+        "artifact/scripts/prepare.py": "3918c8686c2bd678b2f787b62ccd4dce6ce2733699f57c12a28faffb4d5d20e3",
+        "artifact/skills/LICENSE.superpowers": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "artifact/skills/UPSTREAM.json": "10c9f7b9456fab307d5dda6f43328e1ed01c9096fd76b646d1332435cd5d9870",
+        "artifact/skills/systematic-debugging/CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+        "artifact/skills/systematic-debugging/SKILL.md": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+        "artifact/skills/systematic-debugging/condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+        "artifact/skills/systematic-debugging/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+        "artifact/skills/systematic-debugging/defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+        "artifact/skills/systematic-debugging/find-polluter.sh": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+        "artifact/skills/systematic-debugging/root-cause-tracing.md": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+        "artifact/skills/systematic-debugging/test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+        "artifact/skills/systematic-debugging/test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+        "artifact/skills/systematic-debugging/test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+        "artifact/skills/systematic-debugging/test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+        "artifact/skills/test-driven-development/SKILL.md": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+        "artifact/skills/test-driven-development/writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+        "artifact/skills/verification-before-completion/SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+        "artifact/task.md": "effc36d525b365b8d9048e9c3249600cfcd7777a341d68add843fa9c7808f368",
+        "artifact/workload/README.md": "357eb72cfef12be54eaa41a51cf236fbda54dc061a4fe605baa6a638b8be1921",
+        "artifact/workload/data/expenses.csv": "3a705bed21b2165ddc1cbe0fa0e3ea83c5fbf3641ce8db40765d56da8b99154e",
+        "artifact/workload/docs/project-notes.md": "aa8be77c5907b952e3d3bc381780892791dd1b2e8ff10737a543d159e242fb13",
+        "artifact/workload/docs/runner-notes.txt": "a5c77e0c1967d61fef7b366bfa7d008d5ec58d88caffb4108eac69dd1b1e6b65",
+        "artifact/workload/src/__init__.py": "e032b7ad1c96194c9b34f1627d0a2b3d98ce94039afae0bbc121b0da6afdef9a",
+        "artifact/workload/src/expense_summary.py": "593d1ec77d902448a9debcdc8c47ff17317228c1d5c94256f8d724b96b09c936",
+        "artifact/workload/tests/test_expense_summary.py": "e1848c2b8f4d5c9e5bd742842eba86ff1c0b8f795580fb331463196e251d9127",
+        "artifact/workload/tools/run_tests.py": "bc8934a868841e59c8900630209eaf5d795501b9cca6eac9778f070b83ba121b",
+        "planner/__init__.py": "eadc5e3bdae34bdc41323afcef57dd10773a63a57d566839ce352ee884b3be31",
+        "planner/__main__.py": "47e119a95248cb15a402c9604b4228b1c6156c2cee6881f51ec8490029d6560d",
+        "planner/broker_server.py": "7878a8da217ae4bdada6b552dd48c2d80ea9d2f52a073b352da4ce9b968ef6dc",
+        "planner/changeset.py": "a2200d8c08c90941dd34233b8728b7ed033aefba5a1c24ccab0cb29a641313ce",
+        "planner/comparison.py": "f4119d4b7dab1298bf662a9ce7a1cde74e9fe4eaf36e325ef90cd383cd791ea8",
+        "planner/connector.py": "b29eff4f94f27284c20e33af91bfd568eb77c871dd2b994302b82a153095f739",
+        "planner/context.py": "fd649cf9e08d3a77b7b8ed46381ba24c4060de3d3829f44aa82fa3b2b522c5d3",
+        "planner/demo.py": "b4cb58d505400913d1e4b52c2c9236de3da03d84d99c08593a2c10ec24d01fc0",
+        "planner/enforcement.py": "b92c7b93a44b6f11ab74ca26bcd3bfda8a533542028a677a25ea8c9a76869c36",
+        "planner/evaluation.py": "037f52146eb1f2322e889df72d1009b94ffd62656e344e284f4747e991383581",
+        "planner/launcher.py": "92de38d39cbb17932842d913fbed43535deefdb72e1d710b391e8c405816db5d",
+        "planner/mediation.py": "b9326e66860a58bfe804476594a8a74ef89485178324f81f40d49898ae0c418f",
+        "planner/native/__init__.py": "ff1977b9b4c9261a33337eacaa9f525ae855d356eecf535f60d53a957bfe8b2d",
+        "planner/native/confined_bootstrap.py": "6bd55aee343dcd80b3c383e2c706cc7361a08b0420a051fa71a3fcba8c0f694d",
+        "planner/native/confined_opencode.py": "0afc71db476ff881bfbda4532d21fc24a7b106e9ddf9fb52cee76161205089ca",
+        "planner/native/confined_transport.py": "4396809ff34d859efd854cce5f8671b234c20ae30a738cedf83767bc68c1db3a",
+        "planner/native/fuse_bridge.c": "465b9639a1e44d490bdabd0ad76622298baebca07dab9c881485f1f678461188",
+        "planner/native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "planner/native/linux_sandbox.py": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8",
+        "planner/native/macos_candidate/CandidateBroker.swift": "51876600d26ea95312b9b4aed9dbbbbcad3754c20e1ed3cc14cc6f334a3b8752",
+        "planner/native/macos_candidate/CandidateFileSystem.swift": "c8bbf8a1d5a9d17d2ff5679de1f4641446652a9a24b73d153900dd5fed0ac0e4",
+        "planner/native/macos_candidate/CandidateVolume.swift": "93a11e36de54f9124559d6b33de4dcae5d9de670d2bf570e479eb46f32651fe1",
+        "planner/native/macos_candidate/ExtensionMain.swift": "628d471b5907bb09883342d4b528b67996c4a0578377d0080bf79a3f5e4bbf31",
+        "planner/native/macos_candidate/HostMain.swift": "a8a94abffe81f9925f4df5ffd57259bb1fc250599893a2d87347f54719ce5305",
+        "planner/native/macos_contract.py": "109dbebf0cf40a023c8556098d0488e2a69a4d481ed12d28f4533d83ea682e66",
+        "planner/native/mediatedfs.py": "c106c19c2cdcb1a8386236f8a321bf587f97a31203cb960d0471a33018022005",
+        "planner/opencode/__init__.py": "3cafb944988356dbebec5d7d015cb45645688c346aeac8dedd80c653bf9e1764",
+        "planner/opencode/bridge.mjs": "676cf27ae62908a4d5d3acc74d19a17ab8faad4bbd8a49c38bd82914bd2ccfd6",
+        "planner/opencode/diagnostic.py": "8ce96700cd8130c8332c1b2e2f286b9b0f40fbcc529c8e0aca0ecb61af36488a",
+        "planner/opencode/index.js": "040dd60143b05e7b923c1832d5634f25782d08a059e2b15f075c225078df864f",
+        "planner/opencode/package.json": "2a4d581ee8980b112a56f0e62bd3a4f640c7725b241454ed36cd5345722202ce",
+        "planner/opencode/pretool/index.js": "dad4884b0269a44089b8b4acb8d9caff3a4b301356922893efb8dfdac5148f5f",
+        "planner/opencode/pretool/package.json": "861767ba9c7eae94c77b537dfabee687a5ad720a73c3bf5bea951f504fc46d22",
+        "planner/policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421",
+        "planner/pretool.py": "a74a9e25fdcbf4825eb29951aa77ae5b4c6d52eac82892957a62030501bf13f1",
+        "planner/private_server.py": "87dba765d8e18c54a149466ae2ee600e3dcb149cef29fefc4f70ba03650c3b11",
+        "planner/provenance.py": "b749f9b1ea9fb31b1e2d6592e1c0e598e743dbc3723e1b76e83b9cd12540922b",
+        "planner/records.py": "03cae84914846d7f5be506f98b388825b7524f953a500d6642cf18b690a36dd1",
+        "planner/report/template.html": "ff107bd472829d95973d8d431b7dfd6b4faf579e61f5eec9ae2248621a2ecb52",
+        "planner/report.py": "034cee5bc486d68bd574413f5b3acc4d37f7f9f90836ee6db2dc1513d01df018",
+        "planner/scenarios/benchmark.json": "aaf4d1a624ccb47edb18fcb272284645ed593e8d1e06bf754e4924f2d97aed22",
+        "planner/supervisor.py": "da6c1aebd1d5dac3a007ecaaffebbcf281dcc149ecf243205dcb7feec10a3c20",
+        "planner/templates/documentation.toml": "87a90fa3a1b9c5e4fe183fc03d3cd7c48ebbfc56455c500fad75768596e50089",
+        "planner/templates/inspection.toml": "f7dc4067e2a64b1c5f6eecebece3df0a007f13ff0c724ff1a43ed223407bb936",
+        "planner/templates/source.toml": "dd3f19006bc0c42d5f7d812c4c8a02a075a82edcbca455517711c7d6d7523c40",
+        "planner/templates/tests.toml": "8d1173a12aab72819c8343d5d14b698dffee4fc44e028d773293d21d6bcce52b",
+        "planner/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "planner/tests/runtime_fixtures.py": "0f8eedebbd81f37522ffb29f3d17832aea667135443cc25edc73007d58f9e27e",
+        "planner/tests/test_broker_server.py": "7c588fc8c318507ef4c7ace4d23d0179971027f57d1d9cfc58fdeef6a367a5c4",
+        "planner/tests/test_changeset.py": "484d004b0ad4889628f39038c32b1e45858f3019ac1b761c56841e75731e5713",
+        "planner/tests/test_cli.py": "02d33ce3bdcc6bb7a47ddd235d0fc504e4e5a0cbeaefca4cc1482cb84f39cfcd",
+        "planner/tests/test_comparison.py": "fbc921607cf20fa4c2934d961a10ccf5173ea026b374a00b37c64ec7b7f0b30d",
+        "planner/tests/test_confined_opencode.py": "00641d9aed51b893179ad6979675bcca45bd2befd9b4a202b86821b1fadf6f0a",
+        "planner/tests/test_connector.py": "6554f6acafa4aea93d626f066b4ab8d78d1e9f10bd215ee572ab233240df4539",
+        "planner/tests/test_context.py": "2bd776b5227609995bc71ef20fead43a877068f74e1d3d4b6eb1f6deeaf192d0",
+        "planner/tests/test_control_adversarial.py": "4e1cac8161f04486a65e2d5c2c3379b8d1ad12e74a6ba8a74fa7628241a3ffad",
+        "planner/tests/test_delegation_recovery.py": "1c89e8bb81a2b2fa5addc77e6c4c1417d6749299ed6cab65988798a3b4161dac",
+        "planner/tests/test_enforcement.py": "a8b294d6ee0e43c3221978104ae6b4914194c33197c6f56c2a7a41e3098f4d34",
+        "planner/tests/test_evaluation.py": "42596ec46dc104768601f571b3484bf4a0b0a2c5a1cb6ac6292db6a46c3a61c5",
+        "planner/tests/test_launcher.py": "562e903386ae6e8008898b60d0429b01463ab0ee9c3c2c46cdbe1c73d439f6fa",
+        "planner/tests/test_linux_sandbox.py": "4f1b7b47f2204751a0b9172d3fcc7779f12aeb89da6ed36685f6a966f30da89f",
+        "planner/tests/test_mediatedfs.py": "b34f08ccce476300e6b10762bf5a9a5f121192b0682aa7a22516a9fd50cd6038",
+        "planner/tests/test_mediation.py": "6b85bdf945d5f01cf760774023d3d68f41a7750e28d267f5d9825013d77ad4f7",
+        "planner/tests/test_opencode_bridge.py": "a32182bf2d9453c2aeb090b674d10a731f6e0da4e55a5eada76b87f69d9aae9b",
+        "planner/tests/test_policy.py": "21130ec62b998c7a73afa2c90aca1b4dfbf4b2886cdfdf5cfd3164e6eacabb4e",
+        "planner/tests/test_policy_adversarial.py": "53d561191460fbad1b39401990d93c47fabc3ea817430f7f5fa304973f98c31a",
+        "planner/tests/test_pretool.py": "0e2bd542f870ca75af37181c47f71ea2ada3d8bcaab61bec04900409f76ac4ac",
+        "planner/tests/test_private_server.py": "729972facead3fe8c9eccc4a696576c17e134445ad78f0e605bac5b1c7f51625",
+        "planner/tests/test_provenance.py": "4da7bcde14892071d8492f96668f51dc0b29215fc1a477e0ac095932b2d54642",
+        "planner/tests/test_reconsideration.py": "c000fd91d764639d9e6d517b076de0be3baa6ae02bd246dd9c40aea33f6304f0",
+        "planner/tests/test_report.py": "7de35169e892476968676c81220f89f10775d7e51527df9564a82629c6e76e2d",
+        "planner/tests/test_supervisor.py": "e0e64531bec5ab8a2fbf182a5f66eeac8854052af8fb03249d93b6b8a03d6dcb",
+        "planner/tests/test_workflow.py": "097401e0194ca203c046f06897cc529eee7cbd5f4edd11bd8a0bcf872ce9ec6e",
+        "planner/workflow.py": "5bcdc515e94de977ee8fed41303332e19cf2471c94ce3f19ac110bfdb8596c46",
+        "pyproject.toml": "6fd2a53884825f3c7bb24d2a6558415cab82f4c2ae6699166da8da314ebfb660",
+        "scripts/demo.sh": "6d2496eeb0aeb03851f9f5faf5b2a12c3f04a051983847920860cf275eddf750",
+        "scripts/install-ubuntu.sh": "fa901bd9e4acefa3ad28cb14a3cf05c8672fbacbfcab8b38c56e1712855355bf"
+      },
+      "sources_stable": true,
+      "runtime_binaries": {
+        "/home/user/.local/share/planner/opencode-2.2.5/opencode": "8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050",
+        "/tmp/planner-hook-check.Eobgpk/fuse-bridge": "59dfa06f3ea765cefdbbfb8ca3a39d058afc6bf74133734ad97b5b2696236a11"
+      },
+      "tests": 253,
+      "failures": [
+        {
+          "test": "test_pretool.HookTests.test_interactive_cli_uses_the_checked_server_and_edits_the_project",
+          "detail": "Traceback (most recent call last):\n  File \"/tmp/planner-hook-check.Eobgpk/planner/tests/test_pretool.py\", line 203, in test_interactive_cli_uses_the_checked_server_and_edits_the_project\n    self.assertTrue(sent, \"Interactive prompt did not become available\")\nAssertionError: False is not true : Interactive prompt did not become available\n"
+        }
+      ],
+      "errors": [
+        {
+          "test": "test_pretool.HookTests.test_rejected_hook_registration_never_dispatches_prompt",
+          "detail": "Traceback (most recent call last):\n  File \"/tmp/planner-hook-check.Eobgpk/planner/tests/test_pretool.py\", line 157, in test_rejected_hook_registration_never_dispatches_prompt\n    run_hook(self.state, self.task, \"worker\", ConnectorConfig(\n  File \"/tmp/planner-hook-check.Eobgpk/planner/pretool.py\", line 100, in run_hook\n    version = subprocess.run([probe.argv[0], \"--version\"], env=probe.env, cwd=root,\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 550, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 1209, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 2116, in _communicate\n    self._check_timeout(endtime, orig_timeout, stdout, stderr)\n  File \"/usr/lib/python3.12/subprocess.py\", line 1253, in _check_timeout\n    raise TimeoutExpired(\nsubprocess.TimeoutExpired: Command '['/home/user/.local/share/planner/opencode-2.2.5/opencode', '--version']' timed out after 2 seconds\n"
+        }
+      ],
+      "skips": [
+        {
+          "test": "test_confined_opencode.ConfinedRealProviderTests.test_real_model_edits_permitted_file_and_cannot_disclose_secret",
+          "reason": "Actual Linux runtime and an explicitly selected real provider are required"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_hardlink_created_externally_during_execution",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_read_after_moving_sensitive_inode_to_allowed_name",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_symlink_name_to_public_target",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_refuses_startup_with_preexisting_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_confined_oracle_contains_hostile_generated_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_real_confined_oracle_distinguishes_unfixed_and_fixed_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_existing_file_outside_the_worker_read_grant",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_create_network_sockets",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_actual_native_bodies_and_auxiliary_contexts_are_admitted",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_channel_serializes_requests_and_rejects_denials",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_denied_tool_is_blocked_before_effect",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_extra_plugin_blocks_prompt_and_mcp_catalog_is_removed",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_handshake_reports_successfully_registered_hooks",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_oversized_payload_is_audited_without_losing_sequence",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_shell_environment_excludes_provider_and_control_credentials",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_summary_lineage_uses_stored_record_type_and_receipt",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_opencode_bridge.BridgeTests.test_unsupported_transport_is_audited_without_frame_bytes_and_stays_blocked",
+          "reason": "Node is required for the OpenCode JavaScript bridge tests"
+        },
+        {
+          "test": "test_policy.PolicyTests.test_case_alias_cannot_read_denied_resource_on_case_insensitive_filesystem",
+          "reason": "Case-sensitive filesystem"
+        },
+        {
+          "test": "test_policy_adversarial.PolicyAdversarialTests.test_case_alias_cannot_bypass_denial_on_case_insensitive_filesystem",
+          "reason": "Filesystem treats case variants as different resources"
+        },
+        {
+          "test": "test_pretool.HookTests.test_adapter_blocks_effects_on_denial_and_connection_loss",
+          "reason": "Node required for real JavaScript hook callbacks"
+        }
+      ],
+      "seconds": 1125.21,
+      "observed_resource_warning": "An unused ScriptedProvider in the owner-death test left a listening socket open; reproduced separately."
+    }
+  ],
+  "temporary_profile_cleanup": {
+    "planner-05bc5f5986e40740a1acb0e9_removed": true,
+    "planner-647d1ce6279b0af09b8b207e_removed": true
+  },
+  "offline_checks": {
+    "at": "2026-11-23T08:14:18.275109+00:00",
+    "scope": "Previously skipped Linux offline process and confined evaluator checks, under user-approved temporary test profiles.",
+    "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+    "tests": 22,
+    "failures": [],
+    "errors": [],
+    "skips": [],
+    "seconds": 67.64,
+    "sources_stable": true
+  },
+  "socket_regression_red": {
+    "at": "2026-11-23T08:26:22.798056+00:00",
+    "phase": "red",
+    "tests": 1,
+    "failures": [
+      {
+        "test": "planner.tests.test_launcher.LauncherTests.test_owner_death_stops_worker_and_recovery_verifies_before_reuse",
+        "detail": "Traceback (most recent call last):\n  File \"/tmp/planner-hook-check.Eobgpk/planner/tests/test_launcher.py\", line 245, in test_owner_death_stops_worker_and_recovery_verifies_before_reuse\n    self.assertFalse([warning for warning in emitted if warning.category is ResourceWarning],\nAssertionError: [<warnings.WarningMessage object at 0x752f857aecf0>] is not false : The blocked-restart provider leaked a socket\n"
+      }
+    ],
+    "errors": [],
+    "skipped": 0,
+    "seconds": 25.65,
+    "source_sha256": "ee01d5f04f74a5b7e2cc352d11206b236267ab66ace7ba05fa136962d6a4f9e9",
+    "sources_stable": true
+  },
+  "socket_regression_green": {
+    "at": "2026-11-23T08:31:12.004158+00:00",
+    "phase": "green",
+    "tests": 1,
+    "failures": [],
+    "errors": [],
+    "skipped": 0,
+    "seconds": 57.3,
+    "source_sha256": "144a72379dcd6ee75034f0780ae92ef7595c197282cfcdbf257cb6e1b976ad7a",
+    "sources_stable": true
+  },
+  "hook_recheck": {
+    "tests": 7,
+    "seconds": 83.176,
+    "passed": 6,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "scope": "All hook tests, including actual Linux OpenCode headless and interactive terminal execution; Node callback test skipped because Node is absent.",
+    "test_source_sha256": "f09221ca020f095ec77a98b9dd0c9b291bb12175a1b93ac5059d5c69e22c149a",
+    "log_sha256": "0315c117ae81499c0700643a160f17b613271b018752fd65aee44c5090beef54"
+  },
+  "interactive_diagnostic": {
+    "passed": false,
+    "reason": "At the original 15-second terminal deadline only the launcher preamble had appeared; increasing the terminal wait to 60 seconds passed with the same permission checks.",
+    "log_sha256": "b0482f1dbb097b97c5a2dc7978e08aa445a877c35ceea60e9ba184c8ac600470"
+  },
+  "resolved_issues": [
+    "The hook rejection fixture used a two-second version-probe budget; increased it to ten seconds and assert the specific authenticated-registration timeout.",
+    "The VM interactive terminal needed longer than the fifteen-second test deadline; extended that deadline to sixty seconds without changing runtime behavior or permission checks.",
+    "The existing owner-death test constructed a dummy provider outside a context manager; now closes it and asserts no ResourceWarning after collection."
+  ],
+  "final_sources": {
+    "README.md": "d8adbfb996e612c1b2371c640f68fc99d985e1859a58fb0dd69eb600b9c102a4",
+    "artifact/README.md": "e2e382f7f97c88eb83e74bdab7121c297e9b82e1fbe232f9a6b83b97fa1dc5d5",
+    "artifact/scenarios/benign-quotation.json": "917d72b7ebb9e9bb4d4d888deed0276638ac91071e0761fbf4877f1a1227e052",
+    "artifact/scenarios/documentation-injection.json": "8011a727e239df83584ddab52cb3e5a7ce434b11667baafa7a78b26152908cd7",
+    "artifact/scenarios/normal.json": "8943f90b8343c6d61adcdbe3d7855e97dadbaf015a032742ffa86f63d2cc704b",
+    "artifact/scenarios/tool-output-injection.json": "67df3c0a116d94f3e7e8bd6dbd5b59ea119627541a7a68280d2d4021b3f916be",
+    "artifact/scripts/prepare.py": "3918c8686c2bd678b2f787b62ccd4dce6ce2733699f57c12a28faffb4d5d20e3",
+    "artifact/skills/LICENSE.superpowers": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+    "artifact/skills/UPSTREAM.json": "10c9f7b9456fab307d5dda6f43328e1ed01c9096fd76b646d1332435cd5d9870",
+    "artifact/skills/systematic-debugging/CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+    "artifact/skills/systematic-debugging/SKILL.md": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+    "artifact/skills/systematic-debugging/condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+    "artifact/skills/systematic-debugging/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+    "artifact/skills/systematic-debugging/defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+    "artifact/skills/systematic-debugging/find-polluter.sh": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+    "artifact/skills/systematic-debugging/root-cause-tracing.md": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+    "artifact/skills/systematic-debugging/test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+    "artifact/skills/systematic-debugging/test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+    "artifact/skills/systematic-debugging/test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+    "artifact/skills/systematic-debugging/test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+    "artifact/skills/test-driven-development/SKILL.md": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+    "artifact/skills/test-driven-development/writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+    "artifact/skills/verification-before-completion/SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+    "artifact/task.md": "effc36d525b365b8d9048e9c3249600cfcd7777a341d68add843fa9c7808f368",
+    "artifact/workload/README.md": "357eb72cfef12be54eaa41a51cf236fbda54dc061a4fe605baa6a638b8be1921",
+    "artifact/workload/data/expenses.csv": "3a705bed21b2165ddc1cbe0fa0e3ea83c5fbf3641ce8db40765d56da8b99154e",
+    "artifact/workload/docs/project-notes.md": "aa8be77c5907b952e3d3bc381780892791dd1b2e8ff10737a543d159e242fb13",
+    "artifact/workload/docs/runner-notes.txt": "a5c77e0c1967d61fef7b366bfa7d008d5ec58d88caffb4108eac69dd1b1e6b65",
+    "artifact/workload/src/__init__.py": "e032b7ad1c96194c9b34f1627d0a2b3d98ce94039afae0bbc121b0da6afdef9a",
+    "artifact/workload/src/expense_summary.py": "593d1ec77d902448a9debcdc8c47ff17317228c1d5c94256f8d724b96b09c936",
+    "artifact/workload/tests/test_expense_summary.py": "e1848c2b8f4d5c9e5bd742842eba86ff1c0b8f795580fb331463196e251d9127",
+    "artifact/workload/tools/run_tests.py": "bc8934a868841e59c8900630209eaf5d795501b9cca6eac9778f070b83ba121b",
+    "planner/__init__.py": "eadc5e3bdae34bdc41323afcef57dd10773a63a57d566839ce352ee884b3be31",
+    "planner/__main__.py": "47e119a95248cb15a402c9604b4228b1c6156c2cee6881f51ec8490029d6560d",
+    "planner/broker_server.py": "7878a8da217ae4bdada6b552dd48c2d80ea9d2f52a073b352da4ce9b968ef6dc",
+    "planner/changeset.py": "a2200d8c08c90941dd34233b8728b7ed033aefba5a1c24ccab0cb29a641313ce",
+    "planner/comparison.py": "f4119d4b7dab1298bf662a9ce7a1cde74e9fe4eaf36e325ef90cd383cd791ea8",
+    "planner/connector.py": "b29eff4f94f27284c20e33af91bfd568eb77c871dd2b994302b82a153095f739",
+    "planner/context.py": "fd649cf9e08d3a77b7b8ed46381ba24c4060de3d3829f44aa82fa3b2b522c5d3",
+    "planner/demo.py": "b4cb58d505400913d1e4b52c2c9236de3da03d84d99c08593a2c10ec24d01fc0",
+    "planner/enforcement.py": "b92c7b93a44b6f11ab74ca26bcd3bfda8a533542028a677a25ea8c9a76869c36",
+    "planner/evaluation.py": "037f52146eb1f2322e889df72d1009b94ffd62656e344e284f4747e991383581",
+    "planner/launcher.py": "92de38d39cbb17932842d913fbed43535deefdb72e1d710b391e8c405816db5d",
+    "planner/mediation.py": "b9326e66860a58bfe804476594a8a74ef89485178324f81f40d49898ae0c418f",
+    "planner/native/__init__.py": "ff1977b9b4c9261a33337eacaa9f525ae855d356eecf535f60d53a957bfe8b2d",
+    "planner/native/confined_bootstrap.py": "6bd55aee343dcd80b3c383e2c706cc7361a08b0420a051fa71a3fcba8c0f694d",
+    "planner/native/confined_opencode.py": "0afc71db476ff881bfbda4532d21fc24a7b106e9ddf9fb52cee76161205089ca",
+    "planner/native/confined_transport.py": "4396809ff34d859efd854cce5f8671b234c20ae30a738cedf83767bc68c1db3a",
+    "planner/native/fuse_bridge.c": "465b9639a1e44d490bdabd0ad76622298baebca07dab9c881485f1f678461188",
+    "planner/native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+    "planner/native/linux_sandbox.py": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8",
+    "planner/native/macos_candidate/CandidateBroker.swift": "51876600d26ea95312b9b4aed9dbbbbcad3754c20e1ed3cc14cc6f334a3b8752",
+    "planner/native/macos_candidate/CandidateFileSystem.swift": "c8bbf8a1d5a9d17d2ff5679de1f4641446652a9a24b73d153900dd5fed0ac0e4",
+    "planner/native/macos_candidate/CandidateVolume.swift": "93a11e36de54f9124559d6b33de4dcae5d9de670d2bf570e479eb46f32651fe1",
+    "planner/native/macos_candidate/ExtensionMain.swift": "628d471b5907bb09883342d4b528b67996c4a0578377d0080bf79a3f5e4bbf31",
+    "planner/native/macos_candidate/HostMain.swift": "a8a94abffe81f9925f4df5ffd57259bb1fc250599893a2d87347f54719ce5305",
+    "planner/native/macos_contract.py": "109dbebf0cf40a023c8556098d0488e2a69a4d481ed12d28f4533d83ea682e66",
+    "planner/native/mediatedfs.py": "c106c19c2cdcb1a8386236f8a321bf587f97a31203cb960d0471a33018022005",
+    "planner/opencode/__init__.py": "3cafb944988356dbebec5d7d015cb45645688c346aeac8dedd80c653bf9e1764",
+    "planner/opencode/bridge.mjs": "676cf27ae62908a4d5d3acc74d19a17ab8faad4bbd8a49c38bd82914bd2ccfd6",
+    "planner/opencode/diagnostic.py": "8ce96700cd8130c8332c1b2e2f286b9b0f40fbcc529c8e0aca0ecb61af36488a",
+    "planner/opencode/index.js": "040dd60143b05e7b923c1832d5634f25782d08a059e2b15f075c225078df864f",
+    "planner/opencode/package.json": "2a4d581ee8980b112a56f0e62bd3a4f640c7725b241454ed36cd5345722202ce",
+    "planner/opencode/pretool/index.js": "dad4884b0269a44089b8b4acb8d9caff3a4b301356922893efb8dfdac5148f5f",
+    "planner/opencode/pretool/package.json": "861767ba9c7eae94c77b537dfabee687a5ad720a73c3bf5bea951f504fc46d22",
+    "planner/policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421",
+    "planner/pretool.py": "a74a9e25fdcbf4825eb29951aa77ae5b4c6d52eac82892957a62030501bf13f1",
+    "planner/private_server.py": "87dba765d8e18c54a149466ae2ee600e3dcb149cef29fefc4f70ba03650c3b11",
+    "planner/provenance.py": "b749f9b1ea9fb31b1e2d6592e1c0e598e743dbc3723e1b76e83b9cd12540922b",
+    "planner/records.py": "03cae84914846d7f5be506f98b388825b7524f953a500d6642cf18b690a36dd1",
+    "planner/report/template.html": "ff107bd472829d95973d8d431b7dfd6b4faf579e61f5eec9ae2248621a2ecb52",
+    "planner/report.py": "034cee5bc486d68bd574413f5b3acc4d37f7f9f90836ee6db2dc1513d01df018",
+    "planner/scenarios/benchmark.json": "aaf4d1a624ccb47edb18fcb272284645ed593e8d1e06bf754e4924f2d97aed22",
+    "planner/supervisor.py": "da6c1aebd1d5dac3a007ecaaffebbcf281dcc149ecf243205dcb7feec10a3c20",
+    "planner/templates/documentation.toml": "87a90fa3a1b9c5e4fe183fc03d3cd7c48ebbfc56455c500fad75768596e50089",
+    "planner/templates/inspection.toml": "f7dc4067e2a64b1c5f6eecebece3df0a007f13ff0c724ff1a43ed223407bb936",
+    "planner/templates/source.toml": "dd3f19006bc0c42d5f7d812c4c8a02a075a82edcbca455517711c7d6d7523c40",
+    "planner/templates/tests.toml": "8d1173a12aab72819c8343d5d14b698dffee4fc44e028d773293d21d6bcce52b",
+    "planner/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "planner/tests/runtime_fixtures.py": "0f8eedebbd81f37522ffb29f3d17832aea667135443cc25edc73007d58f9e27e",
+    "planner/tests/test_broker_server.py": "7c588fc8c318507ef4c7ace4d23d0179971027f57d1d9cfc58fdeef6a367a5c4",
+    "planner/tests/test_changeset.py": "484d004b0ad4889628f39038c32b1e45858f3019ac1b761c56841e75731e5713",
+    "planner/tests/test_cli.py": "02d33ce3bdcc6bb7a47ddd235d0fc504e4e5a0cbeaefca4cc1482cb84f39cfcd",
+    "planner/tests/test_comparison.py": "fbc921607cf20fa4c2934d961a10ccf5173ea026b374a00b37c64ec7b7f0b30d",
+    "planner/tests/test_confined_opencode.py": "00641d9aed51b893179ad6979675bcca45bd2befd9b4a202b86821b1fadf6f0a",
+    "planner/tests/test_connector.py": "6554f6acafa4aea93d626f066b4ab8d78d1e9f10bd215ee572ab233240df4539",
+    "planner/tests/test_context.py": "2bd776b5227609995bc71ef20fead43a877068f74e1d3d4b6eb1f6deeaf192d0",
+    "planner/tests/test_control_adversarial.py": "4e1cac8161f04486a65e2d5c2c3379b8d1ad12e74a6ba8a74fa7628241a3ffad",
+    "planner/tests/test_delegation_recovery.py": "1c89e8bb81a2b2fa5addc77e6c4c1417d6749299ed6cab65988798a3b4161dac",
+    "planner/tests/test_enforcement.py": "a8b294d6ee0e43c3221978104ae6b4914194c33197c6f56c2a7a41e3098f4d34",
+    "planner/tests/test_evaluation.py": "42596ec46dc104768601f571b3484bf4a0b0a2c5a1cb6ac6292db6a46c3a61c5",
+    "planner/tests/test_launcher.py": "144a72379dcd6ee75034f0780ae92ef7595c197282cfcdbf257cb6e1b976ad7a",
+    "planner/tests/test_linux_sandbox.py": "4f1b7b47f2204751a0b9172d3fcc7779f12aeb89da6ed36685f6a966f30da89f",
+    "planner/tests/test_mediatedfs.py": "b34f08ccce476300e6b10762bf5a9a5f121192b0682aa7a22516a9fd50cd6038",
+    "planner/tests/test_mediation.py": "6b85bdf945d5f01cf760774023d3d68f41a7750e28d267f5d9825013d77ad4f7",
+    "planner/tests/test_opencode_bridge.py": "a32182bf2d9453c2aeb090b674d10a731f6e0da4e55a5eada76b87f69d9aae9b",
+    "planner/tests/test_policy.py": "21130ec62b998c7a73afa2c90aca1b4dfbf4b2886cdfdf5cfd3164e6eacabb4e",
+    "planner/tests/test_policy_adversarial.py": "53d561191460fbad1b39401990d93c47fabc3ea817430f7f5fa304973f98c31a",
+    "planner/tests/test_pretool.py": "f09221ca020f095ec77a98b9dd0c9b291bb12175a1b93ac5059d5c69e22c149a",
+    "planner/tests/test_private_server.py": "729972facead3fe8c9eccc4a696576c17e134445ad78f0e605bac5b1c7f51625",
+    "planner/tests/test_provenance.py": "4da7bcde14892071d8492f96668f51dc0b29215fc1a477e0ac095932b2d54642",
+    "planner/tests/test_reconsideration.py": "c000fd91d764639d9e6d517b076de0be3baa6ae02bd246dd9c40aea33f6304f0",
+    "planner/tests/test_report.py": "7de35169e892476968676c81220f89f10775d7e51527df9564a82629c6e76e2d",
+    "planner/tests/test_supervisor.py": "e0e64531bec5ab8a2fbf182a5f66eeac8854052af8fb03249d93b6b8a03d6dcb",
+    "planner/tests/test_workflow.py": "097401e0194ca203c046f06897cc529eee7cbd5f4edd11bd8a0bcf872ce9ec6e",
+    "planner/workflow.py": "5bcdc515e94de977ee8fed41303332e19cf2471c94ce3f19ac110bfdb8596c46",
+    "pyproject.toml": "6fd2a53884825f3c7bb24d2a6558415cab82f4c2ae6699166da8da314ebfb660",
+    "scripts/demo.sh": "6d2496eeb0aeb03851f9f5faf5b2a12c3f04a051983847920860cf275eddf750",
+    "scripts/install-ubuntu.sh": "fa901bd9e4acefa3ad28cb14a3cf05c8672fbacbfcab8b38c56e1712855355bf"
+  },
+  "source_changes_since_full_run": [
+    "planner/tests/test_launcher.py",
+    "planner/tests/test_pretool.py"
+  ],
+  "combined_validation": {
+    "discovered_cases": 253,
+    "passed": 226,
+    "skipped": 27,
+    "unresolved_failures": 0,
+    "method": "Full Linux run plus 22 previously skipped offline checks and targeted reruns of all failures; the full suite was not repeated after test-only fixes.",
+    "remaining_skips": [
+      {
+        "test": "test_confined_opencode.ConfinedRealProviderTests.test_real_model_edits_permitted_file_and_cannot_disclose_secret",
+        "reason": "Actual Linux runtime and an explicitly selected real provider are required"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_hardlink_created_externally_during_execution",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_read_after_moving_sensitive_inode_to_allowed_name",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_symlink_name_to_public_target",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_refuses_startup_with_preexisting_hardlinks",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+        "reason": "Explicit local macOS confinement diagnostic only"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_actual_native_bodies_and_auxiliary_contexts_are_admitted",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_channel_serializes_requests_and_rejects_denials",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_denied_tool_is_blocked_before_effect",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_extra_plugin_blocks_prompt_and_mcp_catalog_is_removed",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_handshake_reports_successfully_registered_hooks",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_oversized_payload_is_audited_without_losing_sequence",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_shell_environment_excludes_provider_and_control_credentials",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_summary_lineage_uses_stored_record_type_and_receipt",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_opencode_bridge.BridgeTests.test_unsupported_transport_is_audited_without_frame_bytes_and_stays_blocked",
+        "reason": "Node is required for the OpenCode JavaScript bridge tests"
+      },
+      {
+        "test": "test_policy.PolicyTests.test_case_alias_cannot_read_denied_resource_on_case_insensitive_filesystem",
+        "reason": "Case-sensitive filesystem"
+      },
+      {
+        "test": "test_policy_adversarial.PolicyAdversarialTests.test_case_alias_cannot_bypass_denial_on_case_insensitive_filesystem",
+        "reason": "Filesystem treats case variants as different resources"
+      },
+      {
+        "test": "test_pretool.HookTests.test_adapter_blocks_effects_on_denial_and_connection_loss",
+        "reason": "Node required for real JavaScript hook callbacks"
+      }
+    ],
+    "skip_reasons": {
+      "Actual Linux runtime and an explicitly selected real provider are required": 1,
+      "Explicit local macOS confinement diagnostic only": 14,
+      "Node is required for the OpenCode JavaScript bridge tests": 9,
+      "Case-sensitive filesystem": 1,
+      "Filesystem treats case variants as different resources": 1,
+      "Node required for real JavaScript hook callbacks": 1
+    }
+  },
+  "demo": {
+    "at": "2026-11-23T08:31:51.424410+00:00",
+    "scope": "Actual demo.sh --yes with existing VM runtime and deterministic local provider; no paid provider",
+    "exit_code": 0,
+    "checks": {
+      "allowed_edit": true,
+      ".env_unchanged": true,
+      "config/.env.production_unchanged": true,
+      "tests/test_greeting.py_unchanged": true,
+      "docs/MAINTAINERS.md_unchanged": true,
+      "completed": true,
+      "cleanup_verified": true,
+      "applied": true
+    },
+    "provider_requests": 6,
+    "seconds": 38.62,
+    "scripts": {
+      "scripts/demo.sh": "6d2496eeb0aeb03851f9f5faf5b2a12c3f04a051983847920860cf275eddf750",
+      "scripts/install-ubuntu.sh": "fa901bd9e4acefa3ad28cb14a3cf05c8672fbacbfcab8b38c56e1712855355bf"
+    }
+  },
+  "final_source_verification": {
+    "source_files_verified": 109,
+    "mismatches": [],
+    "temporary_profiles_removed": {
+      "planner-05bc5f5986e40740a1acb0e9": true,
+      "planner-647d1ce6279b0af09b8b207e": true
+    }
+  },
+  "installer_check": {
+    "syntax": "passed with bash -n",
+    "execution": "not rerun; automatic review rejected package/system-policy changes; existing connected runtime used instead"
+  }
+}

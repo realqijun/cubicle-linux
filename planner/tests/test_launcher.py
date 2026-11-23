@@ -1,6 +1,7 @@
 """Prompt-to-application through the public CLI and the actual confined runtime."""
 
 import hashlib
+import gc
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ import tempfile
 import threading
 import time
 import unittest
+import warnings
 
 from planner.tests.runtime_fixtures import RUNTIME_GATE, RUNTIME_REASON, ScriptedProvider, runtime_paths, shell
 
@@ -236,7 +238,14 @@ class LauncherTests(RuntimeCase):
         task = self.approved_task()
         self.kill_owner_mid_run(task)
         self.assertEqual(self.cli("attempts", task)[0]["state"], "running")  # Recorded honestly as unresolved.
-        blocked = self.cli("run", *self.run_args(task, ScriptedProvider([]))[1:], check=False)
+        with warnings.catch_warnings(record=True) as emitted:
+            warnings.simplefilter("always", ResourceWarning)
+            with ScriptedProvider([]) as provider:
+                blocked = self.cli("run", *self.run_args(task, provider)[1:], check=False)
+            self.assertEqual(provider.bodies, [])
+            gc.collect()
+        self.assertFalse([warning for warning in emitted if warning.category is ResourceWarning],
+                         "The blocked-restart provider leaked a socket")
         self.assertEqual(blocked["returncode"], 2)  # Unresolved attempt prevents a second owner.
         transport = json.loads(next(self.runs.glob("*/processes.json")).read_text())["transport"]
         self.assertTrue(Path(transport).exists())  # A killed owner cannot clean up after itself.

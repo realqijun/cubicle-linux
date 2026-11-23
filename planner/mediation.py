@@ -43,6 +43,8 @@ class _Request:
 
 
 class WorkerBroker:
+    required_hooks: tuple[str, ...] = REQUIRED_HOOKS
+
     def __init__(self, supervisor: Supervisor, store: Provenance,
                  task_id: str, worker_id: str, *, provider_origins: tuple[str, ...] = (),
                  worker_project: str | None = None, sensitive_exposure: threading.Event | None = None,
@@ -208,7 +210,7 @@ class WorkerBroker:
                 if (self._hello or payload.get("release") != PINNED_VERSION or
                         not isinstance(registered, list) or
                         any(not isinstance(name, str) for name in registered) or
-                        len(registered) != len(REQUIRED_HOOKS) or set(registered) != set(REQUIRED_HOOKS)):
+                        len(registered) != len(self.required_hooks) or set(registered) != set(self.required_hooks)):
                     raise MediationDenied("incompatible_bridge")
                 self._hello = True
                 return {"allowed": True, "reason": "bridge_registered"}

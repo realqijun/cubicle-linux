@@ -1,0 +1,485 @@
+{
+  "schema": 1,
+  "earlier_attempts": [
+    {
+      "scope": "Initial six hook tests under restricted local connections",
+      "tests": 6,
+      "passed": 4,
+      "errors": 2,
+      "reason": "Local socket bind denied before OpenCode fixtures started",
+      "source_hashes": "not captured"
+    },
+    {
+      "scope": "Six hook tests with local connections enabled",
+      "tests": 6,
+      "passed": 6,
+      "errors": 0,
+      "source_hashes": "not captured"
+    },
+    {
+      "scope": "Actual interactive OpenCode terminal probe with local dummy provider",
+      "allowed_edit_observed": true,
+      "provider_requests": 3,
+      "source_hashes": "not captured"
+    },
+    {
+      "scope": "Initial typecheck attempt",
+      "result": "unavailable",
+      "reason": "mypy not installed; subsequently installed into a temporary directory and passed"
+    }
+  ],
+  "attempts": [
+    {
+      "at": "2026-11-23T08:00:50.116646+00:00",
+      "scope": "Complete local suite, including real OpenCode 2.2.5 hook-only headless and interactive terminal fixtures; Linux gated tests remain skipped.",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "planner/pretool.py": "a74a9e25fdcbf4825eb29951aa77ae5b4c6d52eac82892957a62030501bf13f1",
+        "planner/mediation.py": "b9326e66860a58bfe804476594a8a74ef89485178324f81f40d49898ae0c418f",
+        "planner/private_server.py": "87dba765d8e18c54a149466ae2ee600e3dcb149cef29fefc4f70ba03650c3b11",
+        "planner/__main__.py": "47e119a95248cb15a402c9604b4228b1c6156c2cee6881f51ec8490029d6560d",
+        "planner/connector.py": "b29eff4f94f27284c20e33af91bfd568eb77c871dd2b994302b82a153095f739",
+        "planner/broker_server.py": "7878a8da217ae4bdada6b552dd48c2d80ea9d2f52a073b352da4ce9b968ef6dc",
+        "planner/tests/test_pretool.py": "0e2bd542f870ca75af37181c47f71ea2ada3d8bcaab61bec04900409f76ac4ac",
+        "planner/opencode/pretool/index.js": "dad4884b0269a44089b8b4acb8d9caff3a4b301356922893efb8dfdac5148f5f",
+        "planner/opencode/pretool/package.json": "861767ba9c7eae94c77b537dfabee687a5ad720a73c3bf5bea951f504fc46d22"
+      },
+      "sources_stable": true,
+      "tests": 253,
+      "failures": [],
+      "errors": [],
+      "skips": [
+        {
+          "test": "test_changeset.ChangesetTests.test_authority_failure_before_start_changes_nothing",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_blind_replacement_conflicts_with_a_changed_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_blind_replacement_of_withheld_file_applies_under_write_authority",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_conflict_rejects_whole_changeset",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_content_changed_after_review_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_deleting_a_withheld_stand_in_never_deletes_the_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_create_move_and_remove",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_outside_write_scope_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_removal_refuses_content_never_exposed",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_disk_manifest_identifies_intended_result_without_worker_text",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_extended_metadata_is_not_silently_dropped",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_inspection_after_revocation_does_not_restore_authority",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_interrupted_application_records_progress_and_cannot_replay",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_link_substitution_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_metadata_change_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_missing_journal_directory_cannot_start_application",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_modify_add_delete_and_preserve_excluded_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_new_directory_destination_collision_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_replaced_approved_root_is_rejected_at_capture",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_replaced_parent_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_restart_inspection_distinguishes_applied_files_from_current_conflicts",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_revision_change_cannot_reuse_prepared_work",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_steps_never_reached_are_interrupted_not_conflicts",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_supervisor_code_remains_protected_under_a_broad_grant",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_truncated_or_unfinished_journal_never_claims_completion",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unauthorized_change_blocks_other_edits",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unchanged_placeholder_is_ignored_and_original_kept",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unexposed_existing_file_is_not_an_addition",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_confined_modes_deny_and_record_the_same_operations",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_descendants_cannot_reach_the_evaluator_inputs",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_read_rule_blocks_the_read_tool",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_rules_cannot_stop_shell_reads_or_protected_writes",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedOpenCodeTests.test_actual_confined_edit_child_denial_and_checked_application",
+          "reason": "Actual Linux, FUSE helper and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedOpenCodeTests.test_missing_hook_readiness_stops_before_dispatch",
+          "reason": "Actual Linux, FUSE helper and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedRealProviderTests.test_real_model_edits_permitted_file_and_cannot_disclose_secret",
+          "reason": "Actual Linux runtime and an explicitly selected real provider are required"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_hardlink_created_externally_during_execution",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_read_after_moving_sensitive_inode_to_allowed_name",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_symlink_name_to_public_target",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_refuses_startup_with_preexisting_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_confined_oracle_contains_hostile_generated_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_real_confined_oracle_distinguishes_unfixed_and_fixed_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_launcher.IsolationTests.test_delegated_child_has_only_its_subset_and_stops_with_its_parent",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.IsolationTests.test_repository_configuration_instructions_and_plugins_never_load",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_cancellation_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_concurrent_user_edit_is_preserved_as_conflict",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_directory_create_move_and_remove_reach_the_original",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_expiry_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_owner_death_stops_worker_and_recovery_verifies_before_reuse",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_prompt_to_applied_edit_with_child_denials_recorded",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_recovery_after_expiry_does_not_revive_authority",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_review_mode_retains_until_explicit_apply_and_never_replays",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_revocation_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_unavailable_runtime_blocks_before_any_provider_request",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_approved_write_exception_permits_exactly_one_applied_edit",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_external_input_is_an_exact_read_only_single_use_copy",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_refused_request_stays_denied",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_sensitive_read_needs_disclosure_consent_is_single_use_and_taints_outputs",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_cancellation_between_verification_and_dispatch_closes_cleanly",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_lost_broker_stops_the_worker_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_refusing_a_held_sensitive_approval_stops_the_worker_before_use",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_repeated_identical_shell_denials_suspend_the_worker",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_existing_file_outside_the_worker_read_grant",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_create_network_sockets",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_allowed_read_and_write_with_denied_actual_secret_read",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_blind_replacement_does_not_grant_read",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_blind_writer_must_replace_a_withheld_file_completely",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_directory_create_move_and_remove_are_permitted_but_not_secret_ancestor_move",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_new_sensitive_name_stays_unreadable_and_unassigned_write_is_denied",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_open_descriptor_is_rechecked_after_rename_and_cannot_mmap",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_secret_ancestor_move_is_denied_even_when_both_paths_are_writable",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_subprocess_reads_are_restricted_by_kernel_mount",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_unmount_failure_still_stops_serving_and_can_be_reconciled",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_withheld_stand_in_cannot_be_deleted",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_reconsideration.ReviewRegressionTests.test_recovery_waits_for_a_live_reviewed_apply",
+          "reason": "Process start times come from /proc"
+        }
+      ],
+      "seconds": 30.01
+    }
+  ],
+  "typecheck": {
+    "command": "python3 -m mypy --config-file pyproject.toml",
+    "result": "passed",
+    "source_files": 30,
+    "tool": "mypy 2.4.1 installed in temporary directory; no project dependency changes"
+  },
+  "independent_review": {
+    "result": "no blocking findings; fixed required_hooks tuple annotation; interactive terminal acceptance subsequently passed"
+  },
+  "linux_regression": {
+    "earlier_attempt": {
+      "status": "not_run",
+      "reason": "Existing localhost:2222 guest rejected SSH authentication with the current identity; no SSH configuration or credentials were imported."
+    },
+    "status": "validated with existing Linux runtime plus user-approved temporary profiles; targeted failures fixed and rechecked",
+    "evidence": "evidence/pretool-linux.json"
+  },
+  "source_verification": {
+    "at_local_run_capture_hashes_matched": true,
+    "followup": "Two test files were adjusted during VM validation; final hashes and rerun outcomes are in evidence/pretool-linux.json"
+  }
+}
