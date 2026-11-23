@@ -103,6 +103,44 @@ See [the connected runtime guide](CONNECTED_RUNTIME.md). The installed paths are
 --fuse-helper ~/.local/share/planner/fuse-bridge
 ```
 
+## Optional: open OpenCode with tool hooks
+
+Use `hook` to open an interactive OpenCode CLI with the supervisor checking direct file reads and edits.
+This mode edits your original project directly and provides no OS confinement or model-context provenance.
+Shell commands, search, directory reads, and subagents are disabled, so run your tests separately or use the confined workflow above.
+
+You need Python 3.11+ and OpenCode **2.2.5**.
+The commands below use the OpenCode binary installed in step 1 and the provider settings from step 2, defaulting to SoC LaaS.
+If those prerequisites are already installed, you can use hook mode without the Linux installer by pointing `--opencode` to your existing binary.
+
+Run these commands from the cloned repository.
+Replace `/absolute/project` with your project path and keep the state file outside that project.
+
+```sh
+planner_state=/tmp/planner-control/control.sqlite
+python3 -m planner --state "$planner_state" propose /absolute/project --template source
+```
+
+Copy the returned task ID into `planner_task`, then review and approve the permissions before assigning the worker:
+
+```sh
+planner_task=PASTE_TASK_ID_HERE
+python3 -m planner --state "$planner_state" review "$planner_task"
+python3 -m planner --state "$planner_state" approve-task "$planner_task" --revision 1
+python3 -m planner --state "$planner_state" assign "$planner_task" worker \
+  --read '**' --write 'src/**' --tool file
+python3 -m planner --state "$planner_state" hook "$planner_task" worker \
+  --opencode "${PLANNER_HOME:-$HOME/.local/share/planner}/opencode-2.2.5/opencode" \
+  --model "${PLANNER_MODEL:-soclaas/qwen3.8:27b}" \
+  --provider-url "${PLANNER_PROVIDER_URL:-https://soclaas-api.comp.nus.edu.sg/v1}" \
+  --api-key-env "${PLANNER_API_KEY_ENV:-SOCLAAS_API_KEY}"
+```
+
+The CLI opens only after the hook has registered with the supervisor.
+Add `--prompt 'Your task'` to the `hook` command for one noninteractive session.
+Typing plain `opencode` still uses your ordinary setup; this does not install a global hook.
+See [hook-only usage](USAGE.md#hook-only-opencode) for supported operations and limitations.
+
 ## Troubleshooting
 
 | Message | Fix |
@@ -112,4 +150,4 @@ See [the connected runtime guide](CONNECTED_RUNTIME.md). The installed paths are
 | `The model made no changes and attempted nothing` | Check `PLANNER_PROVIDER_URL`, `PLANNER_MODEL` and the key. The provider may have rejected the requests; the supervisor does not yet report provider errors. |
 | `Bubblewrap still cannot create namespaces` | The host blocks user namespaces. Check `sysctl kernel.apparmor_restrict_unprivileged_userns` and [the sandbox guide](LINUX_SANDBOX.md). |
 | `FUSE device unavailable` | `/dev/fuse` is missing (common in containers). Use a VM or bare metal. |
-| `BLOCKED: …` | The supervisor refused to start without full protection. Read the reason; it never falls back to weaker execution. |
+| `BLOCKED: …` | Read the reported reason. Confined `run` requires full protection; `hook` requires an approved task and working tool hooks. Neither silently switches modes. |
