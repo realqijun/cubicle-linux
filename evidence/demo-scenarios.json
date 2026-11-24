@@ -1575,12 +1575,60 @@
           "planner/tests/test_demo_scenarios.py": "75e242d21f3aaea59c3d42f4bac07325b6df684cee16cfe13b0d49b8b76ab3bd",
           "docs/QUICKSTART.md": "93289c5b05ef0ba9464ec7896a53b588445b8cf8276dcc174ef23d6184b48ba1"
         }
+      },
+      {
+        "at": "2026-11-24T14:53:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "commit": "e8aac4d",
+        "scope": "Full gated suite on the independently reviewed code",
+        "result": "275 tests, 2 failures, 26 skipped (14 macOS diagnostic, 2 case behaviour, 1 real provider gate, 9 Node not installed)",
+        "failure": "test_expiry_stops_descendants_and_prevents_application and test_recovery_after_expiry_does_not_revive_authority: the worker did not start within the 90-second task lifetime; the suite took 6209 s against 2948 s for the previous full run",
+        "thread_exception": "The stopper thread's 'Worker never started' assertion printed 'Exception in thread' instead of failing the test"
+      },
+      {
+        "at": "2026-11-24T15:05:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Rerun of the cancellation and expiry tests on e8aac4d",
+        "result": "2 of 2 passed in 152 s"
+      },
+      {
+        "at": "2026-11-24T15:20:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Fix: an expiry test whose task expires before its worker starts retries with a 300-second lifetime; the stopper thread no longer asserts. Retry forced with lifetimes of 5 then 90 seconds",
+        "result": "First probe matched only an authority_lost outcome and failed when the 5-second task was refused at launch ('blocked'); the condition now checks the recorded deadline. Two later forced runs: both tests retried after 5 seconds and passed",
+        "finding": "A task that expires between verification and start reports runtime_error:ValueError; the attempt is refused before any worker starts, but the outcome label does not say the task expired"
+      },
+      {
+        "at": "2026-11-24T16:00:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "test_launcher, test_demo_scenarios and test_alerts, all gates open, test_launcher.py sha256 61ae8739 (includes 54d430d)",
+        "result": "49 tests passed in 1709 s, no warnings"
+      },
+      {
+        "at": "2026-11-24T15:50:46.177475+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Final test_launcher.py (an owner that exits early only retries when the task has expired): both expiry tests with real lifetimes, then forced lifetimes of 5 then 90 seconds",
+        "result": "Real lifetimes: 2 of 2 passed in 530 s. Forced: both attempts of the recovery test expired before startup and raised the retry, then the test failed as designed; the 5-second expiry task expired before approval. Both forced failures are limits of the probe on a slow guest",
+        "sources": {
+          "planner/alerts.py": "01e55d24cdcdb9caa079635e25982d76107b358c63973667acfb628a02ea0950",
+          "planner/scripted_provider.py": "0455ff6c66e2450ea2c9b7347c54a2440a4b2b3d02eeb248d6d3cc4169b61ec3",
+          "planner/demo_scenarios.py": "cf93100bc9a020f3935e6049694f0c53876f3a04e0ce1623b8e8bf8daa93d82e",
+          "planner/launcher.py": "6fb993107be420f863989457017eb7fcdb41481fe656ba977c52f73e1e8b9a61",
+          "planner/supervisor.py": "c71a30587f02a06ff636baa0a55cdfc2c0b9ea67d9e11f66782dbc65fff45091",
+          "planner/__main__.py": "d0451ddf8cb6f1526997378f26a075906978c3fe1982bac5e3b9507534fc8437",
+          "scripts/demo.sh": "2a511e99296435c79803aa9b4a9dc791a1beebc4089cb9fe77f6adf0088af3c2",
+          "planner/tests/runtime_fixtures.py": "cce94db1ffa686c1b9e262c56bc3c79da77d65c72a51d139e53572bc88da5bef",
+          "planner/tests/test_alerts.py": "f865ab7b7c265a2584c46a9a11eb32b179581dbcf2d1fe314c3f9dc2095edc66",
+          "planner/tests/test_launcher.py": "62f6729b8ded19b44f87a319e6cb1dccca1264d21b813d7047ba5729fe472ffc",
+          "planner/tests/test_demo_scenarios.py": "536d76b0820bfc5dd5576a089fab795207403df57dabb7eb0ac5376187fb3920",
+          "docs/QUICKSTART.md": "93289c5b05ef0ba9464ec7896a53b588445b8cf8276dcc174ef23d6184b48ba1"
+        }
       }
     ],
     "local": {
-      "at": "2026-11-24T12:45:59.966869+00:00",
+      "at": "2026-11-24T15:50:46.177475+00:00",
       "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
-      "suite": "271 tests, 0 failures, 109 skipped (Linux-gated)"
+      "suite": "275 tests, 0 failures, 110 skipped (Linux-gated); mypy --strict clean on 32 files"
     }
   }
 }
