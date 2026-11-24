@@ -2,7 +2,8 @@
 
 This directory is the planner repository root. Run `python3 -m planner`, tests,
 and typechecking here. The code is in `planner/`; documentation, sanitized
-evidence, and evaluation fixtures are in `docs/`, `evidence/`, and `artifact/`.
+evidence, evaluation fixtures and the Ubuntu scripts are in `docs/`,
+`evidence/`, `artifact/` and `scripts/`.
 No import or symlink depends on the source workspace's parent directory.
 
 The repository has its own `.git` directory and `main` branch. It is not a Git

@@ -119,9 +119,10 @@ approved revision are required for its grant edge. Foreign attempt-event
 bindings remain disconnected and are flagged. `cleanup_verified=false` always
 displays **cleanup unverified**; a true value displays **cleanup evidence
 recorded**. Neither the `running` state nor a synthetic test protection status
-establishes real process confinement or file effects. The tested Ubuntu offline
-runner does not populate these attempt records; full launcher integration and
-acceptance remain pending.
+establishes real process confinement or file effects. The connected runtime's
+launcher populates these records and is accepted on Ubuntu 24.04.3 x86-64; see
+the [runtime guide](CONNECTED_RUNTIME.md). The Ubuntu offline runner does not
+populate them.
 
 The report also accepts actual `ModelContext` admission, provider, transformation,
 worker-report, and failure records without raw text. Their existing information

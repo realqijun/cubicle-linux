@@ -116,7 +116,7 @@ See [Ubuntu setup and restrictions](LINUX_SANDBOX.md) for the tested contract.
 | Model context | Actual in-memory inputs, conservative origin/sensitivity propagation, opaque handles | [context](../planner/context.py) |
 | OpenCode connector | Pinned release, private bootstrap proposal, blocking hooks, explicit provider configuration | [connector](../planner/connector.py), [hook bridge](../planner/opencode/bridge.mjs) |
 | Launcher | Attempt lifecycle, exception reservation, cleanup evidence, recovery, application | [launcher](../planner/launcher.py) |
-| Live alerts | Display-only warning, bell and desktop notification for refusals already enforced and recorded | [alerts](../planner/alerts.py) |
+| Live alerts | Display-only warning, bell, desktop sound and notification for refusals already enforced and recorded | [alerts](../planner/alerts.py) |
 | Connected runtime | FUSE mediator, jail, relays, private server bootstrap | [mediator](../planner/native/mediatedfs.py), [runtime](../planner/native/confined_opencode.py) |
 | Changeset | Checked application of files and directories with a progress journal | [changeset](../planner/changeset.py) |
 | Generic live-project gate | Still refuses unconfined live-project commands | [enforcement](../planner/enforcement.py) |

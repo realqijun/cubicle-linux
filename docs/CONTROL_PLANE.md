@@ -54,9 +54,10 @@ new policy language or automatic authority inferred from repository text.
 ## Execution attempt lifecycle
 
 The lifecycle APIs record what the trusted runner knows. They do not launch or
-terminate processes. The [Ubuntu offline runner](LINUX_SANDBOX.md) has separate
-process-containment tests but does not populate these attempt records. Wiring
-the full launcher and cleanup evidence into this lifecycle remains pending.
+terminate processes. The connected runtime's [launcher](../planner/launcher.py)
+records every run through this lifecycle, with its cleanup evidence. The
+[Ubuntu offline runner](LINUX_SANDBOX.md) has separate process-containment tests
+but does not populate these attempt records.
 
 1. `prepare_attempt(task, worker)` snapshots the exact grant, revision, and expiry
    into a fresh ID with state `prepared`. Unresolved attempts prevent another
