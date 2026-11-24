@@ -116,12 +116,14 @@ See [Ubuntu setup and restrictions](LINUX_SANDBOX.md) for the tested contract.
 | Model context | Actual in-memory inputs, conservative origin/sensitivity propagation, opaque handles | [context](../planner/context.py) |
 | OpenCode connector | Pinned release, private bootstrap proposal, blocking hooks, explicit provider configuration | [connector](../planner/connector.py), [hook bridge](../planner/opencode/bridge.mjs) |
 | Launcher | Attempt lifecycle, exception reservation, cleanup evidence, recovery, application | [launcher](../planner/launcher.py) |
+| Live alerts | Display-only warning, bell and desktop notification for refusals already enforced and recorded | [alerts](../planner/alerts.py) |
 | Connected runtime | FUSE mediator, jail, relays, private server bootstrap | [mediator](../planner/native/mediatedfs.py), [runtime](../planner/native/confined_opencode.py) |
 | Changeset | Checked application of files and directories with a progress journal | [changeset](../planner/changeset.py) |
 | Generic live-project gate | Still refuses unconfined live-project commands | [enforcement](../planner/enforcement.py) |
 | Ubuntu offline runner | Private input copy, kernel path rules, detached-descendant cleanup; no model network or automatic merge | [Linux sandbox](../planner/native/linux_sandbox.py) |
 | Persistence and report | SQLite metadata, project memory, inspection and offline visualization | [provenance](../planner/provenance.py), [report](../planner/report.py) |
 | Evaluation | Frozen matched fixtures, confined oracle, native/OS/supervisor collector | [evaluation](../planner/evaluation.py), [comparison](../planner/comparison.py) |
+| Guided demo | Scenario projects, scripted `alarm` worker, result and log views | [scenarios](../planner/demo_scenarios.py), [scripted provider](../planner/scripted_provider.py), [script](../scripts/demo.sh) |
 
 ## Trust boundaries
 

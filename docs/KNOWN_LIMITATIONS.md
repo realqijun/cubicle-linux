@@ -40,6 +40,16 @@ Accepted on one Ubuntu guest; see its [limits](CONNECTED_RUNTIME.md#limits). Als
   in operator storage) and for repository configuration discovery; OpenCode's
   own state lives on tmpfs inside the jail and is discarded.
 - Matched comparison results are single runs per cell; see [evaluation](EVALUATION.md).
+- `--alert` only displays refusals; it never enforces one. Over SSH only the
+  text and the terminal bell reach the viewer, since the desktop sound and
+  notification run only in a local graphical session. A busy state database
+  delays a warning to the next poll.
+- A task that expires in the seconds between runtime verification and worker
+  start is reported as `runtime_error:ValueError`. No worker starts, but the
+  outcome does not say the task expired.
+- The guest demo tests use a deterministic local provider. With a real model,
+  whether a scenario other than `alarm` sets off the alarm depends on what the
+  model tries.
 - No Landlock rules are applied. Filesystem confinement comes from the
   Bubblewrap mount namespace, the FUSE mediator and AppArmor. Landlock, the
   Linux counterpart to OpenBSD's `unveil`, could add an independent

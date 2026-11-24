@@ -26,7 +26,9 @@ task. Results and source hashes are in [evidence](evidence/completion-progress.j
 ## Try it
 
 **Fresh Ubuntu 24.04 machine:** follow the [quick start](docs/QUICKSTART.md).
-Two scripts install the runtime and run a guided demo.
+Two scripts install the runtime and run a guided demo. Its `alarm` scenario
+needs no model or API key and shows the live warning for a refused operation;
+`scripts/demo.sh log` shows what happened in the latest run.
 
 The control-plane commands below need only Python 3.11+. Run commands from this
 repository root. Keep the trusted state database outside the target project and
