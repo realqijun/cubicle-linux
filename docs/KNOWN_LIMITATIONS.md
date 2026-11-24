@@ -43,10 +43,11 @@ Accepted on one Ubuntu guest; see its [limits](CONNECTED_RUNTIME.md#limits). Als
 - `--alert` only displays refusals; it never enforces one. Over SSH only the
   text and the terminal bell reach the viewer, since the desktop sound and
   notification run only in a local graphical session. A busy state database
-  delays a warning to the next poll.
+  delays a warning to the next poll, or leaves it out of the live display at
+  the final check after the run; the refusal itself stays recorded.
 - A task that expires in the seconds between runtime verification and worker
-  start is reported as `runtime_error:ValueError`. No worker starts, but the
-  outcome does not say the task expired.
+  start is reported as `runtime_error:ValueError`. No worker starts; only the
+  result's `error` field says the task expired.
 - The guest demo tests use a deterministic local provider. With a real model,
   whether a scenario other than `alarm` sets off the alarm depends on what the
   model tries.

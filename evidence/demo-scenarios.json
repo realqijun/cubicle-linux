@@ -1586,20 +1586,20 @@
         "thread_exception": "The stopper thread's 'Worker never started' assertion printed 'Exception in thread' instead of failing the test"
       },
       {
-        "at": "2026-11-24T15:05:00+00:00",
+        "at": "2026-11-24T14:57:09+00:00",
         "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
         "scope": "Rerun of the cancellation and expiry tests on e8aac4d",
         "result": "2 of 2 passed in 152 s"
       },
       {
-        "at": "2026-11-24T15:20:00+00:00",
+        "at": "2026-11-24T15:09:53+00:00",
         "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
         "scope": "Fix: an expiry test whose task expires before its worker starts retries with a 300-second lifetime; the stopper thread no longer asserts. Retry forced with lifetimes of 5 then 90 seconds",
         "result": "First probe matched only an authority_lost outcome and failed when the 5-second task was refused at launch ('blocked'); the condition now checks the recorded deadline. Two later forced runs: both tests retried after 5 seconds and passed",
         "finding": "A task that expires between verification and start reports runtime_error:ValueError; the attempt is refused before any worker starts, but the outcome label does not say the task expired"
       },
       {
-        "at": "2026-11-24T16:00:00+00:00",
+        "at": "2026-11-24T15:38:53+00:00",
         "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
         "scope": "test_launcher, test_demo_scenarios and test_alerts, all gates open, test_launcher.py sha256 61ae8739 (includes 54d430d)",
         "result": "49 tests passed in 1709 s, no warnings"
