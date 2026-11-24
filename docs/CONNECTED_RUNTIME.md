@@ -74,6 +74,13 @@ $p applications TASK
 
 - `--mode review` retains edits; `apply ATTEMPT` applies them later with the
   same checks and never twice.
+- `--alert` prints a `BLOCKED` warning on stderr for each refusal recorded for
+  the worker while it runs. The first refusal in a three-second burst also
+  prints an ASCII warning sign, rings the terminal bell and, in a local desktop
+  session, plays the desktop warning sound and shows a notification. Alerts
+  only display refusals that were already enforced and recorded. Worker-chosen
+  names are escaped before display, and sound players receive no provider
+  credential.
 - `exception ID`, `approve-exception ID` and `refuse-exception ID` answer the
   requests a run created. An approval takes effect for the next replacement
   worker, never the running one. Sensitive reads need

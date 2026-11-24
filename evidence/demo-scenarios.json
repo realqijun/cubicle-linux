@@ -1,0 +1,1540 @@
+{
+  "schema": 1,
+  "local_attempts": [
+    {
+      "at": "2026-11-24T05:44:07.928568+00:00",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "scripts/demo.sh": "ebe1d0009c88bc27072c8dbd1c0cc2e56cbe51cc0712c92c3c9c50c90d4ac449",
+        "planner/demo_scenarios.py": "9f8d4c0f12d8fb06a36ddcc1633c0ea3fcc4fc1b672015f8564d786fbd33ab30",
+        "planner/tests/test_demo_scenarios.py": "bee4c6b0832d68217aef830e83779a92dd1480a2f77627ee42473324140fa625",
+        "docs/QUICKSTART.md": "b5379497521bd2f876145e955f60487757aaceffcfdde9d61b36fcbf7a1734ee",
+        "scripts/install-ubuntu.sh": "fa901bd9e4acefa3ad28cb14a3cf05c8672fbacbfcab8b38c56e1712855355bf"
+      },
+      "sources_stable": true,
+      "tests": 257,
+      "failures": [],
+      "errors": [],
+      "skips": [
+        {
+          "test": "test_changeset.ChangesetTests.test_authority_failure_before_start_changes_nothing",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_blind_replacement_conflicts_with_a_changed_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_blind_replacement_of_withheld_file_applies_under_write_authority",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_conflict_rejects_whole_changeset",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_content_changed_after_review_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_deleting_a_withheld_stand_in_never_deletes_the_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_create_move_and_remove",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_outside_write_scope_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_removal_refuses_content_never_exposed",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_disk_manifest_identifies_intended_result_without_worker_text",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_extended_metadata_is_not_silently_dropped",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_inspection_after_revocation_does_not_restore_authority",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_interrupted_application_records_progress_and_cannot_replay",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_link_substitution_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_metadata_change_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_missing_journal_directory_cannot_start_application",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_modify_add_delete_and_preserve_excluded_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_new_directory_destination_collision_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_replaced_approved_root_is_rejected_at_capture",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_replaced_parent_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_restart_inspection_distinguishes_applied_files_from_current_conflicts",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_revision_change_cannot_reuse_prepared_work",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_steps_never_reached_are_interrupted_not_conflicts",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_supervisor_code_remains_protected_under_a_broad_grant",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_truncated_or_unfinished_journal_never_claims_completion",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unauthorized_change_blocks_other_edits",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unchanged_placeholder_is_ignored_and_original_kept",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unexposed_existing_file_is_not_an_addition",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_confined_modes_deny_and_record_the_same_operations",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_descendants_cannot_reach_the_evaluator_inputs",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_read_rule_blocks_the_read_tool",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_rules_cannot_stop_shell_reads_or_protected_writes",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedOpenCodeTests.test_actual_confined_edit_child_denial_and_checked_application",
+          "reason": "Actual Linux, FUSE helper and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedOpenCodeTests.test_missing_hook_readiness_stops_before_dispatch",
+          "reason": "Actual Linux, FUSE helper and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedRealProviderTests.test_real_model_edits_permitted_file_and_cannot_disclose_secret",
+          "reason": "Actual Linux runtime and an explicitly selected real provider are required"
+        },
+        {
+          "test": "test_demo_scenarios.DemoScriptRuntimeTests.test_all_scenarios_run_in_fresh_workspaces_with_real_confinement",
+          "reason": "Actual Linux connected runtime required for demo script execution"
+        },
+        {
+          "test": "test_demo_scenarios.DemoScriptRuntimeTests.test_interactive_menu_runs_two_selected_cases_with_separate_approvals",
+          "reason": "Actual Linux connected runtime required for demo script execution"
+        },
+        {
+          "test": "test_demo_scenarios.DemoScriptRuntimeTests.test_refused_approval_cancels_before_any_provider_request",
+          "reason": "Actual Linux connected runtime required for demo script execution"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_hardlink_created_externally_during_execution",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_read_after_moving_sensitive_inode_to_allowed_name",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_symlink_name_to_public_target",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_refuses_startup_with_preexisting_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_confined_oracle_contains_hostile_generated_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_real_confined_oracle_distinguishes_unfixed_and_fixed_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_launcher.IsolationTests.test_delegated_child_has_only_its_subset_and_stops_with_its_parent",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.IsolationTests.test_repository_configuration_instructions_and_plugins_never_load",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_cancellation_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_concurrent_user_edit_is_preserved_as_conflict",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_directory_create_move_and_remove_reach_the_original",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_expiry_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_owner_death_stops_worker_and_recovery_verifies_before_reuse",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_prompt_to_applied_edit_with_child_denials_recorded",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_recovery_after_expiry_does_not_revive_authority",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_review_mode_retains_until_explicit_apply_and_never_replays",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_revocation_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_unavailable_runtime_blocks_before_any_provider_request",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_approved_write_exception_permits_exactly_one_applied_edit",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_external_input_is_an_exact_read_only_single_use_copy",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_refused_request_stays_denied",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_sensitive_read_needs_disclosure_consent_is_single_use_and_taints_outputs",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_cancellation_between_verification_and_dispatch_closes_cleanly",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_lost_broker_stops_the_worker_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_refusing_a_held_sensitive_approval_stops_the_worker_before_use",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_repeated_identical_shell_denials_suspend_the_worker",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_existing_file_outside_the_worker_read_grant",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_create_network_sockets",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_allowed_read_and_write_with_denied_actual_secret_read",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_blind_replacement_does_not_grant_read",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_blind_writer_must_replace_a_withheld_file_completely",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_directory_create_move_and_remove_are_permitted_but_not_secret_ancestor_move",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_new_sensitive_name_stays_unreadable_and_unassigned_write_is_denied",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_open_descriptor_is_rechecked_after_rename_and_cannot_mmap",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_secret_ancestor_move_is_denied_even_when_both_paths_are_writable",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_subprocess_reads_are_restricted_by_kernel_mount",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_unmount_failure_still_stops_serving_and_can_be_reconciled",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_withheld_stand_in_cannot_be_deleted",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_reconsideration.ReviewRegressionTests.test_recovery_waits_for_a_live_reviewed_apply",
+          "reason": "Process start times come from /proc"
+        }
+      ],
+      "seconds": 54.67
+    },
+    {
+      "at": "2026-11-24T06:34:18.723626+00:00",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "sources": {
+        "README.md": "88c37df425daace1db6c0840843b0b1038882363e19110d0a18ca8576cfe70ce",
+        "artifact/README.md": "e2e382f7f97c88eb83e74bdab7121c297e9b82e1fbe232f9a6b83b97fa1dc5d5",
+        "artifact/scenarios/benign-quotation.json": "917d72b7ebb9e9bb4d4d888deed0276638ac91071e0761fbf4877f1a1227e052",
+        "artifact/scenarios/documentation-injection.json": "8011a727e239df83584ddab52cb3e5a7ce434b11667baafa7a78b26152908cd7",
+        "artifact/scenarios/normal.json": "8943f90b8343c6d61adcdbe3d7855e97dadbaf015a032742ffa86f63d2cc704b",
+        "artifact/scenarios/tool-output-injection.json": "67df3c0a116d94f3e7e8bd6dbd5b59ea119627541a7a68280d2d4021b3f916be",
+        "artifact/scripts/prepare.py": "3918c8686c2bd678b2f787b62ccd4dce6ce2733699f57c12a28faffb4d5d20e3",
+        "artifact/skills/LICENSE.superpowers": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "artifact/skills/UPSTREAM.json": "10c9f7b9456fab307d5dda6f43328e1ed01c9096fd76b646d1332435cd5d9870",
+        "artifact/skills/systematic-debugging/CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+        "artifact/skills/systematic-debugging/SKILL.md": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+        "artifact/skills/systematic-debugging/condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+        "artifact/skills/systematic-debugging/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+        "artifact/skills/systematic-debugging/defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+        "artifact/skills/systematic-debugging/find-polluter.sh": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+        "artifact/skills/systematic-debugging/root-cause-tracing.md": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+        "artifact/skills/systematic-debugging/test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+        "artifact/skills/systematic-debugging/test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+        "artifact/skills/systematic-debugging/test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+        "artifact/skills/systematic-debugging/test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+        "artifact/skills/test-driven-development/SKILL.md": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+        "artifact/skills/test-driven-development/writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+        "artifact/skills/verification-before-completion/SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+        "artifact/task.md": "effc36d525b365b8d9048e9c3249600cfcd7777a341d68add843fa9c7808f368",
+        "artifact/workload/README.md": "357eb72cfef12be54eaa41a51cf236fbda54dc061a4fe605baa6a638b8be1921",
+        "artifact/workload/data/expenses.csv": "3a705bed21b2165ddc1cbe0fa0e3ea83c5fbf3641ce8db40765d56da8b99154e",
+        "artifact/workload/docs/project-notes.md": "aa8be77c5907b952e3d3bc381780892791dd1b2e8ff10737a543d159e242fb13",
+        "artifact/workload/docs/runner-notes.txt": "a5c77e0c1967d61fef7b366bfa7d008d5ec58d88caffb4108eac69dd1b1e6b65",
+        "artifact/workload/src/__init__.py": "e032b7ad1c96194c9b34f1627d0a2b3d98ce94039afae0bbc121b0da6afdef9a",
+        "artifact/workload/src/expense_summary.py": "593d1ec77d902448a9debcdc8c47ff17317228c1d5c94256f8d724b96b09c936",
+        "artifact/workload/tests/test_expense_summary.py": "e1848c2b8f4d5c9e5bd742842eba86ff1c0b8f795580fb331463196e251d9127",
+        "artifact/workload/tools/run_tests.py": "bc8934a868841e59c8900630209eaf5d795501b9cca6eac9778f070b83ba121b",
+        "docs/QUICKSTART.md": "b5379497521bd2f876145e955f60487757aaceffcfdde9d61b36fcbf7a1734ee",
+        "planner/__init__.py": "eadc5e3bdae34bdc41323afcef57dd10773a63a57d566839ce352ee884b3be31",
+        "planner/__main__.py": "7658643a72efbe528b406e8b9ccdaa96ea9c1196784ef7f661230c536a06d61b",
+        "planner/broker_server.py": "7878a8da217ae4bdada6b552dd48c2d80ea9d2f52a073b352da4ce9b968ef6dc",
+        "planner/changeset.py": "a2200d8c08c90941dd34233b8728b7ed033aefba5a1c24ccab0cb29a641313ce",
+        "planner/comparison.py": "f4119d4b7dab1298bf662a9ce7a1cde74e9fe4eaf36e325ef90cd383cd791ea8",
+        "planner/connector.py": "b29eff4f94f27284c20e33af91bfd568eb77c871dd2b994302b82a153095f739",
+        "planner/context.py": "fd649cf9e08d3a77b7b8ed46381ba24c4060de3d3829f44aa82fa3b2b522c5d3",
+        "planner/demo.py": "b4cb58d505400913d1e4b52c2c9236de3da03d84d99c08593a2c10ec24d01fc0",
+        "planner/demo_scenarios.py": "9f8d4c0f12d8fb06a36ddcc1633c0ea3fcc4fc1b672015f8564d786fbd33ab30",
+        "planner/enforcement.py": "b92c7b93a44b6f11ab74ca26bcd3bfda8a533542028a677a25ea8c9a76869c36",
+        "planner/evaluation.py": "037f52146eb1f2322e889df72d1009b94ffd62656e344e284f4747e991383581",
+        "planner/launcher.py": "92de38d39cbb17932842d913fbed43535deefdb72e1d710b391e8c405816db5d",
+        "planner/mediation.py": "43e945e6b9121ccb0c5fa4e15b524caf6c3aed0bf94a7244a6dde205d3e3bee8",
+        "planner/native/__init__.py": "ff1977b9b4c9261a33337eacaa9f525ae855d356eecf535f60d53a957bfe8b2d",
+        "planner/native/confined_bootstrap.py": "6bd55aee343dcd80b3c383e2c706cc7361a08b0420a051fa71a3fcba8c0f694d",
+        "planner/native/confined_opencode.py": "0afc71db476ff881bfbda4532d21fc24a7b106e9ddf9fb52cee76161205089ca",
+        "planner/native/confined_transport.py": "4396809ff34d859efd854cce5f8671b234c20ae30a738cedf83767bc68c1db3a",
+        "planner/native/fuse_bridge.c": "465b9639a1e44d490bdabd0ad76622298baebca07dab9c881485f1f678461188",
+        "planner/native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "planner/native/linux_sandbox.py": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8",
+        "planner/native/macos_candidate/CandidateBroker.swift": "51876600d26ea95312b9b4aed9dbbbbcad3754c20e1ed3cc14cc6f334a3b8752",
+        "planner/native/macos_candidate/CandidateFileSystem.swift": "c8bbf8a1d5a9d17d2ff5679de1f4641446652a9a24b73d153900dd5fed0ac0e4",
+        "planner/native/macos_candidate/CandidateVolume.swift": "93a11e36de54f9124559d6b33de4dcae5d9de670d2bf570e479eb46f32651fe1",
+        "planner/native/macos_candidate/ExtensionMain.swift": "628d471b5907bb09883342d4b528b67996c4a0578377d0080bf79a3f5e4bbf31",
+        "planner/native/macos_candidate/HostMain.swift": "a8a94abffe81f9925f4df5ffd57259bb1fc250599893a2d87347f54719ce5305",
+        "planner/native/macos_contract.py": "109dbebf0cf40a023c8556098d0488e2a69a4d481ed12d28f4533d83ea682e66",
+        "planner/native/mediatedfs.py": "c106c19c2cdcb1a8386236f8a321bf587f97a31203cb960d0471a33018022005",
+        "planner/opencode/__init__.py": "3cafb944988356dbebec5d7d015cb45645688c346aeac8dedd80c653bf9e1764",
+        "planner/opencode/bridge.mjs": "676cf27ae62908a4d5d3acc74d19a17ab8faad4bbd8a49c38bd82914bd2ccfd6",
+        "planner/opencode/diagnostic.py": "8ce96700cd8130c8332c1b2e2f286b9b0f40fbcc529c8e0aca0ecb61af36488a",
+        "planner/opencode/index.js": "040dd60143b05e7b923c1832d5634f25782d08a059e2b15f075c225078df864f",
+        "planner/opencode/package.json": "2a4d581ee8980b112a56f0e62bd3a4f640c7725b241454ed36cd5345722202ce",
+        "planner/policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421",
+        "planner/private_server.py": "84a01ddaeb6dcb4472a01775ae6b130e4b8fb57275b6e1f358cee0f24b3f4c50",
+        "planner/provenance.py": "b749f9b1ea9fb31b1e2d6592e1c0e598e743dbc3723e1b76e83b9cd12540922b",
+        "planner/records.py": "03cae84914846d7f5be506f98b388825b7524f953a500d6642cf18b690a36dd1",
+        "planner/report/template.html": "ff107bd472829d95973d8d431b7dfd6b4faf579e61f5eec9ae2248621a2ecb52",
+        "planner/report.py": "034cee5bc486d68bd574413f5b3acc4d37f7f9f90836ee6db2dc1513d01df018",
+        "planner/scenarios/benchmark.json": "aaf4d1a624ccb47edb18fcb272284645ed593e8d1e06bf754e4924f2d97aed22",
+        "planner/supervisor.py": "da6c1aebd1d5dac3a007ecaaffebbcf281dcc149ecf243205dcb7feec10a3c20",
+        "planner/templates/documentation.toml": "87a90fa3a1b9c5e4fe183fc03d3cd7c48ebbfc56455c500fad75768596e50089",
+        "planner/templates/inspection.toml": "f7dc4067e2a64b1c5f6eecebece3df0a007f13ff0c724ff1a43ed223407bb936",
+        "planner/templates/source.toml": "dd3f19006bc0c42d5f7d812c4c8a02a075a82edcbca455517711c7d6d7523c40",
+        "planner/templates/tests.toml": "8d1173a12aab72819c8343d5d14b698dffee4fc44e028d773293d21d6bcce52b",
+        "planner/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "planner/tests/runtime_fixtures.py": "0f8eedebbd81f37522ffb29f3d17832aea667135443cc25edc73007d58f9e27e",
+        "planner/tests/test_broker_server.py": "7c588fc8c318507ef4c7ace4d23d0179971027f57d1d9cfc58fdeef6a367a5c4",
+        "planner/tests/test_changeset.py": "484d004b0ad4889628f39038c32b1e45858f3019ac1b761c56841e75731e5713",
+        "planner/tests/test_cli.py": "02d33ce3bdcc6bb7a47ddd235d0fc504e4e5a0cbeaefca4cc1482cb84f39cfcd",
+        "planner/tests/test_comparison.py": "fbc921607cf20fa4c2934d961a10ccf5173ea026b374a00b37c64ec7b7f0b30d",
+        "planner/tests/test_confined_opencode.py": "00641d9aed51b893179ad6979675bcca45bd2befd9b4a202b86821b1fadf6f0a",
+        "planner/tests/test_connector.py": "6554f6acafa4aea93d626f066b4ab8d78d1e9f10bd215ee572ab233240df4539",
+        "planner/tests/test_context.py": "2bd776b5227609995bc71ef20fead43a877068f74e1d3d4b6eb1f6deeaf192d0",
+        "planner/tests/test_control_adversarial.py": "4e1cac8161f04486a65e2d5c2c3379b8d1ad12e74a6ba8a74fa7628241a3ffad",
+        "planner/tests/test_delegation_recovery.py": "1c89e8bb81a2b2fa5addc77e6c4c1417d6749299ed6cab65988798a3b4161dac",
+        "planner/tests/test_demo_scenarios.py": "b3866c5c86270c73fc2e91cc235e15e6e42acd37d02db4dcab3a06322894eb2d",
+        "planner/tests/test_enforcement.py": "a8b294d6ee0e43c3221978104ae6b4914194c33197c6f56c2a7a41e3098f4d34",
+        "planner/tests/test_evaluation.py": "42596ec46dc104768601f571b3484bf4a0b0a2c5a1cb6ac6292db6a46c3a61c5",
+        "planner/tests/test_launcher.py": "562e903386ae6e8008898b60d0429b01463ab0ee9c3c2c46cdbe1c73d439f6fa",
+        "planner/tests/test_linux_sandbox.py": "4f1b7b47f2204751a0b9172d3fcc7779f12aeb89da6ed36685f6a966f30da89f",
+        "planner/tests/test_mediatedfs.py": "b34f08ccce476300e6b10762bf5a9a5f121192b0682aa7a22516a9fd50cd6038",
+        "planner/tests/test_mediation.py": "6b85bdf945d5f01cf760774023d3d68f41a7750e28d267f5d9825013d77ad4f7",
+        "planner/tests/test_opencode_bridge.py": "a32182bf2d9453c2aeb090b674d10a731f6e0da4e55a5eada76b87f69d9aae9b",
+        "planner/tests/test_policy.py": "21130ec62b998c7a73afa2c90aca1b4dfbf4b2886cdfdf5cfd3164e6eacabb4e",
+        "planner/tests/test_policy_adversarial.py": "53d561191460fbad1b39401990d93c47fabc3ea817430f7f5fa304973f98c31a",
+        "planner/tests/test_private_server.py": "729972facead3fe8c9eccc4a696576c17e134445ad78f0e605bac5b1c7f51625",
+        "planner/tests/test_provenance.py": "4da7bcde14892071d8492f96668f51dc0b29215fc1a477e0ac095932b2d54642",
+        "planner/tests/test_reconsideration.py": "c000fd91d764639d9e6d517b076de0be3baa6ae02bd246dd9c40aea33f6304f0",
+        "planner/tests/test_report.py": "7de35169e892476968676c81220f89f10775d7e51527df9564a82629c6e76e2d",
+        "planner/tests/test_supervisor.py": "e0e64531bec5ab8a2fbf182a5f66eeac8854052af8fb03249d93b6b8a03d6dcb",
+        "planner/tests/test_workflow.py": "097401e0194ca203c046f06897cc529eee7cbd5f4edd11bd8a0bcf872ce9ec6e",
+        "planner/workflow.py": "5bcdc515e94de977ee8fed41303332e19cf2471c94ce3f19ac110bfdb8596c46",
+        "pyproject.toml": "6fd2a53884825f3c7bb24d2a6558415cab82f4c2ae6699166da8da314ebfb660",
+        "scripts/demo.sh": "ebe1d0009c88bc27072c8dbd1c0cc2e56cbe51cc0712c92c3c9c50c90d4ac449",
+        "scripts/install-ubuntu.sh": "fa901bd9e4acefa3ad28cb14a3cf05c8672fbacbfcab8b38c56e1712855355bf"
+      },
+      "sources_stable": true,
+      "tests": 259,
+      "failures": [],
+      "errors": [],
+      "skips": [
+        {
+          "test": "test_changeset.ChangesetTests.test_authority_failure_before_start_changes_nothing",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_blind_replacement_conflicts_with_a_changed_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_blind_replacement_of_withheld_file_applies_under_write_authority",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_conflict_rejects_whole_changeset",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_content_changed_after_review_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_deleting_a_withheld_stand_in_never_deletes_the_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_create_move_and_remove",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_outside_write_scope_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_directory_removal_refuses_content_never_exposed",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_disk_manifest_identifies_intended_result_without_worker_text",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_extended_metadata_is_not_silently_dropped",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_inspection_after_revocation_does_not_restore_authority",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_interrupted_application_records_progress_and_cannot_replay",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_link_substitution_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_metadata_change_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_missing_journal_directory_cannot_start_application",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_modify_add_delete_and_preserve_excluded_original",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_new_directory_destination_collision_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_replaced_approved_root_is_rejected_at_capture",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_replaced_parent_is_refused",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_restart_inspection_distinguishes_applied_files_from_current_conflicts",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_revision_change_cannot_reuse_prepared_work",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_steps_never_reached_are_interrupted_not_conflicts",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_supervisor_code_remains_protected_under_a_broad_grant",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_truncated_or_unfinished_journal_never_claims_completion",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unauthorized_change_blocks_other_edits",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unchanged_placeholder_is_ignored_and_original_kept",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_changeset.ChangesetTests.test_unexposed_existing_file_is_not_an_addition",
+          "reason": "Application metadata contract requires Linux"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_confined_modes_deny_and_record_the_same_operations",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_descendants_cannot_reach_the_evaluator_inputs",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_read_rule_blocks_the_read_tool",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_comparison.MeasurementControlTests.test_native_rules_cannot_stop_shell_reads_or_protected_writes",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedOpenCodeTests.test_actual_confined_edit_child_denial_and_checked_application",
+          "reason": "Actual Linux, FUSE helper and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedOpenCodeTests.test_missing_hook_readiness_stops_before_dispatch",
+          "reason": "Actual Linux, FUSE helper and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_confined_opencode.ConfinedRealProviderTests.test_real_model_edits_permitted_file_and_cannot_disclose_secret",
+          "reason": "Actual Linux runtime and an explicitly selected real provider are required"
+        },
+        {
+          "test": "test_demo_scenarios.DemoScriptRuntimeTests.test_all_scenarios_run_in_fresh_workspaces_with_real_confinement",
+          "reason": "Actual Linux connected runtime required for demo script execution"
+        },
+        {
+          "test": "test_demo_scenarios.DemoScriptRuntimeTests.test_interactive_menu_runs_two_selected_cases_with_separate_approvals",
+          "reason": "Actual Linux connected runtime required for demo script execution"
+        },
+        {
+          "test": "test_demo_scenarios.DemoScriptRuntimeTests.test_refused_approval_cancels_before_any_provider_request",
+          "reason": "Actual Linux connected runtime required for demo script execution"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_blocks_parent_process_and_unix_control_socket",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_closes_existing_inheritable_secret_descriptor",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_case_alias_and_trusted_state_access",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_existing_sensitive_paths_and_symlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_hardlink_created_externally_during_execution",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_new_matching_secret_and_allows_source_replacement",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_protected_write_rename_delete_and_truncate",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_read_after_moving_sensitive_inode_to_allowed_name",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_read_in_children_and_grandchildren",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_sensitive_symlink_name_to_public_target",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_denies_worker_creation_of_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_does_not_leave_detached_descendant_after_owner_exit",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_refuses_startup_with_preexisting_hardlinks",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_enforcement.MacOSCandidateTests.test_candidate_runs_legitimate_read_and_write",
+          "reason": "Explicit local macOS confinement diagnostic only"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_confined_oracle_contains_hostile_generated_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_evaluation.EvaluationTests.test_real_confined_oracle_distinguishes_unfixed_and_fixed_source",
+          "reason": "Requires Linux and the operator-loaded oracle profile"
+        },
+        {
+          "test": "test_launcher.IsolationTests.test_delegated_child_has_only_its_subset_and_stops_with_its_parent",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.IsolationTests.test_repository_configuration_instructions_and_plugins_never_load",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_cancellation_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_concurrent_user_edit_is_preserved_as_conflict",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_directory_create_move_and_remove_reach_the_original",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_expiry_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_owner_death_stops_worker_and_recovery_verifies_before_reuse",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_prompt_to_applied_edit_with_child_denials_recorded",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_recovery_after_expiry_does_not_revive_authority",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_review_mode_retains_until_explicit_apply_and_never_replays",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_revocation_stops_descendants_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.LauncherTests.test_unavailable_runtime_blocks_before_any_provider_request",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_approved_write_exception_permits_exactly_one_applied_edit",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_external_input_is_an_exact_read_only_single_use_copy",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_refused_request_stays_denied",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReconsiderationTests.test_sensitive_read_needs_disclosure_consent_is_single_use_and_taints_outputs",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_cancellation_between_verification_and_dispatch_closes_cleanly",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_lost_broker_stops_the_worker_and_prevents_application",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_refusing_a_held_sensitive_approval_stops_the_worker_before_use",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_launcher.ReviewRuntimeTests.test_repeated_identical_shell_denials_suspend_the_worker",
+          "reason": "Actual Linux, FUSE helper, loaded profile and pinned OpenCode binary are required"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_detached_descendant_loses_authority_after_owner_exit",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_host_files_processes_and_control_socket_are_inaccessible",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_inherited_secret_descriptor_and_environment_are_removed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_io_uring_cannot_bypass_link_syscall_restrictions",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_actual_secret_bytes_including_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_existing_file_outside_the_worker_read_grant",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_kernel_denies_protected_write_rename_unlink_and_truncate",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_launcher_death_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_live_changes_to_original_project_cannot_inject_secret_alias",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_missing_profile_cannot_execute_the_command",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_new_sensitive_names_and_link_aliases_are_denied_continuously",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_operator_cli_uses_approved_grant_and_refuses_a_revoked_worker",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_real_process_can_read_and_edit_assigned_files",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_renaming_a_secret_ancestor_cannot_make_it_readable",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_revocation_stops_the_running_process",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_secret_inserted_after_start_is_unreadable_and_cannot_be_renamed",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_timeout_stops_detached_descendants",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_tree_denial_covers_a_file_at_the_tree_root",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_create_network_sockets",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_linux_sandbox.LinuxProcessTests.test_worker_cannot_leave_its_apparmor_profile",
+          "reason": "Requires Linux and the generated enforcing AppArmor profile"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_allowed_read_and_write_with_denied_actual_secret_read",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_blind_replacement_does_not_grant_read",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_blind_writer_must_replace_a_withheld_file_completely",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_directory_create_move_and_remove_are_permitted_but_not_secret_ancestor_move",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_new_sensitive_name_stays_unreadable_and_unassigned_write_is_denied",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_open_descriptor_is_rechecked_after_rename_and_cannot_mmap",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_secret_ancestor_move_is_denied_even_when_both_paths_are_writable",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_subprocess_reads_are_restricted_by_kernel_mount",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_unmount_failure_still_stops_serving_and_can_be_reconciled",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_mediatedfs.MediatedFilesystemTests.test_withheld_stand_in_cannot_be_deleted",
+          "reason": "Real Linux FUSE mount and compiled bridge are required"
+        },
+        {
+          "test": "test_reconsideration.ReviewRegressionTests.test_recovery_waits_for_a_live_reviewed_apply",
+          "reason": "Process start times come from /proc"
+        }
+      ],
+      "seconds": 76.59
+    }
+  ],
+  "earlier_checks": [
+    {
+      "tests": 255,
+      "passed": 151,
+      "skipped": 104,
+      "failures": 0,
+      "errors": 0,
+      "scope": "Local suite before two additional selection/cancellation tests were added; source hashes not captured."
+    }
+  ],
+  "vm_preflight": [
+    {
+      "result": "connection_refused",
+      "endpoint": "localhost:2222",
+      "system_modified": false
+    }
+  ],
+  "vm_validation": "interactive two-case selection, cancellation before provider access, and real-terminal preview passed; all-seven batch in progress",
+  "independent_review": "No blocking findings; clarified that cancelled runs do not have final reports.",
+  "installer_validation": "bash -n passed; installer execution unchanged and not rerun.",
+  "timeout_regression_red": {
+    "tests": 1,
+    "failures": 1,
+    "seconds": 1.038,
+    "test": "DemoScenarioTests.test_script_timeout_stops_its_child_processes",
+    "source_sha256": "eb7b1ef019348734843e99eee0ff4c28768eabc8613adc199d77dfbef2321bf6",
+    "symptom": "Timed-out script left its child running",
+    "earlier_attempt": "The first reproduction could not inspect ps under restricted process access; rerunning with process inspection reproduced the actual failure."
+  },
+  "vm_attempts": [
+    {
+      "at": "2026-11-24T06:15:48.822627+00:00",
+      "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+      "scope": "Actual demo.sh: all seven scenarios with confined OpenCode and a deterministic local provider, interactive two-case selection, refusal before provider access, and local fixture/selection checks.",
+      "sources": {
+        "README.md": "88c37df425daace1db6c0840843b0b1038882363e19110d0a18ca8576cfe70ce",
+        "artifact/README.md": "e2e382f7f97c88eb83e74bdab7121c297e9b82e1fbe232f9a6b83b97fa1dc5d5",
+        "artifact/scenarios/benign-quotation.json": "917d72b7ebb9e9bb4d4d888deed0276638ac91071e0761fbf4877f1a1227e052",
+        "artifact/scenarios/documentation-injection.json": "8011a727e239df83584ddab52cb3e5a7ce434b11667baafa7a78b26152908cd7",
+        "artifact/scenarios/normal.json": "8943f90b8343c6d61adcdbe3d7855e97dadbaf015a032742ffa86f63d2cc704b",
+        "artifact/scenarios/tool-output-injection.json": "67df3c0a116d94f3e7e8bd6dbd5b59ea119627541a7a68280d2d4021b3f916be",
+        "artifact/scripts/prepare.py": "3918c8686c2bd678b2f787b62ccd4dce6ce2733699f57c12a28faffb4d5d20e3",
+        "artifact/skills/LICENSE.superpowers": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+        "artifact/skills/UPSTREAM.json": "10c9f7b9456fab307d5dda6f43328e1ed01c9096fd76b646d1332435cd5d9870",
+        "artifact/skills/systematic-debugging/CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+        "artifact/skills/systematic-debugging/SKILL.md": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+        "artifact/skills/systematic-debugging/condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+        "artifact/skills/systematic-debugging/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+        "artifact/skills/systematic-debugging/defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+        "artifact/skills/systematic-debugging/find-polluter.sh": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+        "artifact/skills/systematic-debugging/root-cause-tracing.md": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+        "artifact/skills/systematic-debugging/test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+        "artifact/skills/systematic-debugging/test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+        "artifact/skills/systematic-debugging/test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+        "artifact/skills/systematic-debugging/test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+        "artifact/skills/test-driven-development/SKILL.md": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+        "artifact/skills/test-driven-development/writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+        "artifact/skills/verification-before-completion/SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+        "artifact/task.md": "effc36d525b365b8d9048e9c3249600cfcd7777a341d68add843fa9c7808f368",
+        "artifact/workload/README.md": "357eb72cfef12be54eaa41a51cf236fbda54dc061a4fe605baa6a638b8be1921",
+        "artifact/workload/data/expenses.csv": "3a705bed21b2165ddc1cbe0fa0e3ea83c5fbf3641ce8db40765d56da8b99154e",
+        "artifact/workload/docs/project-notes.md": "aa8be77c5907b952e3d3bc381780892791dd1b2e8ff10737a543d159e242fb13",
+        "artifact/workload/docs/runner-notes.txt": "a5c77e0c1967d61fef7b366bfa7d008d5ec58d88caffb4108eac69dd1b1e6b65",
+        "artifact/workload/src/__init__.py": "e032b7ad1c96194c9b34f1627d0a2b3d98ce94039afae0bbc121b0da6afdef9a",
+        "artifact/workload/src/expense_summary.py": "593d1ec77d902448a9debcdc8c47ff17317228c1d5c94256f8d724b96b09c936",
+        "artifact/workload/tests/test_expense_summary.py": "e1848c2b8f4d5c9e5bd742842eba86ff1c0b8f795580fb331463196e251d9127",
+        "artifact/workload/tools/run_tests.py": "bc8934a868841e59c8900630209eaf5d795501b9cca6eac9778f070b83ba121b",
+        "docs/QUICKSTART.md": "b5379497521bd2f876145e955f60487757aaceffcfdde9d61b36fcbf7a1734ee",
+        "planner/__init__.py": "eadc5e3bdae34bdc41323afcef57dd10773a63a57d566839ce352ee884b3be31",
+        "planner/__main__.py": "7658643a72efbe528b406e8b9ccdaa96ea9c1196784ef7f661230c536a06d61b",
+        "planner/broker_server.py": "7878a8da217ae4bdada6b552dd48c2d80ea9d2f52a073b352da4ce9b968ef6dc",
+        "planner/changeset.py": "a2200d8c08c90941dd34233b8728b7ed033aefba5a1c24ccab0cb29a641313ce",
+        "planner/comparison.py": "f4119d4b7dab1298bf662a9ce7a1cde74e9fe4eaf36e325ef90cd383cd791ea8",
+        "planner/connector.py": "b29eff4f94f27284c20e33af91bfd568eb77c871dd2b994302b82a153095f739",
+        "planner/context.py": "fd649cf9e08d3a77b7b8ed46381ba24c4060de3d3829f44aa82fa3b2b522c5d3",
+        "planner/demo.py": "b4cb58d505400913d1e4b52c2c9236de3da03d84d99c08593a2c10ec24d01fc0",
+        "planner/demo_scenarios.py": "9f8d4c0f12d8fb06a36ddcc1633c0ea3fcc4fc1b672015f8564d786fbd33ab30",
+        "planner/enforcement.py": "b92c7b93a44b6f11ab74ca26bcd3bfda8a533542028a677a25ea8c9a76869c36",
+        "planner/evaluation.py": "037f52146eb1f2322e889df72d1009b94ffd62656e344e284f4747e991383581",
+        "planner/launcher.py": "92de38d39cbb17932842d913fbed43535deefdb72e1d710b391e8c405816db5d",
+        "planner/mediation.py": "43e945e6b9121ccb0c5fa4e15b524caf6c3aed0bf94a7244a6dde205d3e3bee8",
+        "planner/native/__init__.py": "ff1977b9b4c9261a33337eacaa9f525ae855d356eecf535f60d53a957bfe8b2d",
+        "planner/native/confined_bootstrap.py": "6bd55aee343dcd80b3c383e2c706cc7361a08b0420a051fa71a3fcba8c0f694d",
+        "planner/native/confined_opencode.py": "0afc71db476ff881bfbda4532d21fc24a7b106e9ddf9fb52cee76161205089ca",
+        "planner/native/confined_transport.py": "4396809ff34d859efd854cce5f8671b234c20ae30a738cedf83767bc68c1db3a",
+        "planner/native/fuse_bridge.c": "465b9639a1e44d490bdabd0ad76622298baebca07dab9c881485f1f678461188",
+        "planner/native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+        "planner/native/linux_sandbox.py": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8",
+        "planner/native/macos_candidate/CandidateBroker.swift": "51876600d26ea95312b9b4aed9dbbbbcad3754c20e1ed3cc14cc6f334a3b8752",
+        "planner/native/macos_candidate/CandidateFileSystem.swift": "c8bbf8a1d5a9d17d2ff5679de1f4641446652a9a24b73d153900dd5fed0ac0e4",
+        "planner/native/macos_candidate/CandidateVolume.swift": "93a11e36de54f9124559d6b33de4dcae5d9de670d2bf570e479eb46f32651fe1",
+        "planner/native/macos_candidate/ExtensionMain.swift": "628d471b5907bb09883342d4b528b67996c4a0578377d0080bf79a3f5e4bbf31",
+        "planner/native/macos_candidate/HostMain.swift": "a8a94abffe81f9925f4df5ffd57259bb1fc250599893a2d87347f54719ce5305",
+        "planner/native/macos_contract.py": "109dbebf0cf40a023c8556098d0488e2a69a4d481ed12d28f4533d83ea682e66",
+        "planner/native/mediatedfs.py": "c106c19c2cdcb1a8386236f8a321bf587f97a31203cb960d0471a33018022005",
+        "planner/opencode/__init__.py": "3cafb944988356dbebec5d7d015cb45645688c346aeac8dedd80c653bf9e1764",
+        "planner/opencode/bridge.mjs": "676cf27ae62908a4d5d3acc74d19a17ab8faad4bbd8a49c38bd82914bd2ccfd6",
+        "planner/opencode/diagnostic.py": "8ce96700cd8130c8332c1b2e2f286b9b0f40fbcc529c8e0aca0ecb61af36488a",
+        "planner/opencode/index.js": "040dd60143b05e7b923c1832d5634f25782d08a059e2b15f075c225078df864f",
+        "planner/opencode/package.json": "2a4d581ee8980b112a56f0e62bd3a4f640c7725b241454ed36cd5345722202ce",
+        "planner/policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421",
+        "planner/private_server.py": "84a01ddaeb6dcb4472a01775ae6b130e4b8fb57275b6e1f358cee0f24b3f4c50",
+        "planner/provenance.py": "b749f9b1ea9fb31b1e2d6592e1c0e598e743dbc3723e1b76e83b9cd12540922b",
+        "planner/records.py": "03cae84914846d7f5be506f98b388825b7524f953a500d6642cf18b690a36dd1",
+        "planner/report/template.html": "ff107bd472829d95973d8d431b7dfd6b4faf579e61f5eec9ae2248621a2ecb52",
+        "planner/report.py": "034cee5bc486d68bd574413f5b3acc4d37f7f9f90836ee6db2dc1513d01df018",
+        "planner/scenarios/benchmark.json": "aaf4d1a624ccb47edb18fcb272284645ed593e8d1e06bf754e4924f2d97aed22",
+        "planner/supervisor.py": "da6c1aebd1d5dac3a007ecaaffebbcf281dcc149ecf243205dcb7feec10a3c20",
+        "planner/templates/documentation.toml": "87a90fa3a1b9c5e4fe183fc03d3cd7c48ebbfc56455c500fad75768596e50089",
+        "planner/templates/inspection.toml": "f7dc4067e2a64b1c5f6eecebece3df0a007f13ff0c724ff1a43ed223407bb936",
+        "planner/templates/source.toml": "dd3f19006bc0c42d5f7d812c4c8a02a075a82edcbca455517711c7d6d7523c40",
+        "planner/templates/tests.toml": "8d1173a12aab72819c8343d5d14b698dffee4fc44e028d773293d21d6bcce52b",
+        "planner/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "planner/tests/runtime_fixtures.py": "0f8eedebbd81f37522ffb29f3d17832aea667135443cc25edc73007d58f9e27e",
+        "planner/tests/test_broker_server.py": "7c588fc8c318507ef4c7ace4d23d0179971027f57d1d9cfc58fdeef6a367a5c4",
+        "planner/tests/test_changeset.py": "484d004b0ad4889628f39038c32b1e45858f3019ac1b761c56841e75731e5713",
+        "planner/tests/test_cli.py": "02d33ce3bdcc6bb7a47ddd235d0fc504e4e5a0cbeaefca4cc1482cb84f39cfcd",
+        "planner/tests/test_comparison.py": "fbc921607cf20fa4c2934d961a10ccf5173ea026b374a00b37c64ec7b7f0b30d",
+        "planner/tests/test_confined_opencode.py": "00641d9aed51b893179ad6979675bcca45bd2befd9b4a202b86821b1fadf6f0a",
+        "planner/tests/test_connector.py": "6554f6acafa4aea93d626f066b4ab8d78d1e9f10bd215ee572ab233240df4539",
+        "planner/tests/test_context.py": "2bd776b5227609995bc71ef20fead43a877068f74e1d3d4b6eb1f6deeaf192d0",
+        "planner/tests/test_control_adversarial.py": "4e1cac8161f04486a65e2d5c2c3379b8d1ad12e74a6ba8a74fa7628241a3ffad",
+        "planner/tests/test_delegation_recovery.py": "1c89e8bb81a2b2fa5addc77e6c4c1417d6749299ed6cab65988798a3b4161dac",
+        "planner/tests/test_demo_scenarios.py": "bee4c6b0832d68217aef830e83779a92dd1480a2f77627ee42473324140fa625",
+        "planner/tests/test_enforcement.py": "a8b294d6ee0e43c3221978104ae6b4914194c33197c6f56c2a7a41e3098f4d34",
+        "planner/tests/test_evaluation.py": "42596ec46dc104768601f571b3484bf4a0b0a2c5a1cb6ac6292db6a46c3a61c5",
+        "planner/tests/test_launcher.py": "562e903386ae6e8008898b60d0429b01463ab0ee9c3c2c46cdbe1c73d439f6fa",
+        "planner/tests/test_linux_sandbox.py": "4f1b7b47f2204751a0b9172d3fcc7779f12aeb89da6ed36685f6a966f30da89f",
+        "planner/tests/test_mediatedfs.py": "b34f08ccce476300e6b10762bf5a9a5f121192b0682aa7a22516a9fd50cd6038",
+        "planner/tests/test_mediation.py": "6b85bdf945d5f01cf760774023d3d68f41a7750e28d267f5d9825013d77ad4f7",
+        "planner/tests/test_opencode_bridge.py": "a32182bf2d9453c2aeb090b674d10a731f6e0da4e55a5eada76b87f69d9aae9b",
+        "planner/tests/test_policy.py": "21130ec62b998c7a73afa2c90aca1b4dfbf4b2886cdfdf5cfd3164e6eacabb4e",
+        "planner/tests/test_policy_adversarial.py": "53d561191460fbad1b39401990d93c47fabc3ea817430f7f5fa304973f98c31a",
+        "planner/tests/test_private_server.py": "729972facead3fe8c9eccc4a696576c17e134445ad78f0e605bac5b1c7f51625",
+        "planner/tests/test_provenance.py": "4da7bcde14892071d8492f96668f51dc0b29215fc1a477e0ac095932b2d54642",
+        "planner/tests/test_reconsideration.py": "c000fd91d764639d9e6d517b076de0be3baa6ae02bd246dd9c40aea33f6304f0",
+        "planner/tests/test_report.py": "7de35169e892476968676c81220f89f10775d7e51527df9564a82629c6e76e2d",
+        "planner/tests/test_supervisor.py": "e0e64531bec5ab8a2fbf182a5f66eeac8854052af8fb03249d93b6b8a03d6dcb",
+        "planner/tests/test_workflow.py": "097401e0194ca203c046f06897cc529eee7cbd5f4edd11bd8a0bcf872ce9ec6e",
+        "planner/workflow.py": "5bcdc515e94de977ee8fed41303332e19cf2471c94ce3f19ac110bfdb8596c46",
+        "pyproject.toml": "6fd2a53884825f3c7bb24d2a6558415cab82f4c2ae6699166da8da314ebfb660",
+        "scripts/demo.sh": "ebe1d0009c88bc27072c8dbd1c0cc2e56cbe51cc0712c92c3c9c50c90d4ac449",
+        "scripts/install-ubuntu.sh": "fa901bd9e4acefa3ad28cb14a3cf05c8672fbacbfcab8b38c56e1712855355bf"
+      },
+      "sources_stable": true,
+      "tests": 11,
+      "failures": [],
+      "errors": [
+        {
+          "test": "planner.tests.test_demo_scenarios.DemoScriptRuntimeTests.test_all_scenarios_run_in_fresh_workspaces_with_real_confinement",
+          "detail": "Traceback (most recent call last):\n  File \"/tmp/planner-demo-menu.1IpZ07/planner/tests/test_demo_scenarios.py\", line 221, in test_all_scenarios_run_in_fresh_workspaces_with_real_confinement\n    result = self.script(\"--all\", \"--yes\", env=environment, timeout=1200)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/planner-demo-menu.1IpZ07/planner/tests/test_demo_scenarios.py\", line 33, in script\n    return subprocess.run([\"bash\", str(ROOT / \"scripts/demo.sh\"), *args], cwd=ROOT,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 550, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 1209, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 2116, in _communicate\n    self._check_timeout(endtime, orig_timeout, stdout, stderr)\n  File \"/usr/lib/python3.12/subprocess.py\", line 1253, in _check_timeout\n    raise TimeoutExpired(\nsubprocess.TimeoutExpired: Command '['bash', '/tmp/planner-demo-menu.1IpZ07/scripts/demo.sh', '--all', '--yes']' timed out after 1200 seconds\n"
+        },
+        {
+          "test": "planner.tests.test_demo_scenarios.DemoScriptRuntimeTests.test_all_scenarios_run_in_fresh_workspaces_with_real_confinement",
+          "detail": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/shutil.py\", line 715, in _rmtree_safe_fd\n    os.unlink(entry.name, dir_fd=topfd)\nPermissionError: [Errno 13] Permission denied: 'opencode.json'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/tempfile.py\", line 1089, in cleanup\n    self._rmtree(self.name, ignore_errors=self._ignore_cleanup_errors)\n  File \"/usr/lib/python3.12/tempfile.py\", line 1069, in _rmtree\n    _rmtree(name, onexc=onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 785, in rmtree\n    _rmtree_safe_fd(fd, path, onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 686, in _rmtree_safe_fd\n    _rmtree_safe_fd(dirfd, fullname, onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 686, in _rmtree_safe_fd\n    _rmtree_safe_fd(dirfd, fullname, onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 686, in _rmtree_safe_fd\n    _rmtree_safe_fd(dirfd, fullname, onexc)\n  [Previous line repeated 3 more times]\n  File \"/usr/lib/python3.12/shutil.py\", line 717, in _rmtree_safe_fd\n    onexc(os.unlink, fullname, err)\n  File \"/usr/lib/python3.12/tempfile.py\", line 1040, in onexc\n    _resetperms(_os.path.dirname(path))\n  File \"/usr/lib/python3.12/tempfile.py\", line 425, in _resetperms\n    _dont_follow_symlinks(_os.chmod, path, 0o700)\n  File \"/usr/lib/python3.12/tempfile.py\", line 416, in _dont_follow_symlinks\n    func(path, *args)\nOSError: [Errno 38] Function not implemented: '/tmp/planner-demo-menu-test-q9wiuf0t/runtime/demo-20261124-060634-comment-instruction-bmtX/runs/2a740b6ea5c149a0aa9117a6adb5882f/fs/mount'\n"
+        },
+        {
+          "test": "planner.tests.test_demo_scenarios.DemoScriptRuntimeTests.test_interactive_menu_runs_two_selected_cases_with_separate_approvals",
+          "detail": "Traceback (most recent call last):\n  File \"/tmp/planner-demo-menu.1IpZ07/planner/tests/test_demo_scenarios.py\", line 231, in test_interactive_menu_runs_two_selected_cases_with_separate_approvals\n    result = self.script(input=\"2 3\\n\\ny\\n\\n\\ny\\n\\n\", env=environment, timeout=400)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/planner-demo-menu.1IpZ07/planner/tests/test_demo_scenarios.py\", line 33, in script\n    return subprocess.run([\"bash\", str(ROOT / \"scripts/demo.sh\"), *args], cwd=ROOT,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 550, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 1209, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 2116, in _communicate\n    self._check_timeout(endtime, orig_timeout, stdout, stderr)\n  File \"/usr/lib/python3.12/subprocess.py\", line 1253, in _check_timeout\n    raise TimeoutExpired(\nsubprocess.TimeoutExpired: Command '['bash', '/tmp/planner-demo-menu.1IpZ07/scripts/demo.sh']' timed out after 400 seconds\n"
+        },
+        {
+          "test": "planner.tests.test_demo_scenarios.DemoScriptRuntimeTests.test_interactive_menu_runs_two_selected_cases_with_separate_approvals",
+          "detail": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/shutil.py\", line 715, in _rmtree_safe_fd\n    os.unlink(entry.name, dir_fd=topfd)\nPermissionError: [Errno 13] Permission denied: 'opencode.json'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/tempfile.py\", line 1089, in cleanup\n    self._rmtree(self.name, ignore_errors=self._ignore_cleanup_errors)\n  File \"/usr/lib/python3.12/tempfile.py\", line 1069, in _rmtree\n    _rmtree(name, onexc=onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 785, in rmtree\n    _rmtree_safe_fd(fd, path, onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 686, in _rmtree_safe_fd\n    _rmtree_safe_fd(dirfd, fullname, onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 686, in _rmtree_safe_fd\n    _rmtree_safe_fd(dirfd, fullname, onexc)\n  File \"/usr/lib/python3.12/shutil.py\", line 686, in _rmtree_safe_fd\n    _rmtree_safe_fd(dirfd, fullname, onexc)\n  [Previous line repeated 3 more times]\n  File \"/usr/lib/python3.12/shutil.py\", line 717, in _rmtree_safe_fd\n    onexc(os.unlink, fullname, err)\n  File \"/usr/lib/python3.12/tempfile.py\", line 1040, in onexc\n    _resetperms(_os.path.dirname(path))\n  File \"/usr/lib/python3.12/tempfile.py\", line 425, in _resetperms\n    _dont_follow_symlinks(_os.chmod, path, 0o700)\n  File \"/usr/lib/python3.12/tempfile.py\", line 416, in _dont_follow_symlinks\n    func(path, *args)\nOSError: [Errno 38] Function not implemented: '/tmp/planner-demo-menu-test-5pxx6ncu/runtime/demo-20261124-061242-documentation-injection-KbRR/runs/00f25be2082e46ada3b9b167f1b58168/fs/mount'\n"
+        },
+        {
+          "test": "planner.tests.test_demo_scenarios.DemoScriptRuntimeTests.test_refused_approval_cancels_before_any_provider_request",
+          "detail": "Traceback (most recent call last):\n  File \"/tmp/planner-demo-menu.1IpZ07/planner/tests/test_demo_scenarios.py\", line 237, in test_refused_approval_cancels_before_any_provider_request\n    result = self.script(input=\"2\\n\\nn\\n\", env=environment, timeout=60)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/planner-demo-menu.1IpZ07/planner/tests/test_demo_scenarios.py\", line 33, in script\n    return subprocess.run([\"bash\", str(ROOT / \"scripts/demo.sh\"), *args], cwd=ROOT,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 550, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 1209, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/subprocess.py\", line 2116, in _communicate\n    self._check_timeout(endtime, orig_timeout, stdout, stderr)\n  File \"/usr/lib/python3.12/subprocess.py\", line 1253, in _check_timeout\n    raise TimeoutExpired(\nsubprocess.TimeoutExpired: Command '['bash', '/tmp/planner-demo-menu.1IpZ07/scripts/demo.sh']' timed out after 60 seconds\n"
+        }
+      ],
+      "skips": [],
+      "seconds": 1718.24
+    }
+  ],
+  "background_timeout_regression_red": {
+    "tests": 1,
+    "failures": 1,
+    "seconds": 3.094,
+    "source_sha256": "33b56f6521c3d452c7351cab05a090464ea8b73fb079f22bcbd6476244e636d2",
+    "symptom": "A TERM-ignoring child with redirected output survived after the parent exited",
+    "independent_reproduction": true
+  },
+  "terminal_preview": {
+    "exit_code": 0,
+    "prompts_answered": 5,
+    "provider_requests": 0,
+    "both_selections_cancelled": true,
+    "script_sha256": "ebe1d0009c88bc27072c8dbd1c0cc2e56cbe51cc0712c92c3c9c50c90d4ac449",
+    "transcript_sha256": "fbd312b03ede199b761e210f5156261493cf962e9b87be3aaba0a6ff07271dad"
+  },
+  "first_attempt_cleanup": {
+    "terminated_test_processes": [],
+    "stale_test_mounts": []
+  },
+  "persistent_source": {
+    "path": "/home/user/cubicle-linux-demo-menu",
+    "files": 108,
+    "all_hashes_match": true
+  },
+  "independent_review_followup": {
+    "findings_fixed": "Timeout cleanup now also kills TERM-ignoring children after the grace period even when their output is redirected.",
+    "regression_tests_independently_passed": 2,
+    "seconds": 12.194,
+    "remaining_findings": []
+  },
+  "checks": {
+    "strict_mypy": "passed - 30 source files",
+    "shell_syntax": "passed - demo.sh and unchanged install-ubuntu.sh",
+    "diff_whitespace": "passed"
+  },
+  "final_vm_test_harness_check": {
+    "sources": {
+      "README.md": "88c37df425daace1db6c0840843b0b1038882363e19110d0a18ca8576cfe70ce",
+      "artifact/README.md": "e2e382f7f97c88eb83e74bdab7121c297e9b82e1fbe232f9a6b83b97fa1dc5d5",
+      "artifact/scenarios/benign-quotation.json": "917d72b7ebb9e9bb4d4d888deed0276638ac91071e0761fbf4877f1a1227e052",
+      "artifact/scenarios/documentation-injection.json": "8011a727e239df83584ddab52cb3e5a7ce434b11667baafa7a78b26152908cd7",
+      "artifact/scenarios/normal.json": "8943f90b8343c6d61adcdbe3d7855e97dadbaf015a032742ffa86f63d2cc704b",
+      "artifact/scenarios/tool-output-injection.json": "67df3c0a116d94f3e7e8bd6dbd5b59ea119627541a7a68280d2d4021b3f916be",
+      "artifact/scripts/prepare.py": "3918c8686c2bd678b2f787b62ccd4dce6ce2733699f57c12a28faffb4d5d20e3",
+      "artifact/skills/LICENSE.superpowers": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+      "artifact/skills/UPSTREAM.json": "10c9f7b9456fab307d5dda6f43328e1ed01c9096fd76b646d1332435cd5d9870",
+      "artifact/skills/systematic-debugging/CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+      "artifact/skills/systematic-debugging/SKILL.md": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+      "artifact/skills/systematic-debugging/condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+      "artifact/skills/systematic-debugging/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+      "artifact/skills/systematic-debugging/defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+      "artifact/skills/systematic-debugging/find-polluter.sh": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+      "artifact/skills/systematic-debugging/root-cause-tracing.md": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+      "artifact/skills/systematic-debugging/test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+      "artifact/skills/systematic-debugging/test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+      "artifact/skills/systematic-debugging/test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+      "artifact/skills/systematic-debugging/test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+      "artifact/skills/test-driven-development/SKILL.md": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+      "artifact/skills/test-driven-development/writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+      "artifact/skills/verification-before-completion/SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+      "artifact/task.md": "effc36d525b365b8d9048e9c3249600cfcd7777a341d68add843fa9c7808f368",
+      "artifact/workload/README.md": "357eb72cfef12be54eaa41a51cf236fbda54dc061a4fe605baa6a638b8be1921",
+      "artifact/workload/data/expenses.csv": "3a705bed21b2165ddc1cbe0fa0e3ea83c5fbf3641ce8db40765d56da8b99154e",
+      "artifact/workload/docs/project-notes.md": "aa8be77c5907b952e3d3bc381780892791dd1b2e8ff10737a543d159e242fb13",
+      "artifact/workload/docs/runner-notes.txt": "a5c77e0c1967d61fef7b366bfa7d008d5ec58d88caffb4108eac69dd1b1e6b65",
+      "artifact/workload/src/__init__.py": "e032b7ad1c96194c9b34f1627d0a2b3d98ce94039afae0bbc121b0da6afdef9a",
+      "artifact/workload/src/expense_summary.py": "593d1ec77d902448a9debcdc8c47ff17317228c1d5c94256f8d724b96b09c936",
+      "artifact/workload/tests/test_expense_summary.py": "e1848c2b8f4d5c9e5bd742842eba86ff1c0b8f795580fb331463196e251d9127",
+      "artifact/workload/tools/run_tests.py": "bc8934a868841e59c8900630209eaf5d795501b9cca6eac9778f070b83ba121b",
+      "docs/QUICKSTART.md": "b5379497521bd2f876145e955f60487757aaceffcfdde9d61b36fcbf7a1734ee",
+      "planner/__init__.py": "eadc5e3bdae34bdc41323afcef57dd10773a63a57d566839ce352ee884b3be31",
+      "planner/__main__.py": "7658643a72efbe528b406e8b9ccdaa96ea9c1196784ef7f661230c536a06d61b",
+      "planner/broker_server.py": "7878a8da217ae4bdada6b552dd48c2d80ea9d2f52a073b352da4ce9b968ef6dc",
+      "planner/changeset.py": "a2200d8c08c90941dd34233b8728b7ed033aefba5a1c24ccab0cb29a641313ce",
+      "planner/comparison.py": "f4119d4b7dab1298bf662a9ce7a1cde74e9fe4eaf36e325ef90cd383cd791ea8",
+      "planner/connector.py": "b29eff4f94f27284c20e33af91bfd568eb77c871dd2b994302b82a153095f739",
+      "planner/context.py": "fd649cf9e08d3a77b7b8ed46381ba24c4060de3d3829f44aa82fa3b2b522c5d3",
+      "planner/demo.py": "b4cb58d505400913d1e4b52c2c9236de3da03d84d99c08593a2c10ec24d01fc0",
+      "planner/demo_scenarios.py": "9f8d4c0f12d8fb06a36ddcc1633c0ea3fcc4fc1b672015f8564d786fbd33ab30",
+      "planner/enforcement.py": "b92c7b93a44b6f11ab74ca26bcd3bfda8a533542028a677a25ea8c9a76869c36",
+      "planner/evaluation.py": "037f52146eb1f2322e889df72d1009b94ffd62656e344e284f4747e991383581",
+      "planner/launcher.py": "92de38d39cbb17932842d913fbed43535deefdb72e1d710b391e8c405816db5d",
+      "planner/mediation.py": "43e945e6b9121ccb0c5fa4e15b524caf6c3aed0bf94a7244a6dde205d3e3bee8",
+      "planner/native/__init__.py": "ff1977b9b4c9261a33337eacaa9f525ae855d356eecf535f60d53a957bfe8b2d",
+      "planner/native/confined_bootstrap.py": "6bd55aee343dcd80b3c383e2c706cc7361a08b0420a051fa71a3fcba8c0f694d",
+      "planner/native/confined_opencode.py": "0afc71db476ff881bfbda4532d21fc24a7b106e9ddf9fb52cee76161205089ca",
+      "planner/native/confined_transport.py": "4396809ff34d859efd854cce5f8671b234c20ae30a738cedf83767bc68c1db3a",
+      "planner/native/fuse_bridge.c": "465b9639a1e44d490bdabd0ad76622298baebca07dab9c881485f1f678461188",
+      "planner/native/linux_contract.py": "7130431360d805af3c8cd495b3174ff2d8fc6fdb988786239ca9950d2a7d68e9",
+      "planner/native/linux_sandbox.py": "c82401547982957dabb10ce98e642415f10b3127df685f7f733252d51b9c2ee8",
+      "planner/native/macos_candidate/CandidateBroker.swift": "51876600d26ea95312b9b4aed9dbbbbcad3754c20e1ed3cc14cc6f334a3b8752",
+      "planner/native/macos_candidate/CandidateFileSystem.swift": "c8bbf8a1d5a9d17d2ff5679de1f4641446652a9a24b73d153900dd5fed0ac0e4",
+      "planner/native/macos_candidate/CandidateVolume.swift": "93a11e36de54f9124559d6b33de4dcae5d9de670d2bf570e479eb46f32651fe1",
+      "planner/native/macos_candidate/ExtensionMain.swift": "628d471b5907bb09883342d4b528b67996c4a0578377d0080bf79a3f5e4bbf31",
+      "planner/native/macos_candidate/HostMain.swift": "a8a94abffe81f9925f4df5ffd57259bb1fc250599893a2d87347f54719ce5305",
+      "planner/native/macos_contract.py": "109dbebf0cf40a023c8556098d0488e2a69a4d481ed12d28f4533d83ea682e66",
+      "planner/native/mediatedfs.py": "c106c19c2cdcb1a8386236f8a321bf587f97a31203cb960d0471a33018022005",
+      "planner/opencode/__init__.py": "3cafb944988356dbebec5d7d015cb45645688c346aeac8dedd80c653bf9e1764",
+      "planner/opencode/bridge.mjs": "676cf27ae62908a4d5d3acc74d19a17ab8faad4bbd8a49c38bd82914bd2ccfd6",
+      "planner/opencode/diagnostic.py": "8ce96700cd8130c8332c1b2e2f286b9b0f40fbcc529c8e0aca0ecb61af36488a",
+      "planner/opencode/index.js": "040dd60143b05e7b923c1832d5634f25782d08a059e2b15f075c225078df864f",
+      "planner/opencode/package.json": "2a4d581ee8980b112a56f0e62bd3a4f640c7725b241454ed36cd5345722202ce",
+      "planner/policy.py": "03772e214fd65e8816b563fa36f41f3cd32024043e9e942383ba687b30dd6421",
+      "planner/private_server.py": "84a01ddaeb6dcb4472a01775ae6b130e4b8fb57275b6e1f358cee0f24b3f4c50",
+      "planner/provenance.py": "b749f9b1ea9fb31b1e2d6592e1c0e598e743dbc3723e1b76e83b9cd12540922b",
+      "planner/records.py": "03cae84914846d7f5be506f98b388825b7524f953a500d6642cf18b690a36dd1",
+      "planner/report/template.html": "ff107bd472829d95973d8d431b7dfd6b4faf579e61f5eec9ae2248621a2ecb52",
+      "planner/report.py": "034cee5bc486d68bd574413f5b3acc4d37f7f9f90836ee6db2dc1513d01df018",
+      "planner/scenarios/benchmark.json": "aaf4d1a624ccb47edb18fcb272284645ed593e8d1e06bf754e4924f2d97aed22",
+      "planner/supervisor.py": "da6c1aebd1d5dac3a007ecaaffebbcf281dcc149ecf243205dcb7feec10a3c20",
+      "planner/templates/documentation.toml": "87a90fa3a1b9c5e4fe183fc03d3cd7c48ebbfc56455c500fad75768596e50089",
+      "planner/templates/inspection.toml": "f7dc4067e2a64b1c5f6eecebece3df0a007f13ff0c724ff1a43ed223407bb936",
+      "planner/templates/source.toml": "dd3f19006bc0c42d5f7d812c4c8a02a075a82edcbca455517711c7d6d7523c40",
+      "planner/templates/tests.toml": "8d1173a12aab72819c8343d5d14b698dffee4fc44e028d773293d21d6bcce52b",
+      "planner/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "planner/tests/runtime_fixtures.py": "0f8eedebbd81f37522ffb29f3d17832aea667135443cc25edc73007d58f9e27e",
+      "planner/tests/test_broker_server.py": "7c588fc8c318507ef4c7ace4d23d0179971027f57d1d9cfc58fdeef6a367a5c4",
+      "planner/tests/test_changeset.py": "484d004b0ad4889628f39038c32b1e45858f3019ac1b761c56841e75731e5713",
+      "planner/tests/test_cli.py": "02d33ce3bdcc6bb7a47ddd235d0fc504e4e5a0cbeaefca4cc1482cb84f39cfcd",
+      "planner/tests/test_comparison.py": "fbc921607cf20fa4c2934d961a10ccf5173ea026b374a00b37c64ec7b7f0b30d",
+      "planner/tests/test_confined_opencode.py": "00641d9aed51b893179ad6979675bcca45bd2befd9b4a202b86821b1fadf6f0a",
+      "planner/tests/test_connector.py": "6554f6acafa4aea93d626f066b4ab8d78d1e9f10bd215ee572ab233240df4539",
+      "planner/tests/test_context.py": "2bd776b5227609995bc71ef20fead43a877068f74e1d3d4b6eb1f6deeaf192d0",
+      "planner/tests/test_control_adversarial.py": "4e1cac8161f04486a65e2d5c2c3379b8d1ad12e74a6ba8a74fa7628241a3ffad",
+      "planner/tests/test_delegation_recovery.py": "1c89e8bb81a2b2fa5addc77e6c4c1417d6749299ed6cab65988798a3b4161dac",
+      "planner/tests/test_demo_scenarios.py": "b3866c5c86270c73fc2e91cc235e15e6e42acd37d02db4dcab3a06322894eb2d",
+      "planner/tests/test_enforcement.py": "a8b294d6ee0e43c3221978104ae6b4914194c33197c6f56c2a7a41e3098f4d34",
+      "planner/tests/test_evaluation.py": "42596ec46dc104768601f571b3484bf4a0b0a2c5a1cb6ac6292db6a46c3a61c5",
+      "planner/tests/test_launcher.py": "562e903386ae6e8008898b60d0429b01463ab0ee9c3c2c46cdbe1c73d439f6fa",
+      "planner/tests/test_linux_sandbox.py": "4f1b7b47f2204751a0b9172d3fcc7779f12aeb89da6ed36685f6a966f30da89f",
+      "planner/tests/test_mediatedfs.py": "b34f08ccce476300e6b10762bf5a9a5f121192b0682aa7a22516a9fd50cd6038",
+      "planner/tests/test_mediation.py": "6b85bdf945d5f01cf760774023d3d68f41a7750e28d267f5d9825013d77ad4f7",
+      "planner/tests/test_opencode_bridge.py": "a32182bf2d9453c2aeb090b674d10a731f6e0da4e55a5eada76b87f69d9aae9b",
+      "planner/tests/test_policy.py": "21130ec62b998c7a73afa2c90aca1b4dfbf4b2886cdfdf5cfd3164e6eacabb4e",
+      "planner/tests/test_policy_adversarial.py": "53d561191460fbad1b39401990d93c47fabc3ea817430f7f5fa304973f98c31a",
+      "planner/tests/test_private_server.py": "729972facead3fe8c9eccc4a696576c17e134445ad78f0e605bac5b1c7f51625",
+      "planner/tests/test_provenance.py": "4da7bcde14892071d8492f96668f51dc0b29215fc1a477e0ac095932b2d54642",
+      "planner/tests/test_reconsideration.py": "c000fd91d764639d9e6d517b076de0be3baa6ae02bd246dd9c40aea33f6304f0",
+      "planner/tests/test_report.py": "7de35169e892476968676c81220f89f10775d7e51527df9564a82629c6e76e2d",
+      "planner/tests/test_supervisor.py": "e0e64531bec5ab8a2fbf182a5f66eeac8854052af8fb03249d93b6b8a03d6dcb",
+      "planner/tests/test_workflow.py": "097401e0194ca203c046f06897cc529eee7cbd5f4edd11bd8a0bcf872ce9ec6e",
+      "planner/workflow.py": "5bcdc515e94de977ee8fed41303332e19cf2471c94ce3f19ac110bfdb8596c46",
+      "pyproject.toml": "6fd2a53884825f3c7bb24d2a6558415cab82f4c2ae6699166da8da314ebfb660",
+      "scripts/demo.sh": "ebe1d0009c88bc27072c8dbd1c0cc2e56cbe51cc0712c92c3c9c50c90d4ac449",
+      "scripts/install-ubuntu.sh": "fa901bd9e4acefa3ad28cb14a3cf05c8672fbacbfcab8b38c56e1712855355bf"
+    },
+    "sources_stable": true,
+    "tests": 2,
+    "failures": [],
+    "errors": [],
+    "skips": [],
+    "seconds": 24.78,
+    "runtime_status": [
+      {
+        "backend": "linux-connected",
+        "available": true,
+        "reason": "planner-connected-99d434f4382eeaec4dad7ae9 with FUSE mediation"
+      },
+      {
+        "backend": "opencode-confined",
+        "available": true,
+        "reason": "Pinned 2.2.5; authenticated hooks required before dispatch"
+      }
+    ],
+    "scope": "Final test-only cleanup changes validated separately on Linux; production demo script, helper, fixtures and quickstart unchanged from the active full scenario acceptance snapshot."
+  },
+  "reproduction": {
+    "unit_command": "python3 -m unittest planner.tests.test_demo_scenarios.DemoScenarioTests",
+    "linux_environment": {
+      "PLANNER_RUN_DEMO_SCENARIOS": "1",
+      "PLANNER_OPENCODE_BINARY": "/home/user/.local/share/planner/opencode-2.2.5/opencode",
+      "PLANNER_FUSE_BRIDGE": "/home/user/.local/share/planner/fuse-bridge"
+    },
+    "linux_command": "python3 -W error::ResourceWarning -m unittest planner.tests.test_demo_scenarios",
+    "provider": "Deterministic local test fixture; no paid provider calls or user API key required for acceptance tests.",
+    "requirement": "Existing full connected Linux runtime and exact generated AppArmor profile must be ready."
+  },
+  "live_alerts": {
+    "feature": "planner run --alert and scripts/demo.sh: an ASCII warning sign, bell and desktop sound once per three-second burst, and a BLOCKED line on stderr for every refusal recorded while the worker runs",
+    "local_attempts": [
+      {
+        "at": "2026-11-24T07:17:00.941484+00:00",
+        "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "sources": {
+          "planner/alerts.py": "c3c5ed914a2fe15493cd4985ee73085b2d3f6e35e46758d27a085fbdb58259b8",
+          "planner/launcher.py": "862a280af9ab609a452c435d07813f35f1977cb3f5335bfb1a9d865d7f8a2719",
+          "planner/supervisor.py": "c71a30587f02a06ff636baa0a55cdfc2c0b9ea67d9e11f66782dbc65fff45091",
+          "planner/__main__.py": "61c84b9a0eb4045bdfbf8bb87a11cb06f87c5591ffdd40676c1f3b4d749d227d",
+          "scripts/demo.sh": "0a4005b81d892daaa0eda8e29481de923909d76ae1321ad08b898d497937d2a4",
+          "planner/tests/test_alerts.py": "b2571818671b65ae1aab871828de3406c9950dea14548577c6bc29ccb5ddd0b1",
+          "planner/tests/test_launcher.py": "0519c1def78c55dd02294c9f6499d056c8b354fdd7d9da08bf68b5a271a4e368",
+          "planner/tests/test_demo_scenarios.py": "e16670ec03f991ff57ccceecada2e6831a6955f62a15fd95ee4a0bf897a69af1",
+          "docs/QUICKSTART.md": "14485d08bd14b2c4e46e1a660b021738dbfe7f7b7e8a3e6c36822f96d588f0ea",
+          "docs/CONNECTED_RUNTIME.md": "b54d9df96be39d9cfd525abc11e0b9c8d75261974844373b55f2244e7b94a278",
+          "docs/USAGE.md": "87e85a1186ae4b31d60315327cfa8431b59c32056d0c0a5a6a79a2b8088e0ffe"
+        },
+        "suite": {
+          "tests": 267,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 108,
+          "note": "Linux-gated tests, including the new live-alert runtime test, the desktop alert tests and the demo runtime alert assertions, were skipped on macOS and are not evidence."
+        },
+        "strict_mypy": "passed - 31 source files (mypy in a scratch virtual environment)",
+        "shell_syntax": "passed - demo.sh"
+      },
+      {
+        "at": "2026-11-24T10:11:38.157981+00:00",
+        "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "sources": {
+          "planner/alerts.py": "b85a42f9d0f0c8caa687f392753d9e346a9f824c18de59eca60a57158adddbda",
+          "planner/launcher.py": "862a280af9ab609a452c435d07813f35f1977cb3f5335bfb1a9d865d7f8a2719",
+          "planner/supervisor.py": "c71a30587f02a06ff636baa0a55cdfc2c0b9ea67d9e11f66782dbc65fff45091",
+          "planner/__main__.py": "d0451ddf8cb6f1526997378f26a075906978c3fe1982bac5e3b9507534fc8437",
+          "scripts/demo.sh": "0a4005b81d892daaa0eda8e29481de923909d76ae1321ad08b898d497937d2a4",
+          "planner/tests/test_alerts.py": "5ac8e50e4bc2e9d7588249eaa0228084eb42a0fef8941dbd629dcd3f76987a44",
+          "planner/tests/test_launcher.py": "857aadd43ee3740f63bae1cc3a5e94d13b389d2ccbb7063d6c6c13c3efcb53c6",
+          "planner/tests/test_demo_scenarios.py": "1831aaffad75a07913bc448c73174fb2c3be5dca2881c9de5d9c108aca3f7d2d",
+          "docs/QUICKSTART.md": "8a01d412f27471e78403fdc100de7eefe098736ecf59a361c931f295b1ff7f1a",
+          "docs/CONNECTED_RUNTIME.md": "f4c67dc191f9c6deebf13d46ac4cdd0200b8713b48f3b849dee4dd3f450932a5",
+          "docs/USAGE.md": "87e85a1186ae4b31d60315327cfa8431b59c32056d0c0a5a6a79a2b8088e0ffe"
+        },
+        "suite": {
+          "tests": 267,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 108,
+          "note": "Linux-gated tests skipped on macOS; not protection evidence."
+        },
+        "strict_mypy": "passed - 31 source files",
+        "shell_syntax": "passed - demo.sh"
+      }
+    ],
+    "vm_attempts": [
+      {
+        "at": "2026-11-24T07:17:00.974532+00:00",
+        "endpoint": "localhost:2222",
+        "result": "not_run",
+        "reason": "First attempt timed out during the SSH banner exchange; later attempts reached sshd but the host key was refused (publickey) for users user and qang; no password was tried."
+      },
+      {
+        "at": "2026-11-24T08:20:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Focused: test_alerts and the live-alert and child-denial launcher tests (before the ASCII sign)",
+        "result": "9 tests passed"
+      },
+      {
+        "at": "2026-11-24T08:50:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Full gated suite (with ASCII sign)",
+        "result": "267 tests, 23 failures, 26 skipped",
+        "failures": {
+          "missing_operator_profiles": 22,
+          "cause": "Guest rebooted at 07:07; the operator-loaded offline test profile planner-05bc5f5986e40740a1acb0e9 and oracle profile were no longer loaded",
+          "comparison_os_mode": "test_confined_modes_deny_and_record_the_same_operations (mode='os') runtime_error:HTTPError with no provider requests; passed on isolated rerun"
+        },
+        "resource_warning": "Unclosed listening socket during test_owner_death_stops_worker_and_recovery_verifies_before_reuse"
+      },
+      {
+        "at": "2026-11-24T09:05:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Rerun: comparison measurement controls, all demo tests including all seven real demo.sh scenarios with alert and warning-sign assertions, alert tests, live-alert launcher test",
+        "result": "25 tests passed"
+      },
+      {
+        "at": "2026-11-24T09:25:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Allocation trace of test_launcher",
+        "result": "interrupted",
+        "notes": "test_expiry_stops_descendants_and_prevents_application and test_recovery_after_expiry_does_not_revive_authority failed (worker did not start within the task lifetime) while the guest was degrading; the user restarted the guest at 09:27. Both passed twice in isolation afterwards (about 143 s per pair) and in the next full suite."
+      },
+      {
+        "at": "2026-11-24T10:11:38.157981+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Full gated suite after reloading planner-test and planner-oracle profiles with the user's approval",
+        "result": "267 tests, 0 failures, 0 errors, 26 skipped",
+        "skips": {
+          "macOS diagnostic": 14,
+          "filesystem case behaviour": 2,
+          "real provider gate": 1,
+          "Node not installed on the guest (OpenCode bridge tests)": 9
+        },
+        "resource_warning": "The unclosed socket recurred during test_owner_death_stops_worker_and_recovery_verifies_before_reuse."
+      },
+      {
+        "at": "2026-11-24T10:11:38.157981+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Fix: test_owner_death used ScriptedProvider without entering or closing it; rerun with tracemalloc and ResourceWarning as error",
+        "result": "1 test passed with no unclosed-socket warning",
+        "sources": {
+          "planner/alerts.py": "b85a42f9d0f0c8caa687f392753d9e346a9f824c18de59eca60a57158adddbda",
+          "planner/launcher.py": "862a280af9ab609a452c435d07813f35f1977cb3f5335bfb1a9d865d7f8a2719",
+          "planner/supervisor.py": "c71a30587f02a06ff636baa0a55cdfc2c0b9ea67d9e11f66782dbc65fff45091",
+          "planner/__main__.py": "d0451ddf8cb6f1526997378f26a075906978c3fe1982bac5e3b9507534fc8437",
+          "scripts/demo.sh": "0a4005b81d892daaa0eda8e29481de923909d76ae1321ad08b898d497937d2a4",
+          "planner/tests/test_alerts.py": "5ac8e50e4bc2e9d7588249eaa0228084eb42a0fef8941dbd629dcd3f76987a44",
+          "planner/tests/test_launcher.py": "857aadd43ee3740f63bae1cc3a5e94d13b389d2ccbb7063d6c6c13c3efcb53c6",
+          "planner/tests/test_demo_scenarios.py": "1831aaffad75a07913bc448c73174fb2c3be5dca2881c9de5d9c108aca3f7d2d",
+          "docs/QUICKSTART.md": "8a01d412f27471e78403fdc100de7eefe098736ecf59a361c931f295b1ff7f1a",
+          "docs/CONNECTED_RUNTIME.md": "f4c67dc191f9c6deebf13d46ac4cdd0200b8713b48f3b849dee4dd3f450932a5",
+          "docs/USAGE.md": "87e85a1186ae4b31d60315327cfa8431b59c32056d0c0a5a6a79a2b8088e0ffe"
+        }
+      }
+    ]
+  },
+  "scripted_alarm_scenario": {
+    "feature": "demo scenario 'alarm': greeting fixture with a scripted worker (planner/scripted_provider.py on loopback), no model provider or key; it reads the checklist, tries .env with the read tool and cat, writes the protected test, then fixes the bug",
+    "attempts": [
+      {
+        "at": "2026-11-24T10:27:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "test_scripted_alarm_scenario_needs_no_provider_and_always_alerts",
+        "result": "failed",
+        "symptom": "BLOCKED: Provider credential environment name is reserved or invalid",
+        "cause": "Placeholder key variable PLANNER_SCRIPTED_DEMO_KEY used the reserved PLANNER_ prefix; renamed SCRIPTED_DEMO_KEY"
+      },
+      {
+        "at": "2026-11-24T10:28:30+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Same test, then demo.sh --scenario alarm --yes in a real terminal",
+        "result": "passed",
+        "finding": "Six alert lines for three attempts: broker hook records (use tool.before, file_access_denied) and multi-resource companions (Another resource in this operation was denied) were displayed. Displays now skip these companion records; history and audit keep them."
+      },
+      {
+        "at": "2026-11-24T10:32:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "demo.sh --scenario alarm --yes in a real terminal after the companion filter",
+        "result": "one warning sign, bell, three BLOCKED lines (read .env via read tool, read .env via filesystem for cat, write tests/test_greeting.py); fix applied; protected files unchanged"
+      },
+      {
+        "at": "2026-11-24T11:05:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Full gated suite, including --all with eight scenarios",
+        "result": "270 tests, 1 failure, 26 skipped (14 macOS diagnostic, 2 case behaviour, 1 real provider gate, 9 Node not installed)",
+        "failure": "test_scripted_alarm_scenario_needs_no_provider_and_always_alerts: its sign-before-alert assertion matched the explanatory line 'Expect ... BLOCKED lines below' (test defect); anchored to an alert line"
+      },
+      {
+        "at": "2026-11-24T11:05:44.540459+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Rerun of the corrected test",
+        "result": "passed",
+        "sources": {
+          "planner/alerts.py": "d7a89603e22aec012e1cf76e3e2de105f903e1ef6e2d527c5e0256af08bcfe92",
+          "planner/scripted_provider.py": "0455ff6c66e2450ea2c9b7347c54a2440a4b2b3d02eeb248d6d3cc4169b61ec3",
+          "planner/demo_scenarios.py": "78d2cd753f9eb88d0cc39d03c11fa98eb9febf4b5d6a3a6baa6bce5ff4d7ea51",
+          "planner/launcher.py": "862a280af9ab609a452c435d07813f35f1977cb3f5335bfb1a9d865d7f8a2719",
+          "planner/supervisor.py": "c71a30587f02a06ff636baa0a55cdfc2c0b9ea67d9e11f66782dbc65fff45091",
+          "planner/__main__.py": "d0451ddf8cb6f1526997378f26a075906978c3fe1982bac5e3b9507534fc8437",
+          "scripts/demo.sh": "2964d826d21b45d8cf0cc930f7abf44089d2335db4b591c9c400a60a54e85d9c",
+          "planner/tests/runtime_fixtures.py": "cce94db1ffa686c1b9e262c56bc3c79da77d65c72a51d139e53572bc88da5bef",
+          "planner/tests/test_alerts.py": "f865ab7b7c265a2584c46a9a11eb32b179581dbcf2d1fe314c3f9dc2095edc66",
+          "planner/tests/test_launcher.py": "857aadd43ee3740f63bae1cc3a5e94d13b389d2ccbb7063d6c6c13c3efcb53c6",
+          "planner/tests/test_demo_scenarios.py": "cd4527a025de587cbe34bd900dce2dee2f992ce5d4c94e3d8402faaf8cbd8bf4",
+          "docs/QUICKSTART.md": "2c0d0d2e932c1c7eee8261f6e4e28d1897e9c24ee2dd28b9c8c744fe9cdbf70b",
+          "docs/CONNECTED_RUNTIME.md": "f4c67dc191f9c6deebf13d46ac4cdd0200b8713b48f3b849dee4dd3f450932a5",
+          "docs/USAGE.md": "87e85a1186ae4b31d60315327cfa8431b59c32056d0c0a5a6a79a2b8088e0ffe"
+        }
+      }
+    ],
+    "local": {
+      "at": "2026-11-24T11:05:44.540459+00:00",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "suite": "270 tests, 0 failures, 109 skipped (Linux-gated)",
+      "strict_mypy": "passed - 32 source files",
+      "sources": {
+        "planner/alerts.py": "d7a89603e22aec012e1cf76e3e2de105f903e1ef6e2d527c5e0256af08bcfe92",
+        "planner/scripted_provider.py": "0455ff6c66e2450ea2c9b7347c54a2440a4b2b3d02eeb248d6d3cc4169b61ec3",
+        "planner/demo_scenarios.py": "78d2cd753f9eb88d0cc39d03c11fa98eb9febf4b5d6a3a6baa6bce5ff4d7ea51",
+        "planner/launcher.py": "862a280af9ab609a452c435d07813f35f1977cb3f5335bfb1a9d865d7f8a2719",
+        "planner/supervisor.py": "c71a30587f02a06ff636baa0a55cdfc2c0b9ea67d9e11f66782dbc65fff45091",
+        "planner/__main__.py": "d0451ddf8cb6f1526997378f26a075906978c3fe1982bac5e3b9507534fc8437",
+        "scripts/demo.sh": "2964d826d21b45d8cf0cc930f7abf44089d2335db4b591c9c400a60a54e85d9c",
+        "planner/tests/runtime_fixtures.py": "cce94db1ffa686c1b9e262c56bc3c79da77d65c72a51d139e53572bc88da5bef",
+        "planner/tests/test_alerts.py": "f865ab7b7c265a2584c46a9a11eb32b179581dbcf2d1fe314c3f9dc2095edc66",
+        "planner/tests/test_launcher.py": "857aadd43ee3740f63bae1cc3a5e94d13b389d2ccbb7063d6c6c13c3efcb53c6",
+        "planner/tests/test_demo_scenarios.py": "cd4527a025de587cbe34bd900dce2dee2f992ce5d4c94e3d8402faaf8cbd8bf4",
+        "docs/QUICKSTART.md": "2c0d0d2e932c1c7eee8261f6e4e28d1897e9c24ee2dd28b9c8c744fe9cdbf70b",
+        "docs/CONNECTED_RUNTIME.md": "f4c67dc191f9c6deebf13d46ac4cdd0200b8713b48f3b849dee4dd3f450932a5",
+        "docs/USAGE.md": "87e85a1186ae4b31d60315327cfa8431b59c32056d0c0a5a6a79a2b8088e0ffe"
+      }
+    }
+  }
+}
