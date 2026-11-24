@@ -324,7 +324,8 @@ def _apply(supervisor: Supervisor, attempt_id: str, changes: Changeset, mode: st
 
 def run_task(state: Path, task: str, worker: str, prompt: str, config: ConnectorConfig,
              runtime: Runtime, *, credential: str | None = None, mode: str = "auto",
-             mediated: bool = True) -> dict[str, Any]:
+             mediated: bool = True,
+             on_denial: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
     """Run one supervised attempt and report observed outcomes.
 
     ``mediated=False`` exists only for the matched comparison's OS-only
@@ -332,6 +333,11 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
 
     ``mode='auto'`` applies conflict-free authorized changes after verified
     cleanup; ``mode='review'`` retains them for ``apply_retained``.
+
+    ``on_denial`` receives each refusal recorded for this worker during the
+    attempt, while it runs. It is a display hook: every refusal has already
+    been enforced and recorded before it is called. It must not raise; an
+    exception while the worker runs stops the attempt like any runtime error.
     """
     from .native.confined_opencode import ConfinedOpenCode, runtime_status
     from .native.mediatedfs import INPUTS, MediatedWorkspace
@@ -391,6 +397,15 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                 owner.record_filesystem_denials(task, worker, [(operation, original(name)) for operation, name
                                                                in filesystem.denials[start:end]])
                 holder["recorded"] = end
+
+        def announce() -> None:
+            """Pass refusals recorded since the last poll to ``on_denial``."""
+            if on_denial is None:
+                return
+            for row in supervisor.history(task, after=holder["announced"]):
+                holder["announced"] = row["id"]
+                if not row["allowed"] and row["worker"] == worker:
+                    on_denial(row)
 
         class Broker(WorkerBroker):
             def handle_request(self, envelope: dict[str, Any]) -> dict[str, Any]:
@@ -457,6 +472,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                         credentials=credentials, authority_factory=authority_factory,
                         unmediated_evaluation=not mediated)
                     holder["runtime"] = confined
+                    earlier = supervisor.history(task)
+                    holder["announced"] = earlier[-1]["id"] if earlier else 0  # Only this attempt.
                     supervisor.start_attempt(attempt)
                     try:
                         with confined:
@@ -468,6 +485,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                             deadline = time.monotonic() + runtime.run_seconds
                             while True:
                                 time.sleep(runtime.poll_seconds)
+                                announce()
                                 if confined.authority_lost:
                                     outcome = "authority_lost"
                                 elif broker is not None and not broker.healthy:
@@ -532,6 +550,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
             application = _apply(supervisor, attempt, changes, mode)
         if application["state"] != "retained" and unmounted:
             _purge(run)
+        if "announced" in holder:
+            announce()  # Refusals drained after the last poll; every record is already complete.
         return {**result, "application": application}
     finally:
         supervisor.close()

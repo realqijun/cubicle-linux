@@ -718,10 +718,11 @@ class Supervisor:
             self._record_request(actions, tuple(decision for decision, _ in assessed))
         return tuple(decision for decision, _ in assessed)
 
-    def history(self, task_id: str) -> list[dict[str, Any]]:
+    def history(self, task_id: str, *, after: int = 0) -> list[dict[str, Any]]:
+        """Decisions in recording order; ``after`` skips ids already seen."""
         self.status(task_id)
         return [dict(row) for row in self.db.execute(
-            "SELECT * FROM decisions WHERE task=? ORDER BY id", (task_id,))]
+            "SELECT * FROM decisions WHERE task=? AND id>? ORDER BY id", (task_id, after))]
 
     def record_mediation_denial(self, task_id: str, worker_id: str, route: str, reason: str) -> None:
         """Trusted broker records sanitized non-filesystem refusals, without payload bytes."""

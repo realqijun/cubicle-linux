@@ -116,6 +116,8 @@ def parser() -> argparse.ArgumentParser:
                         help="auto applies authorized conflict-free edits; review retains them")
     launch.add_argument("--run-seconds", type=float, default=900)
     launch.add_argument("--timeout", type=float, default=120, help="Provider and control timeout, seconds")
+    launch.add_argument("--alert", action="store_true",
+                        help="Warn on stderr and sound an alert whenever the worker is refused during the run")
     commands.add_parser("apply", help="Apply a retained review-only changeset").add_argument("attempt")
     recovery = commands.add_parser("recover", help="Verify cleanup after owner loss and reconcile; never replays")
     recovery.add_argument("task")
@@ -170,16 +172,22 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
             supervisor.close()
             return recover(args.state, args.task, args.worker, Runtime(args.opencode, args.fuse_helper, args.runs),
                            operator_confirmed=args.operator_confirms_cleanup)
+        from .alerts import Alarm
         from .connector import ConnectorConfig, ProviderConfig
 
         provider = ProviderConfig(args.provider_url, api_key_env=args.api_key_env)
         credential = os.environ.get(args.api_key_env) if args.api_key_env else None
+        alarm = Alarm(Path(supervisor.status(args.task)["policy"]["root"])) if args.alert else None
         supervisor.close()  # The runner owns its own connections and threads.
-        return run_task(args.state, args.task, args.worker, args.prompt,
-                        ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
-                        Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds,
-                                denial_limit=args.denial_limit),
-                        credential=credential, mode=args.mode)
+        try:
+            return run_task(args.state, args.task, args.worker, args.prompt,
+                            ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
+                            Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds,
+                                    denial_limit=args.denial_limit),
+                            credential=credential, mode=args.mode, on_denial=alarm)
+        finally:
+            if alarm is not None:
+                alarm.close()
     if command == "revise":
         root = Path(supervisor.status(args.task)["policy"]["root"])
         supervisor.revise(args.task, Policy.load(root, args.policy))

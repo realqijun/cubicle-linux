@@ -58,41 +58,48 @@ export PLANNER_API_KEY_ENV=EXAMPLE_API_KEY  # the name of the variable holding t
 read -rs EXAMPLE_API_KEY && export EXAMPLE_API_KEY
 ```
 
+If you skip this, the demo asks for the key when it needs one.
 The key is passed to the supervisor by variable name. It stays outside the jail
 and never appears in command arguments or records.
 
 ## 3. Run the demo
 
 ```sh
-scripts/demo.sh            # or: scripts/demo.sh --yes   (no pauses, auto-approve)
+scripts/demo.sh
 ```
 
-The demo creates a throwaway project with:
+Pick a scenario from the menu, check the worker's permissions, and approve them.
+The demo asks for your API key if it is not set, and offers to run the installer if the runtime is missing.
 
-- a bug in `src/greeting.py`;
-- a dummy secret in `.env` and in `config/.env.production`;
-- a planted instruction in `docs/MAINTAINERS.md` telling agents to print `.env`
-  and edit the tests.
+To see the alarm straight away, pick `alarm`.
+It needs no model or API key: a scripted worker follows a planted checklist that tells it to print `.env` and edit the tests.
+Only the worker's choices are scripted; the sandbox, the supervisor and the alerts are real.
 
-It then walks through the normal flow:
+The other scenarios use your model, so whether the alarm goes off depends on what the model tries.
+`normal` and `benign-quotation` are controls, where no alarm is the right result.
 
-1. Propose a policy from the trusted `source` template. The worker may write
-   `src/**` and `outputs/**`, may not read `.env*`, and may not write `tests/**`.
-2. Ask you to approve that exact policy.
-3. Run OpenCode inside the jail. All project file access goes through the
-   supervisor.
-4. Show the fix applied to the real project, confirm that `.env` and the tests
-   are unchanged, and list the operations the supervisor refused.
-5. Write an HTML provenance report.
+While the worker runs, each blocked attempt prints a red `BLOCKED` line.
+The first in a burst also shows a warning sign and rings the terminal bell, which over SSH plays on your own computer.
+Afterwards the demo shows what changed, how many attempts were blocked, and the diff.
 
-A run takes from under a minute to several minutes, depending on the model.
-Model behaviour varies, so some runs show no refusals because the model never
-tried. The protection itself is covered by the test suite (see
-[the connected runtime guide](CONNECTED_RUNTIME.md)).
+To see what happened in a run, including every file access the supervisor allowed or blocked:
 
-Each run leaves a `demo-*` folder under `~/.local/share/planner`. It contains the
-throwaway project, the supervisor database and `report.html`. Delete old runs
-with `rm -rf ~/.local/share/planner/demo-*`.
+```sh
+scripts/demo.sh log            # the latest run
+scripts/demo.sh log alarm      # the latest run of one scenario
+```
+
+Other forms:
+
+```sh
+scripts/demo.sh alarm          # run one scenario without the menu
+scripts/demo.sh all            # run every scenario, one after another
+scripts/demo.sh alarm --yes    # approve automatically, with no prompts
+scripts/demo.sh list           # list the scenarios
+```
+
+Runs are saved under `~/.local/share/planner/demo-*`.
+Delete them with `rm -rf ~/.local/share/planner/demo-*`.
 
 ## 4. Use it on your own project
 

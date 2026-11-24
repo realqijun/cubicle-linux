@@ -138,6 +138,43 @@ class LauncherTests(RuntimeCase):
         self.assertEqual(denied, {("read", ".env"), ("write", "tests/test_app.py")})
         self.assertNotIn("DUMMY_SECRET", provider.tool_results())
 
+    def test_alert_reports_a_refusal_while_the_worker_is_still_running(self) -> None:
+        task = self.approved_task()
+        script = ("import time\n"
+                  "for name, mode in (('/workspace/.env', 'r'), ('/workspace/tests/test_app.py', 'a')):\n"
+                  "    try: open(name, mode).close()\n"
+                  "    except PermissionError: pass\n"
+                  "time.sleep(20)\n")
+        lines: list[tuple[float, str]] = []
+        with ScriptedProvider([shell(script)]) as provider:
+            process = subprocess.Popen([sys.executable, "-m", "planner", "--json", "--state", str(self.state),
+                                        *self.run_args(task, provider, "--alert")],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                       env={**os.environ, "NO_COLOR": "1"}, cwd=Path(__file__).parents[2])
+            def read_alerts() -> None:
+                assert process.stderr is not None
+                with process.stderr:
+                    lines.extend((time.monotonic(), line) for line in process.stderr)
+            reader = threading.Thread(target=read_alerts)
+            reader.start()
+            assert process.stdout is not None
+            stdout = process.stdout.read()
+            process.wait(timeout=60)
+            exited = time.monotonic()
+            reader.join()
+            process.stdout.close()
+        self.assertEqual(process.returncode, 0, "".join(line for _, line in lines))
+        self.assertEqual(json.loads(stdout)["outcome"], "completed")
+        alerts = [(at, line) for at, line in lines if line.lstrip("\a").startswith("[BLOCKED]")]
+        self.assertEqual(list(dict.fromkeys(line.lstrip("\a").rstrip("\n") for _, line in alerts)), [
+            "[BLOCKED] The worker tried to read .env - refused (filesystem: Worker operation denied)",
+            "[BLOCKED] The worker tried to write tests/test_app.py - refused (filesystem: Worker operation denied)"])
+        stderr = "".join(line for _, line in lines)
+        self.assertLess(stderr.index("\a"), stderr.index("WARNING: PERMISSION VIOLATION"))
+        self.assertLess(stderr.index("WARNING: PERMISSION VIOLATION"), stderr.index("[BLOCKED]"))
+        self.assertGreater(exited - alerts[0][0], 10, "The alert arrived only after the worker finished")
+        self.unchanged("tests/test_app.py", ".env")
+
     def test_directory_create_move_and_remove_reach_the_original(self) -> None:
         (self.project / "src/old").mkdir()
         (self.project / "src/old/f.py").write_text("moved\n")
@@ -236,8 +273,10 @@ class LauncherTests(RuntimeCase):
         task = self.approved_task()
         self.kill_owner_mid_run(task)
         self.assertEqual(self.cli("attempts", task)[0]["state"], "running")  # Recorded honestly as unresolved.
-        blocked = self.cli("run", *self.run_args(task, ScriptedProvider([]))[1:], check=False)
+        with ScriptedProvider([]) as idle:
+            blocked = self.cli(*self.run_args(task, idle), check=False)
         self.assertEqual(blocked["returncode"], 2)  # Unresolved attempt prevents a second owner.
+        self.assertEqual(idle.bodies, [])
         transport = json.loads(next(self.runs.glob("*/processes.json")).read_text())["transport"]
         self.assertTrue(Path(transport).exists())  # A killed owner cannot clean up after itself.
         [recovered] = self.cli(*self.recover_args(task))

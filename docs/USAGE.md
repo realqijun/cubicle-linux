@@ -63,7 +63,7 @@ Append `--json` before the command for machine-readable output.
 | `revoke TASK WORKER` / `cancel TASK` | Revoke worker descendants or the entire task |
 | `plan PROJECT --prompt TEXT --model M --provider-url URL` | Ask a model for a template-bounded proposal |
 | `approve-task TASK --revision N --assign WORKER` | Approve and assign exactly the reviewed scopes |
-| `run TASK WORKER --prompt TEXT ...` | Run one confined attempt; `--mode review` retains edits |
+| `run TASK WORKER --prompt TEXT ...` | Run one confined attempt; `--mode review` retains edits; `--alert` warns and sounds an alert on each refusal while it runs |
 | `apply ATTEMPT` / `applications TASK` | Apply a retained changeset / list application outcomes |
 | `recover TASK WORKER ...` | Verify cleanup after owner loss, then reconcile |
 | `export TASK` | Export readable metadata |
