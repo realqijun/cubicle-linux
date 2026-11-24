@@ -23,6 +23,9 @@ deny_write = ["tests/**"]
 [tools]
 allow = ["file", "search", "shell"]
 """
+# Expiry tests need a running worker before the task lifetime ends; confined
+# startup has taken more than 40 seconds on a loaded Ubuntu guest.
+EXPIRING_TASK_SECONDS = 90
 ORIGINAL = {"README.md": "Example service.\n", "src/app.py": "VALUE = 1\n",
             "tests/test_app.py": "from src.app import VALUE\nassert VALUE == 2\n", ".env": "TOKEN=DUMMY_SECRET\n"}
 
@@ -234,7 +237,7 @@ class LauncherTests(RuntimeCase):
         self.assertEqual((result["outcome"], result["attempt_state"]), ("authority_lost", "cancelled"))
 
     def test_expiry_stops_descendants_and_prevents_application(self) -> None:
-        result, _ = self.stop_during_run([], seconds=90)
+        result, _ = self.stop_during_run([], seconds=EXPIRING_TASK_SECONDS)
         self.assertEqual(result["outcome"], "authority_lost")
         self.assertEqual(result["attempt_state"], "failed")
 
@@ -247,12 +250,14 @@ class LauncherTests(RuntimeCase):
             owner = subprocess.Popen([sys.executable, "-m", "planner", "--json", "--state", str(self.state),
                                       *self.run_args(task, provider)], cwd=Path(__file__).parents[2],
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            deadline = time.monotonic() + 120
-            while not list(self.runs.glob("*/fs/backing/src/started.txt")):
-                self.assertLess(time.monotonic(), deadline, "Worker never started")
-                time.sleep(0.2)
-            owner.kill()
-            owner.wait()
+            try:
+                deadline = time.monotonic() + 120
+                while not list(self.runs.glob("*/fs/backing/src/started.txt")):
+                    self.assertLess(time.monotonic(), deadline, "Worker never started")
+                    time.sleep(0.2)
+            finally:  # Killed here even when the worker never started, so no owner outlives the test.
+                owner.kill()
+                owner.wait()
         deadline = time.monotonic() + 15
         while subprocess.run(["pgrep", "-f", marker], capture_output=True).returncode != 1:
             self.assertLess(time.monotonic(), deadline, "Worker descendants survived owner death")
@@ -291,7 +296,7 @@ class LauncherTests(RuntimeCase):
         self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
 
     def test_recovery_after_expiry_does_not_revive_authority(self) -> None:
-        task = self.approved_task(seconds=40)
+        task = self.approved_task(seconds=EXPIRING_TASK_SECONDS)
         self.kill_owner_mid_run(task)
         expires = self.cli("status", task)["expires"]
         time.sleep(max(0.0, expires - time.time() + 1))

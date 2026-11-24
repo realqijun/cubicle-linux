@@ -1536,5 +1536,51 @@
         "docs/USAGE.md": "87e85a1186ae4b31d60315327cfa8431b59c32056d0c0a5a6a79a2b8088e0ffe"
       }
     }
+  },
+  "single_entrypoint_demo": {
+    "feature": "scripts/demo.sh as the single entrypoint (menu, one approval, live alerts, result block with diff, key prompt, installer offer) and scripts/demo.sh log [SCENARIO]",
+    "attempts": [
+      {
+        "at": "2026-11-24T11:43:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Real terminal: menu choice 8 (alarm), approval, then scripts/demo.sh log alarm",
+        "result": "passed",
+        "finding": "The log listed the applier's two authority checks as extra 'allowed write' rows; they are now shown once, after a line saying the worker stopped"
+      },
+      {
+        "at": "2026-11-24T12:45:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "commit": "0887574",
+        "scope": "Full gated suite",
+        "result": "271 tests, 1 failure, 26 skipped (14 macOS diagnostic, 2 case behaviour, 1 real provider gate, 9 Node not installed)",
+        "failure": "test_recovery_after_expiry_does_not_revive_authority: Worker never started within its 40-second task lifetime; the guest ran about twice as slowly as the previous full run (2948 s versus 1766 s)",
+        "resource_warning": "subprocess still running, reported two tests later: kill_owner_mid_run left its owner process running when the worker never started"
+      },
+      {
+        "at": "2026-11-24T12:45:59.966869+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Fix: owner process always killed; both expiry tests use a shared 90-second lifetime. Recovery-after-expiry, expiry and owner-death tests run twice",
+        "result": "6 of 6 passed, no warnings",
+        "sources": {
+          "planner/alerts.py": "d7a89603e22aec012e1cf76e3e2de105f903e1ef6e2d527c5e0256af08bcfe92",
+          "planner/scripted_provider.py": "0455ff6c66e2450ea2c9b7347c54a2440a4b2b3d02eeb248d6d3cc4169b61ec3",
+          "planner/demo_scenarios.py": "99edbb07b942353deba6cfe8c768bdb34a3051aa66bd3f432ec6d4c91c340be0",
+          "planner/launcher.py": "862a280af9ab609a452c435d07813f35f1977cb3f5335bfb1a9d865d7f8a2719",
+          "planner/supervisor.py": "c71a30587f02a06ff636baa0a55cdfc2c0b9ea67d9e11f66782dbc65fff45091",
+          "planner/__main__.py": "d0451ddf8cb6f1526997378f26a075906978c3fe1982bac5e3b9507534fc8437",
+          "scripts/demo.sh": "192d2ba8da3f886af3f57fbf3a1215b5a38574e635a9478ef8a1b627d3c18c28",
+          "planner/tests/runtime_fixtures.py": "cce94db1ffa686c1b9e262c56bc3c79da77d65c72a51d139e53572bc88da5bef",
+          "planner/tests/test_alerts.py": "f865ab7b7c265a2584c46a9a11eb32b179581dbcf2d1fe314c3f9dc2095edc66",
+          "planner/tests/test_launcher.py": "bf204c2a650b019126ec205dfb58d6e626df364a699ecbfc3e2ab48b75efdf45",
+          "planner/tests/test_demo_scenarios.py": "75e242d21f3aaea59c3d42f4bac07325b6df684cee16cfe13b0d49b8b76ab3bd",
+          "docs/QUICKSTART.md": "93289c5b05ef0ba9464ec7896a53b588445b8cf8276dcc174ef23d6184b48ba1"
+        }
+      }
+    ],
+    "local": {
+      "at": "2026-11-24T12:45:59.966869+00:00",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "suite": "271 tests, 0 failures, 109 skipped (Linux-gated)"
+    }
   }
 }
