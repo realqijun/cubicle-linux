@@ -9,6 +9,7 @@ import sys
 import tempfile
 import threading
 import time
+from typing import Callable, TypeVar
 import unittest
 
 from planner.tests.runtime_fixtures import RUNTIME_GATE, RUNTIME_REASON, ScriptedProvider, runtime_paths, shell
@@ -23,11 +24,18 @@ deny_write = ["tests/**"]
 [tools]
 allow = ["file", "search", "shell"]
 """
-# Expiry tests need a running worker before the task lifetime ends; confined
-# startup has taken more than 40 seconds on a loaded Ubuntu guest.
-EXPIRING_TASK_SECONDS = 90
+# Expiry tests need a running worker before the task lifetime ends. Confined
+# startup usually takes under a minute but has exceeded 90 seconds on a loaded
+# Ubuntu guest, so a run that expires before its worker starts is retried longer.
+EXPIRING_TASK_SECONDS = (90, 300)
+STARTUP_SECONDS = 240
 ORIGINAL = {"README.md": "Example service.\n", "src/app.py": "VALUE = 1\n",
             "tests/test_app.py": "from src.app import VALUE\nassert VALUE == 2\n", ".env": "TOKEN=DUMMY_SECRET\n"}
+T = TypeVar("T")
+
+
+class SlowStartup(Exception):
+    """The run ended before its worker started, so nothing was stopped mid-run."""
 
 
 class RuntimeCase(unittest.TestCase):
@@ -76,20 +84,22 @@ class RuntimeCase(unittest.TestCase):
         self.assertEqual(result["attempt_state"], "finished", result)
         return result, provider
 
-    def stop_during_run(self, stop: list[str], *, seconds: float = 3600, task: str | None = None,
+    def stop_during_run(self, stop: list[str], *, task: str | None = None,
                         worker: str = "worker", area: str = "src") -> tuple[dict, str]:
-        task = task or self.approved_task(seconds)
+        task = task or self.approved_task()
         marker = f"planner-stop-{os.getpid()}-{time.monotonic_ns()}"
         script = ("import time; from pathlib import Path\n"
                   f"Path('/workspace/{area}/started.txt').write_text('1')\n"
                   f"time.sleep(120)  # {marker}\n"
                   f"Path('/workspace/{area}/late.txt').write_text('1')\n")
         triggered: list[float] = []
+        finished = threading.Event()
         def stopper() -> None:
-            deadline = time.monotonic() + 240
-            while time.monotonic() < deadline and not list(self.runs.glob(f"*/fs/backing/{area}/started.txt")):
+            deadline = time.monotonic() + STARTUP_SECONDS
+            while not list(self.runs.glob(f"*/fs/backing/{area}/started.txt")):
+                if finished.is_set() or time.monotonic() > deadline:
+                    return  # Reported by the test thread, where a failure is attributed to the test.
                 time.sleep(0.2)
-            self.assertTrue(list(self.runs.glob(f"*/fs/backing/{area}/started.txt")), "Worker never started")
             if stop:
                 self.cli(*[task if part == "TASK" else part for part in stop])
                 triggered.append(time.time())
@@ -98,10 +108,15 @@ class RuntimeCase(unittest.TestCase):
         thread = threading.Thread(target=stopper)
         with ScriptedProvider([shell(script)]) as provider:
             thread.start()
-            result = self.cli(*self.run_args(task, provider, worker=worker))
-            thread.join()
+            try:
+                result = self.cli(*self.run_args(task, provider, worker=worker))
+            finally:
+                finished.set()
+                thread.join()
+        if not triggered and not stop and time.time() >= self.cli("status", task)["expires"]:
+            raise SlowStartup(f"The task expired before the worker started: {result['outcome']}")
+        self.assertTrue(triggered, "Worker never started")
         # Promptness from the stop trigger, not launch: startup time varies by host.
-        self.assertTrue(triggered, "Stop was never triggered")
         self.assertLess(time.time() - triggered[0], 30, "Worker was not stopped promptly")
         survivors = subprocess.run(["pgrep", "-f", marker], capture_output=True)
         self.assertEqual(survivors.returncode, 1, "A worker descendant survived")
@@ -236,8 +251,18 @@ class LauncherTests(RuntimeCase):
         result, _ = self.stop_during_run(["revoke", "TASK", "worker"])
         self.assertEqual((result["outcome"], result["attempt_state"]), ("authority_lost", "cancelled"))
 
+    def expiring(self, scenario: Callable[[str], T]) -> T:
+        """Run ``scenario`` on a short-lived task, with a longer lifetime if startup outlasted it."""
+        for seconds in EXPIRING_TASK_SECONDS:
+            self.runs = self.base / "operator" / f"runs-{seconds}"  # No earlier attempt's files to match.
+            try:
+                return scenario(self.approved_task(seconds))
+            except SlowStartup:
+                continue
+        self.fail("The worker never started within any test task lifetime")
+
     def test_expiry_stops_descendants_and_prevents_application(self) -> None:
-        result, _ = self.stop_during_run([], seconds=EXPIRING_TASK_SECONDS)
+        result, _ = self.expiring(lambda task: self.stop_during_run([], task=task))
         self.assertEqual(result["outcome"], "authority_lost")
         self.assertEqual(result["attempt_state"], "failed")
 
@@ -251,8 +276,13 @@ class LauncherTests(RuntimeCase):
                                       *self.run_args(task, provider)], cwd=Path(__file__).parents[2],
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
-                deadline = time.monotonic() + 120
+                deadline = time.monotonic() + STARTUP_SECONDS
                 while not list(self.runs.glob("*/fs/backing/src/started.txt")):
+                    if owner.poll() is not None:
+                        ended = f"The run ended before the worker started (exit {owner.returncode})"
+                        if time.time() >= self.cli("status", task)["expires"]:
+                            raise SlowStartup(ended)
+                        self.fail(ended)
                     self.assertLess(time.monotonic(), deadline, "Worker never started")
                     time.sleep(0.2)
             finally:  # Killed here even when the worker never started, so no owner outlives the test.
@@ -296,8 +326,10 @@ class LauncherTests(RuntimeCase):
         self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
 
     def test_recovery_after_expiry_does_not_revive_authority(self) -> None:
-        task = self.approved_task(seconds=EXPIRING_TASK_SECONDS)
-        self.kill_owner_mid_run(task)
+        def killed(task: str) -> str:
+            self.kill_owner_mid_run(task)
+            return task
+        task = self.expiring(killed)
         expires = self.cli("status", task)["expires"]
         time.sleep(max(0.0, expires - time.time() + 1))
         [recovered] = self.cli(*self.recover_args(task))
