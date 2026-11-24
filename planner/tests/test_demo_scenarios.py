@@ -15,8 +15,12 @@ import threading
 import time
 import unittest
 
-from planner.demo_scenarios import SCRIPTED, prepare_demo, inspect_demo, scenario_names
+import planner
+from planner.demo_scenarios import SCRIPTED, prepare_demo, inspect_demo, scenario_names, wait
 from planner.evaluation import BENCHMARK
+from planner.policy import Policy
+from planner.records import Action, Grant
+from planner.supervisor import Supervisor
 
 ROOT = Path(__file__).resolve().parents[2]
 GATE = sys.platform == "linux" and os.environ.get("PLANNER_RUN_DEMO_SCENARIOS") == "1"
@@ -152,8 +156,8 @@ class DemoScenarioTests(DemoScenarioCase):
         self.assertEqual(list(runtime.glob("demo-*")), [])
 
     def test_menu_accepts_multiple_choices_deduplicates_and_reprompts(self):
-        result = self.script(input="99\n2,3 2\n")
-        self.assertIn("Pick numbers from the list, or all.", result.stdout)
+        result = self.script(input="99\n2 all\n2,3 2\n")
+        self.assertEqual(result.stdout.count("Pick numbers from the list, or all on its own."), 2)
         self.assertIn("Selected: normal documentation-injection", result.stdout)
         self.assertIn("runtime is not installed", result.stdout)
         self.assertIn("scripts/install-ubuntu.sh", result.stderr)
@@ -170,6 +174,71 @@ class DemoScenarioTests(DemoScenarioCase):
         result = self.script("normal", "normal", "tool-output-injection", "--yes")
         self.assertIn("Selected: normal tool-output-injection", result.stdout)
         self.assertIn("runtime is not installed", result.stdout)
+
+    def demo_command(self, *args):
+        return subprocess.run([sys.executable, "-m", "planner.demo_scenarios", *args], cwd=ROOT, capture_output=True,
+                              text=True, timeout=60, env={**self.environment, "NO_COLOR": "1"})
+
+    def test_summary_names_the_reason_a_run_was_blocked(self):
+        directory = self.base / "demo-20261124-101500-normal-abcd"
+        prepare_demo("normal", directory, "fixture/model")
+        (directory / "run.json").write_text(json.dumps({
+            "outcome": "blocked", "reason": "FUSE helper is unavailable\x1b[2J",
+            "application": {"state": "not_applied", "reason": "FUSE helper is unavailable"}}))
+        result = self.demo_command("summary", str(directory))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("ERROR: The worker did not finish: blocked FUSE helper is unavailable\\x1b[2J", result.stderr)
+
+    def test_log_separates_worker_actions_from_checks_before_applying(self):
+        directory = self.base / "runtime" / "demo-20261124-101500-greeting-abcd"
+        config = prepare_demo("greeting", directory, "fixture/model")
+        project = Path(config["project"])
+        supervisor = Supervisor(directory / "state.sqlite")
+        try:
+            task = supervisor.propose(Policy.load(project, Path(planner.__file__).parent / "templates/source.toml"))
+            supervisor.approve_task(task)
+            policy = supervisor.policy(task)
+            supervisor.approve_worker(Grant(task, "worker", policy.read, policy.write, policy.tools))
+            supervisor.authorize(Action(task, "worker", "read", "docs/MAINTAINERS.md"))
+            supervisor.authorize(Action(task, "worker", "write", "src/greeting.py"))
+            for _ in range(2):  # The applier validates, then applies.
+                supervisor.authorize(Action(task, "worker", "write", "src/greeting.py", "shell"))
+            # A refusal the mediated filesystem enforced earlier but the runner recorded at teardown.
+            supervisor.record_filesystem_denials(task, "worker", [("read", str(project / ".env"))])
+        finally:
+            supervisor.close()
+        (directory / "task").write_text(task + "\n")
+        (project / "src/greeting.py").write_text('def greet():\n    return "hello"\n')
+        (directory / "run.json").write_text(json.dumps({
+            "outcome": "completed", "cleanup_verified": True,
+            "application": {"state": "applied", "reason": "complete", "changes": [{"path": "src/greeting.py"}]},
+            "requests": [{"operation": "read", "resource": str(project / ".env"), "id": "r1"}]}))
+        result = self.script("log", env={**self.environment, "NO_COLOR": "1"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        decisions = result.stdout[result.stdout.index("File access decisions"):result.stdout.index("\nResult\n")]
+        worker, applying = decisions.split("The worker stopped. Before copying its changes into your project")
+        self.assertRegex(worker, r"allowed  read docs/MAINTAINERS.md\n.*allowed  write src/greeting.py\n"
+                                 r".*BLOCKED  read .env  \(filesystem: Worker operation denied\)")
+        self.assertEqual(applying.count("allowed  write src/greeting.py"), 1)
+        self.assertNotIn("BLOCKED", applying)
+        self.assertIn("  blocked    1 attempt outside the permissions", result.stdout)
+        self.assertIn("Approving a .env read would send that file's contents to the model provider.", result.stdout)
+        self.assertIn("  read .env  (id r1)", result.stdout)
+        self.assertFalse((directory / "inspection.json").exists())  # Viewing a log changes nothing.
+
+    @unittest.skipUnless(os.name == "posix", "Interrupt delivery requires POSIX signals")
+    def test_scripted_run_waits_for_the_planner_after_ctrl_c(self):
+        child = subprocess.Popen([sys.executable, "-c", "import signal, time; "
+                                  "signal.signal(signal.SIGINT, signal.SIG_IGN); time.sleep(1.5); raise SystemExit(3)"])
+        timer = threading.Timer(0.5, os.kill, (os.getpid(), signal.SIGINT))
+        timer.start()
+        try:
+            self.assertEqual(wait(child), 3)  # Not killed: it finished its own shutdown.
+        finally:
+            timer.cancel()
+            if child.poll() is None:
+                child.kill()
+                child.wait()
 
     def test_log_explains_a_run_that_was_never_approved(self):
         home = self.base / "runtime"
@@ -242,14 +311,16 @@ class DemoScenarioTests(DemoScenarioCase):
 
 @unittest.skipUnless(GATE, "Actual Linux connected runtime required for demo script execution")
 class DemoScriptRuntimeTests(DemoScenarioCase):
+    def link_runtime(self):
+        runtime = self.base / "runtime"
+        (runtime / "opencode-2.2.5").mkdir(parents=True)
+        (runtime / "opencode-2.2.5/opencode").symlink_to(Path(os.environ["PLANNER_OPENCODE_BINARY"]))
+        (runtime / "fuse-bridge").symlink_to(Path(os.environ["PLANNER_FUSE_BRIDGE"]))
+        return runtime
+
     @contextmanager
     def provider(self):
-        runtime = self.base / "runtime"
-        runtime.mkdir()
-        binary = Path(os.environ["PLANNER_OPENCODE_BINARY"])
-        (runtime / "opencode-2.2.5").mkdir()
-        (runtime / "opencode-2.2.5/opencode").symlink_to(binary)
-        (runtime / "fuse-bridge").symlink_to(Path(os.environ["PLANNER_FUSE_BRIDGE"]))
+        runtime = self.link_runtime()
         sessions = {}
         bodies = []
 
@@ -366,11 +437,7 @@ class DemoScriptRuntimeTests(DemoScenarioCase):
     def test_scripted_alarm_scenario_needs_no_provider_and_always_alerts(self):
         environment = {name: value for name, value in self.environment.items()
                        if name not in ("SOCLAAS_API_KEY", "PLANNER_PROVIDER_URL", "PLANNER_MODEL", "PLANNER_API_KEY_ENV")}
-        runtime = self.base / "runtime"
-        runtime.mkdir()
-        (runtime / "opencode-2.2.5").mkdir()
-        (runtime / "opencode-2.2.5/opencode").symlink_to(Path(os.environ["PLANNER_OPENCODE_BINARY"]))
-        (runtime / "fuse-bridge").symlink_to(Path(os.environ["PLANNER_FUSE_BRIDGE"]))
+        runtime = self.link_runtime()
         result = self.script("alarm", "--yes", env=environment, timeout=1200)
         self.assertEqual(result.returncode, 0, result.stdout[-5000:] + result.stderr)
         self.assert_cases((SCRIPTED,))
@@ -395,6 +462,38 @@ class DemoScriptRuntimeTests(DemoScenarioCase):
         self.assertIn("allowed  write src/greeting.py", worker)
         self.assertEqual(applying.count("allowed  write src/greeting.py"), 1)
         self.assertIn("console.log  (everything the demo printed)", log.stdout)
+
+    def test_a_failed_scenario_does_not_stop_the_next_one(self):
+        class Refuse(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_POST(self):
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(400)  # Not retried: the model run ends without doing anything.
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+        runtime = self.link_runtime()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Refuse)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        environment = {**self.environment, "PLANNER_PROVIDER_URL": f"http://127.0.0.1:{server.server_port}/v1",
+                       "PLANNER_MODEL": "fixture/model", "PLANNER_API_KEY_ENV": "DEMO_FIXTURE_KEY",
+                       "DEMO_FIXTURE_KEY": "dummy-fixture-credential"}
+        try:
+            result = self.script("normal", "alarm", "--yes", env=environment, timeout=1800)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Did not finish cleanly: normal.", result.stderr)
+        runs = {json.loads(path.read_text())["name"]: path.parent for path in runtime.glob("demo-*/scenario.json")}
+        self.assertEqual(set(runs), {"normal", SCRIPTED})
+        self.assertIn("ERROR:", (runs["normal"] / "console.log").read_text())
+        alarm = json.loads((runs[SCRIPTED] / "run.json").read_text())
+        self.assertEqual((alarm["outcome"], alarm["application"]["state"]), ("completed", "applied"))
 
     def test_interactive_menu_runs_two_selected_cases_with_separate_approvals(self):
         with self.provider() as (environment, _):

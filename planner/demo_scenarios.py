@@ -125,7 +125,20 @@ def scripted_run(arguments: list[str]) -> int:
         command = [sys.executable, "-m", "planner", *arguments, "--model", SCRIPTED_MODEL,
                    "--provider-url", provider.url, "--api-key-env", SCRIPTED_KEY_ENV]
         # A placeholder credential: the loopback provider ignores it.
-        return subprocess.run(command, env={**os.environ, SCRIPTED_KEY_ENV: "scripted-demo"}).returncode
+        return wait(subprocess.Popen(command, env={**os.environ, SCRIPTED_KEY_ENV: "scripted-demo"}))
+
+
+def wait(process: subprocess.Popen[bytes]) -> int:
+    """Wait for the planner, including after Ctrl-C, which reaches it too.
+
+    ``subprocess.run`` would kill it 0.25 seconds after an interrupt, before
+    it has stopped the worker, unmounted the workspace and closed its records.
+    """
+    while True:
+        try:
+            return process.wait()
+        except KeyboardInterrupt:
+            continue
 
 
 def _style(text: str, code: str) -> str:
@@ -139,31 +152,39 @@ def show_policy(proposal: dict[str, Any]) -> str:
     def patterns(key: str) -> str:
         return ", ".join(printable(pattern) for pattern in policy[key]) or "nothing"
 
-    return "\n".join([
-        "Permissions for the worker:",
-        f"  read   {patterns('read')}" + (f"  except {patterns('deny_read')}" if policy["deny_read"] else ""),
-        f"  write  {patterns('write')}" + (f"  except {patterns('deny_write')}" if policy["deny_write"] else ""),
-        f"  tools  {patterns('tools')}"])
+    lines = ["Permissions for the worker, in " + printable(policy["root"]) + ":",
+             f"  read   {patterns('read')}" + (f"  except {patterns('deny_read')}" if policy["deny_read"] else ""),
+             f"  write  {patterns('write')}" + (f"  except {patterns('deny_write')}" if policy["deny_write"] else ""),
+             f"  tools  {patterns('tools')}"]
+    if policy.get("external_inputs"):
+        lines.append(f"  also read outside the project: {patterns('external_inputs')}")
+    return "\n".join(lines)
 
 
-def _records(directory: Path) -> tuple[dict[str, Any], dict[str, Any] | None, list[dict[str, Any]], float | None]:
-    """The scenario, its run result, the supervisor's decisions, and when the worker stopped."""
+def application_check(row: dict[str, Any]) -> bool:
+    """A check the changeset applier made before writing to the project, not a worker action.
+
+    Only the applier records ``shell`` writes during a run: the broker records no
+    decision for shell commands, and the mediated filesystem records ``filesystem``.
+    """
+    return bool(row["tool"] == "shell" and row["operation"] == "write")
+
+
+def _records(directory: Path) -> tuple[dict[str, Any], dict[str, Any] | None, list[dict[str, Any]]]:
+    """The scenario, its run result if the worker ran, and the supervisor's decisions."""
     config = json.loads((directory / "scenario.json").read_text())
     try:
         result = json.loads((directory / "run.json").read_text())
     except (OSError, ValueError):
         result = None  # Not approved, or blocked before a result was written.
     history: list[dict[str, Any]] = []
-    stopped = None
     if (directory / "task").is_file():
         supervisor = Supervisor(directory / "state.sqlite")
         try:
             history = supervisor.history((directory / "task").read_text().strip())
-            if result is not None and result.get("attempt"):
-                stopped = float(supervisor.attempt(result["attempt"])["updated"])  # Unchanged once finished.
         finally:
             supervisor.close()
-    return config, result, history, stopped
+    return config, result, history
 
 
 def _shown(path: str, root: Path) -> str:
@@ -193,21 +214,21 @@ def _diff(directory: Path, config: dict[str, Any], paths: list[str]) -> list[str
 
 
 def _result(directory: Path, config: dict[str, Any], result: dict[str, Any], history: list[dict[str, Any]],
-            diff_lines: int | None) -> tuple[list[str], list[str]]:
+            inspection: dict[str, Any], diff_lines: int | None) -> tuple[list[str], list[str]]:
     """Plain-language result lines, and the problems that make the run a failure."""
-    inspection = inspect_demo(directory)
-    (directory / "inspection.json").write_text(json.dumps(inspection, indent=2) + "\n")
     root = Path(config["project"])
     application = result.get("application", {})
     changes = [str(change["path"]) for change in application.get("changes", [])]
     refused = [row for row in history if not row["allowed"] and not companion(row)]
     problems = []
     if result.get("outcome") != "completed":
-        problems.append(f"The worker did not finish: {result.get('outcome')} {printable(result.get('error') or '')}".rstrip())
+        cause = printable(str(result.get("error") or result.get("reason") or ""))
+        problems.append(f"The worker did not finish: {printable(str(result.get('outcome')))} {cause}".rstrip())
     elif not result.get("cleanup_verified"):
         problems.append("The worker's processes could not be verified as stopped.")
     elif application.get("state") != "applied":
-        problems.append(f"Changes were not applied: {application.get('state')} ({application.get('reason')}).")
+        problems.append(f"Changes were not applied: {printable(str(application.get('state')))} "
+                        f"({printable(str(application.get('reason')))}).")
     elif not changes and not refused:
         problems.append("The model made no changes and tried nothing; check the provider and model settings.")
     if inspection["protected_paths_changed"]:
@@ -233,11 +254,13 @@ def _result(directory: Path, config: dict[str, Any], result: dict[str, Any], his
 
 def summary(directory: Path) -> int:
     """Print the result of one demo run; non-zero when it did not succeed cleanly."""
-    config, result, history, _ = _records(directory)
+    config, result, history = _records(directory)
     if result is None:
         print("ERROR: The worker did not run; the reason is shown above.", file=sys.stderr)
         return 1
-    lines, problems = _result(directory, config, result, history, DIFF_LINES)
+    inspection = inspect_demo(directory)
+    (directory / "inspection.json").write_text(json.dumps(inspection, indent=2) + "\n")
+    lines, problems = _result(directory, config, result, history, inspection, DIFF_LINES)
     print(_style("Result", "1"))
     print("\n".join(lines))
     for problem in problems:
@@ -256,7 +279,7 @@ def latest(home: Path, name: str | None) -> Path:
             continue
     if not runs:
         raise SystemExit("No demo runs found" + (f" for {name}" if name else "") + ". Run scripts/demo.sh first.")
-    return max(runs, key=lambda run: run.name.split("-")[1:3])  # demo-YYYYMMDD-HHMMSS-...
+    return max(runs, key=lambda run: (run / "scenario.json").stat().st_mtime_ns)  # Written once, at creation.
 
 
 def _decision(row: dict[str, Any], root: Path) -> str:
@@ -269,7 +292,7 @@ def _decision(row: dict[str, Any], root: Path) -> str:
 
 def show_log(directory: Path) -> None:
     """Everything worth knowing about one run, from its saved files."""
-    config, result, history, stopped = _records(directory)
+    config, result, history = _records(directory)
     root = Path(config["project"])
     print(_style(config["name"], "1") + " - " + config["description"])
     print("Files: " + str(directory))
@@ -279,10 +302,10 @@ def show_log(directory: Path) -> None:
     print()
     print(_style("File access decisions recorded by the supervisor", "1"))
     rows = [row for row in history if not companion(row)]
-    worker = [row for row in rows if stopped is None or row["created"] <= stopped]
+    worker = [row for row in rows if not application_check(row)]
     # The applier checks each change twice (validate, then apply); one line says the same.
     applying = list({(row["operation"], row["resource"], row["allowed"]): row
-                     for row in rows if row not in worker}.values())
+                     for row in rows if application_check(row)}.values())
     for row in worker:
         print(_decision(row, root))
     if not worker:
@@ -296,8 +319,17 @@ def show_log(directory: Path) -> None:
     if result is None:
         print("  The worker did not run: the permissions were not approved, or the run was blocked before it started.")
     else:
-        lines, problems = _result(directory, config, result, history, None)
+        lines, problems = _result(directory, config, result, history, inspect_demo(directory), None)
         print("\n".join(lines + ["  problem: " + problem for problem in problems]))
+        requests = result.get("requests", [])
+        if requests:
+            print()
+            print(_style("Access requests", "1"))
+            print("  Each blocked attempt became a request that stays inactive unless you approve it.")
+            print("  Approving a .env read would send that file's contents to the model provider.")
+            for request in requests:
+                print(f"  {printable(str(request['operation']))} {_shown(str(request['resource']), root)}"
+                      f"  (id {printable(str(request['id']))})")
     print()
     print(_style("Saved files", "1"))
     for name, meaning in (("console.log", "everything the demo printed"),

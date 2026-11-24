@@ -151,7 +151,7 @@ class LauncherTests(RuntimeCase):
         lines: list[tuple[float, str]] = []
         with ScriptedProvider([shell(script)]) as provider:
             process = subprocess.Popen([sys.executable, "-m", "planner", "--json", "--state", str(self.state),
-                                        *self.run_args(task, provider, "--alert")],
+                                        *self.run_args(task, provider, "--alert", "--run-seconds", "120")],
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                        env={**os.environ, "NO_COLOR": "1"}, cwd=Path(__file__).parents[2])
             def read_alerts() -> None:

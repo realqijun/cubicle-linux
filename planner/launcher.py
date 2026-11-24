@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import sqlite3
 import stat
 import subprocess
 import threading
@@ -335,9 +336,10 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
     cleanup; ``mode='review'`` retains them for ``apply_retained``.
 
     ``on_denial`` receives each refusal recorded for this worker during the
-    attempt, while it runs. It is a display hook: every refusal has already
-    been enforced and recorded before it is called. It must not raise; an
-    exception while the worker runs stops the attempt like any runtime error.
+    attempt, while it runs and once more after every record is complete. It is
+    a display hook: every refusal has already been enforced and recorded before
+    it is called. It must not raise; an exception while the worker runs stops
+    the attempt like any runtime error, and one afterwards is ignored.
     """
     from .native.confined_opencode import ConfinedOpenCode, runtime_status
     from .native.mediatedfs import INPUTS, MediatedWorkspace
@@ -402,7 +404,11 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
             """Pass refusals recorded since the last poll to ``on_denial``."""
             if on_denial is None:
                 return
-            for row in supervisor.history(task, after=holder["announced"]):
+            try:
+                rows = supervisor.history(task, after=holder["announced"])
+            except sqlite3.Error:
+                return  # A busy database only delays the display to the next poll.
+            for row in rows:
                 holder["announced"] = row["id"]
                 if not row["allowed"] and row["worker"] == worker:
                     on_denial(row)
@@ -551,7 +557,10 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         if application["state"] != "retained" and unmounted:
             _purge(run)
         if "announced" in holder:
-            announce()  # Refusals drained after the last poll; every record is already complete.
+            try:
+                announce()  # Refusals drained after the last poll; every record is already complete.
+            except Exception:
+                pass  # Display only: the outcome above is already recorded and must still be returned.
         return {**result, "application": application}
     finally:
         supervisor.close()
