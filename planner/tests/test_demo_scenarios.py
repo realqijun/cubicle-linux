@@ -228,17 +228,27 @@ class DemoScenarioTests(DemoScenarioCase):
 
     @unittest.skipUnless(os.name == "posix", "Interrupt delivery requires POSIX signals")
     def test_scripted_run_waits_for_the_planner_after_ctrl_c(self):
-        child = subprocess.Popen([sys.executable, "-c", "import signal, time; "
-                                  "signal.signal(signal.SIGINT, signal.SIG_IGN); time.sleep(1.5); raise SystemExit(3)"])
-        timer = threading.Timer(0.5, os.kill, (os.getpid(), signal.SIGINT))
-        timer.start()
+        # The interrupt goes to a separate waiter process, never to this test runner.
+        planner = ("import signal, time; signal.signal(signal.SIGINT, signal.SIG_IGN); "
+                   "time.sleep(3); raise SystemExit(3)")
+        waiter = subprocess.Popen(
+            [sys.executable, "-c", "import subprocess, sys\n"
+             "from planner.demo_scenarios import wait\n"
+             f"process = subprocess.Popen([sys.executable, '-c', {planner!r}])\n"
+             "print('ready', flush=True)\n"
+             "sys.exit(wait(process))\n"],
+            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
-            self.assertEqual(wait(child), 3)  # Not killed: it finished its own shutdown.
+            self.assertEqual(waiter.stdout.readline().strip(), "ready")
+            time.sleep(0.5)  # Let the waiter reach wait(); its planner runs for 3 seconds.
+            waiter.send_signal(signal.SIGINT)
+            _, stderr = waiter.communicate(timeout=30)
         finally:
-            timer.cancel()
-            if child.poll() is None:
-                child.kill()
-                child.wait()
+            if waiter.poll() is None:
+                waiter.kill()
+                waiter.communicate()
+        self.assertEqual(waiter.returncode, 3, stderr)  # The planner finished its own shutdown.
+        self.assertIn("Still waiting for the planner to stop the worker and clean up", stderr)
 
     def test_log_explains_a_run_that_was_never_approved(self):
         home = self.base / "runtime"

@@ -138,7 +138,7 @@ def wait(process: subprocess.Popen[bytes]) -> int:
         try:
             return process.wait()
         except KeyboardInterrupt:
-            continue
+            print("Still waiting for the planner to stop the worker and clean up...", file=sys.stderr)
 
 
 def _style(text: str, code: str) -> str:
@@ -164,7 +164,7 @@ def show_policy(proposal: dict[str, Any]) -> str:
 def application_check(row: dict[str, Any]) -> bool:
     """A check the changeset applier made before writing to the project, not a worker action.
 
-    Only the applier records ``shell`` writes during a run: the broker records no
+    In a demo run only the applier records ``shell`` writes: the broker records no
     decision for shell commands, and the mediated filesystem records ``filesystem``.
     """
     return bool(row["tool"] == "shell" and row["operation"] == "write")
