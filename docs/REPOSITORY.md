@@ -7,7 +7,7 @@ No import or symlink depends on the source workspace's parent directory.
 
 The repository has its own `.git` directory and `main` branch. It is not a Git
 submodule or worktree and uses no shared object store. Its GitHub remote is
-[realqijun/agent_authorizer](https://github.com/realqijun/agent_authorizer).
+[realqijun/cubicle-linux](https://github.com/realqijun/cubicle-linux).
 The original source workspace ignores this directory instead of tracking a second copy.
 
 ## Why `planner/planner`?
@@ -23,6 +23,7 @@ planner/               Git repository root
   docs/                Guides and architecture
   evidence/            Sanitized recorded outcomes and source hashes
   artifact/            Pinned evaluation inputs
+  scripts/             Ubuntu install and guided demo
   planner/             Python package
     __main__.py        Control-plane CLI
     native/            Ubuntu runner and platform diagnostics
@@ -58,8 +59,9 @@ suite. See the [fixture README](../artifact/README.md).
 
 ## Validation records
 
-The Ubuntu offline mode has [recorded acceptance](LINUX_SANDBOX.md); the full
-model-connected launcher and live-project backend remain gated. See
+The Ubuntu [offline sandbox](LINUX_SANDBOX.md) and the model-connected
+[runtime](CONNECTED_RUNTIME.md) have recorded acceptance on Ubuntu 24.04.3
+x86-64; the generic live-project backend remains gated. See
 [known limitations](KNOWN_LIMITATIONS.md). Historical evidence is preserved with
 its original source hashes and commit references, rather than rewritten to
 describe newer code. Repository extraction does not strengthen security claims.

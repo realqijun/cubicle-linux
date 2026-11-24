@@ -132,7 +132,9 @@ attempt. The real-runtime tests are `test_launcher`, `test_confined_opencode`,
 and child processes, directory operations, conflicts, review mode, replay,
 cancellation, revocation, expiry, owner death and recovery, single-use and
 sensitive exceptions, external inputs, delegation, repository configuration
-isolation and a real LaaS run.
+isolation, live alerts and a real LaaS run. `test_demo_scenarios` also runs
+`scripts/demo.sh` on the real runtime when `PLANNER_RUN_DEMO_SCENARIOS=1` is set;
+its results are in the [demo evidence](../evidence/demo-scenarios.json).
 
 ## Limits
 
