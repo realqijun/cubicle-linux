@@ -22,7 +22,7 @@ SIGN = ("    /\\",
         "  / !! \\    The worker tried an operation outside its approved permissions.",
         " /______\\   The supervisor refused it before it took effect.")
 # Only what a desktop sound or notification client needs; never provider credentials.
-_SESSION_VARIABLES = ("PATH", "HOME", "LANG", "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
+_SESSION_VARIABLES = ("PATH", "HOME", "LANG", "DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY", "XDG_RUNTIME_DIR",
                       "DBUS_SESSION_BUS_ADDRESS", "PULSE_SERVER")
 
 

@@ -77,9 +77,11 @@ if ((${#selected[@]} == 0)); then
         fi
       done
       valid=1
-      for choice in "${selected[@]}"; do [[ "$choice" == all ]] || known "$choice" || valid=0; done
+      for choice in "${selected[@]}"; do
+        if [[ "$choice" == all ]]; then ((${#selected[@]} == 1)) || valid=0; else known "$choice" || valid=0; fi
+      done
       ((valid)) && break
-      echo "Pick numbers from the list, or all."
+      echo "Pick numbers from the list, or all on its own."
     done
   fi
 fi
@@ -99,21 +101,21 @@ echo "Selected: ${selected[*]}"
 
 if [[ ! -x "$opencode" || ! -x "$helper" ]]; then
   echo "The demo runtime is not installed in $planner_home."
+  echo "scripts/install-ubuntu.sh installs system packages and may add a machine-wide AppArmor"
+  echo "profile that lets any local user run Bubblewrap; see docs/QUICKSTART.md before agreeing."
   answer=n
-  ((yes)) || read -rp "Install it now with scripts/install-ubuntu.sh? It asks for your sudo password. [y/N] " answer || answer=n
+  ((yes)) || read -rp "Run it now? It asks for your sudo password. [y/N] " answer || answer=n
   [[ "$answer" == [yY]* ]] || fail "Install it with scripts/install-ubuntu.sh, then run the demo again."
   scripts/install-ubuntu.sh
 fi
 needs_model=0
+prompted_key=
 for scenario in "${selected[@]}"; do [[ "$scenario" == alarm ]] || needs_model=1; done
 if ((needs_model)); then  # The scripted alarm scenario uses no model provider or key.
   [[ "$key_env" =~ ^[A-Z][A-Z0-9_]*$ ]] || fail "PLANNER_API_KEY_ENV must be an upper-case variable name."
   if [[ -z "${!key_env:-}" ]]; then
-    key=
-    if ((!yes)) && read -rsp "Paste your API key for $provider (it is not shown): " key; then echo; fi
-    [[ -n "$key" ]] || fail "No API key. Set it first: read -rs $key_env && export $key_env"
-    export "$key_env=$key"
-    unset key
+    if ((!yes)) && read -rsp "Paste your API key for $provider (it is not shown): " prompted_key; then echo; fi
+    [[ -n "$prompted_key" ]] || fail "No API key. Set it first: read -rs $key_env && export $key_env"
   fi
 fi
 python3 - "$opencode" "$helper" "$model" "$provider" "$key_env" "$needs_model" <<'EOF' ||
@@ -158,8 +160,10 @@ run_demo() {
     fixtures scripted-run -- "${run[@]}" > "$demo/run.json" || true
   else
     echo "Running the worker with $model. This usually takes a few minutes..."
-    python3 -m planner "${run[@]}" --model "$model" --provider-url "$provider" --api-key-env "$key_env" \
-      > "$demo/run.json" || true
+    # Exported in this subshell only; never put on a command line.
+    ( [[ -z "$prompted_key" ]] || export "$key_env=$prompted_key"
+      exec python3 -m planner "${run[@]}" --model "$model" --provider-url "$provider" --api-key-env "$key_env"
+    ) > "$demo/run.json" || true
   fi
   cli export "$task" > "$demo/audit.json"
   cli report "$task" "$demo/report.html" > /dev/null
@@ -171,10 +175,17 @@ run_demo() {
 
 mkdir -p "$planner_home"
 index=0
+failed=()
 for scenario in "${selected[@]}"; do
   index=$((index + 1))
   position=""
   ((${#selected[@]} == 1)) || position=" ($index of ${#selected[@]})"
   demo=$(mktemp -d "$planner_home/demo-$(date +%Y%m%d-%H%M%S)-$scenario-XXXX")
-  run_demo "$scenario" "$demo" "$position" 2>&1 | tee "$demo/console.log"
+  # Not "run_demo ... || ...": that would disable errexit inside run_demo.
+  set +e
+  (set -e; run_demo "$scenario" "$demo" "$position") 2>&1 | tee "$demo/console.log"
+  status=${PIPESTATUS[0]}
+  set -e
+  ((status == 0)) || failed+=("$scenario")
 done
+((${#failed[@]} == 0)) || fail "Did not finish cleanly: ${failed[*]}. See: scripts/demo.sh log NAME"
