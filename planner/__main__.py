@@ -9,6 +9,7 @@ import sqlite3
 import sys
 from typing import Any, Sequence, cast
 
+from .enforcement import ProtectionUnavailable
 from .policy import Policy
 from .records import Action, Grant, Operation
 from .supervisor import Supervisor
@@ -295,7 +296,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2 if isinstance(result, dict) and result.get("ready") is False else 0
     except (ValueError, KeyError, OSError, RuntimeError, sqlite3.Error) as error:
         result = {"blocked": True, "reason": str(error)}
-        print(json.dumps(result) if args.json else f"BLOCKED: {error}", file=sys.stderr)
+        # A runtime refusal already says BLOCKED; the JSON reason keeps it as recorded.
+        shown = str(error) if isinstance(error, ProtectionUnavailable) else f"BLOCKED: {error}"
+        print(json.dumps(result) if args.json else shown, file=sys.stderr)
         return 2
     finally:
         if supervisor is not None:

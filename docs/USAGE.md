@@ -126,7 +126,8 @@ A worker that repeats the same refused operation `--denial-limit` times in a row
 `resume TASK WORKER --opencode PATH --fuse-helper PATH` reactivates it after the same connected-runtime check that `run` performs.
 It restores the unchanged grant only, starts no process and records a `resume` entry in `history TASK`.
 The worker then starts a new sequence of permitted retries.
-An unavailable runtime, a revoked worker, a cancelled or expired task, a changed policy revision or an unreconciled attempt keeps the worker suspended.
+An unavailable runtime, an expired task or an unreconciled attempt keeps the worker suspended.
+A revoked worker stays revoked, and cancelling the task or revising its policy revokes every worker, so `resume` refuses them.
 After `reconcile`, an interrupted attempt also needs `--cleanup-verified`, which belongs to the trusted operator.
 Revoked or expired grants and old approvals cannot be revived by recovery.
 `preflight TASK WORKER --opencode PATH --fuse-helper PATH` reports the runtime check for an active worker and returns exit 2 while protection is unavailable.

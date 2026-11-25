@@ -127,6 +127,21 @@ class ResumeTests(unittest.TestCase):
                 self.assertEqual(self.state_of(), "suspended")
         self.assertEqual([row["operation"] for row in self.cli("history", self.task)[1]], ["read"] * 3)
 
+    def test_plain_output_says_blocked_once(self) -> None:
+        self.deny()
+        self.statuses = (ProtectionStatus(False, "linux-connected", "Connected runtime requires Linux"),
+                         ProtectionStatus(False, "opencode-confined", "Runtime unavailable"))
+        for args, line in ((("resume", self.task, "worker", *self.runtime),
+                            "BLOCKED: linux-connected: Connected runtime requires Linux"),
+                           (("worker", self.task, "missing"), "BLOCKED: Unknown worker")):
+            with self.subTest(args=args):
+                stderr = io.StringIO()
+                with patch("planner.native.confined_opencode.runtime_status", lambda *paths: self.statuses), \
+                        redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+                    code = main(["--state", str(self.state), *args])
+                self.assertEqual((code, stderr.getvalue()), (2, line + "\n"))
+        self.assertEqual(self.refused(), "BLOCKED: linux-connected: Connected runtime requires Linux")  # JSON as before.
+
     def test_resume_never_revives_revoked_cancelled_or_superseded_authority(self) -> None:
         self.deny()
         self.cli("revoke", self.task, "worker")
