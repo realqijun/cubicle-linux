@@ -145,6 +145,8 @@ isolation, live alerts and a real LaaS run. `test_demo_scenarios` also runs
 `scripts/demo.sh` on the real runtime when `PLANNER_RUN_DEMO_SCENARIOS=1` is set
 with the same two path variables; its results are in the
 [demo evidence](../evidence/demo-scenarios.json).
+`test_guided` runs `scripts/run.sh` on the real runtime with a scripted model
+when `PLANNER_RUN_GUIDED=1` is set with the same two path variables.
 
 ## Limits
 

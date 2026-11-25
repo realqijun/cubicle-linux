@@ -30,6 +30,10 @@ Two scripts install the runtime and run a guided demo. Its `alarm` scenario
 needs no model or API key and shows the live warning for a refused operation;
 `scripts/demo.sh log` shows what happened in the latest run.
 
+**Your own project:** `scripts/run.sh ~/code/myapp "Fix the failing test"` asks
+you to approve the worker's permissions, runs it, and then asks about each
+blocked request; `scripts/run.sh log` shows what happened.
+
 The control-plane commands below need only Python 3.11+. Run commands from this
 repository root. Keep the trusted state database outside the target project and
 outside worker access.

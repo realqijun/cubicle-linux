@@ -1,5 +1,9 @@
 # Policies and terminal use
 
+The easy path is `scripts/run.sh PROJECT "TASK"`.
+It proposes the permissions, asks you to approve them, runs the worker, and asks about each access request; see [the quick start](QUICKSTART.md#4-run-it-on-your-own-project).
+The commands below are what it runs, for when you need finer control.
+
 Run commands from the repository root with Python 3.11+. The trusted operator
 CLI creates and inspects control-plane records and, on the accepted Ubuntu
 runtime, launches confined workers with `run`. See the

@@ -101,9 +101,53 @@ scripts/demo.sh list           # list the scenarios
 Runs are saved under `~/.local/share/planner/demo-*`.
 Delete them with `rm -rf ~/.local/share/planner/demo-*`.
 
-## 4. Use it on your own project
+## 4. Run it on your own project
 
-See [the connected runtime guide](CONNECTED_RUNTIME.md). The installed paths are:
+```sh
+scripts/run.sh ~/code/myapp "Fix the failing test in tests/test_parser.py"
+```
+
+Commit your work first: unless you pass `--review`, approved changes are written straight into the project.
+
+The script walks you through one task:
+
+1. It asks for your API key if it is not set, as the demo does.
+2. It shows the worker's permissions from the built-in `source` template and asks `Approve? [y/N]`.
+   Declining cancels the task and changes nothing.
+3. The worker runs on a private copy of the project, and each blocked attempt prints a `BLOCKED` line.
+   Ctrl-C stops the run; wait while the planner stops the worker.
+   Afterwards you see what changed, how many attempts were blocked, and the diff.
+4. Each blocked attempt becomes an access request, and the script asks about each one.
+   An approved request lets the worker do exactly that once, in the next run; the others are refused.
+   Approving a read of a protected file such as `.env` sends its contents to the model provider, so you must also type `yes`.
+5. If you approved any, it offers to run again.
+   Each run starts a fresh worker that does not remember the previous one.
+6. If the worker keeps repeating the same blocked operation, the supervisor suspends it.
+   The script says so and offers to resume it and run again.
+
+Options:
+
+```sh
+scripts/run.sh PROJECT "TASK" --plan     # the model proposes narrower permissions instead of the template
+scripts/run.sh PROJECT "TASK" --review   # hold the changes and ask before applying them
+scripts/run.sh PROJECT "TASK" --yes      # approve the permissions without asking
+```
+
+`--yes` never approves access requests, sensitive reads, held changes or a resume; those are always asked.
+
+To see what happened, including every file access the supervisor allowed or blocked and the full diff:
+
+```sh
+scripts/run.sh log ~/code/myapp    # the latest run on this project
+scripts/run.sh log                 # the latest run on any project
+```
+
+Records stay outside your project, in `~/.local/share/planner/projects/NAME-ID/`.
+Each run keeps its console output, `report.html`, `audit.json` and copies of the files the worker could change, for the diff.
+The script refuses a project folder that contains these records, such as your home folder.
+
+The individual commands it runs are in [the connected runtime guide](CONNECTED_RUNTIME.md).
+The installed paths are:
 
 ```sh
 --opencode ~/.local/share/planner/opencode-2.2.5/opencode
