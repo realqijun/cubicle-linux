@@ -5,7 +5,7 @@ demo. Only the model's decisions are scripted: the confined worker, mediation,
 supervisor decisions and application are the real ones.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import threading
@@ -15,11 +15,13 @@ from typing import Any
 class ScriptedProvider:
     """OpenAI-compatible SSE server: issues ``steps`` as tool calls, then stops.
 
+    A ``None`` step answers with the final text instead, which ends that run;
+    the steps after it serve the next run against the same provider.
     ``on_request(index, body)`` runs before each response so tests can change
     host state at an exact point of the conversation.
     """
 
-    def __init__(self, steps: list[tuple[str, dict[str, Any]]], *,
+    def __init__(self, steps: Sequence[tuple[str, dict[str, Any]] | None], *,
                  on_request: Callable[[int, dict[str, Any]], None] | None = None,
                  final: str = "FIXTURE_DONE") -> None:
         self.steps, self.on_request = list(steps), on_request
