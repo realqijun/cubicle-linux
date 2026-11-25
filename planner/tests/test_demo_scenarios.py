@@ -19,7 +19,7 @@ import planner
 from planner.demo_scenarios import SCRIPTED, prepare_demo, inspect_demo, scenario_names, wait
 from planner.evaluation import BENCHMARK
 from planner.policy import Policy
-from planner.records import Action, Grant
+from planner.records import Action, Grant, ProtectionStatus
 from planner.supervisor import Supervisor
 from planner.tests.runtime_fixtures import press_ctrl_c
 
@@ -226,6 +226,30 @@ class DemoScenarioTests(DemoScenarioCase):
         self.assertIn("Approving a .env read would send that file's contents to the model provider.", result.stdout)
         self.assertIn("  read .env  (id r1)", result.stdout)
         self.assertFalse((directory / "inspection.json").exists())  # Viewing a log changes nothing.
+
+    def test_log_shows_a_resume_as_your_action_not_a_file_access(self):
+        directory = self.base / "runtime" / "demo-20261124-101500-greeting-abcd"
+        config = prepare_demo("greeting", directory, "fixture/model")
+        project = Path(config["project"])
+        verified = ProtectionStatus(True, "fixture-only", "Not OS evidence", verified=True)
+        supervisor = Supervisor(directory / "state.sqlite")
+        try:
+            task = supervisor.propose(Policy.load(project, Path(planner.__file__).parent / "templates/source.toml"))
+            supervisor.approve_task(task)
+            policy = supervisor.policy(task)
+            supervisor.approve_worker(Grant(task, "worker", policy.read, policy.write, policy.tools))
+            for _ in range(3):  # Identical refusals suspend the worker.
+                supervisor.authorize(Action(task, "worker", "read", ".env"))
+            supervisor.resume(task, "worker", verified, verified)
+        finally:
+            supervisor.close()
+        (directory / "task").write_text(task + "\n")
+        result = self.script("log", env={**self.environment, "NO_COLOR": "1"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        decisions = result.stdout[result.stdout.index("File access decisions"):result.stdout.index("\nYour actions\n")]
+        self.assertEqual(decisions.count("BLOCKED  read .env"), 3)
+        self.assertNotIn("resume", decisions)
+        self.assertRegex(result.stdout, r"\nYour actions\n  \d\d:\d\d:\d\d  you resumed the worker\n\nResult\n")
 
     @unittest.skipUnless(os.name == "posix", "Interrupt delivery requires POSIX signals")
     def test_scripted_run_waits_for_the_planner_after_ctrl_c(self):

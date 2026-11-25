@@ -9,7 +9,7 @@ import unittest
 from planner.provenance import Provenance
 from planner.report import generate
 from planner.policy import Policy
-from planner.records import Grant, ProtectionStatus
+from planner.records import Action, Grant, ProtectionStatus
 from planner.supervisor import Supervisor
 from planner.context import ModelContext
 
@@ -249,6 +249,35 @@ class ReportTests(unittest.TestCase):
             data = json.loads(embedded.group(1))
             self.assertIn({"source": "worker:task-1:worker-1", "target": "decision:task-1:1",
                            "kind": "authorization"}, data["edges"])
+
+    def test_resume_is_an_operator_action_not_a_file_access_decision(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "project"
+            project.mkdir()
+            supervisor = Supervisor(root / "control.sqlite")
+            self.addCleanup(supervisor.close)
+            task = supervisor.propose(Policy(project, read=("**",), deny_read=(".env",)))
+            supervisor.approve_task(task)
+            supervisor.approve_worker(Grant(task, "worker", read=("**",)))
+            for _ in range(3):  # Identical refusals suspend the worker.
+                supervisor.authorize(Action(task, "worker", "read", ".env"))
+            fixture = ProtectionStatus(True, "fixture-only", "Not OS evidence", verified=True)
+            supervisor.resume(task, "worker", fixture, fixture)
+            data = supervisor.export(task)
+            output = root / "report.html"
+            generate(data, output)
+            embedded = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', output.read_text(), re.S)
+            rendered = json.loads(embedded.group(1))
+            resume = data["decisions"][-1]
+            node = next(node for node in rendered["nodes"] if node["id"] == f"decision:{task}:{resume['id']}")
+            self.assertEqual((node["kind"], node["label"], node["status"]),
+                             ("operator", "Resume worker", "operator action; runtime verified"))
+            self.assertEqual(node["details"]["reason"], resume["reason"])  # The recorded row, unchanged.
+            self.assertEqual([edge for edge in rendered["edges"] if edge["target"] == node["id"]],
+                             [{"source": f"worker:{task}:worker", "target": node["id"], "kind": "lifecycle"}])
+            decisions = [node for node in rendered["nodes"] if node["kind"] == "decision"]
+            self.assertEqual([node["status"] for node in decisions], ["denied"] * 3)
 
     def test_mismatched_and_legacy_decision_revisions_do_not_invent_grant_edges(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

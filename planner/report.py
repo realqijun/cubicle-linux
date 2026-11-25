@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .policy import covered
+from .records import operator_action
 
 
 def _policy_metadata(policy: dict[str, Any]) -> dict[str, Any]:
@@ -205,6 +206,17 @@ def generate(data: dict[str, Any], output: Path) -> None:
         details = {key: decision[key] for key in ("id", "task", "worker", "operation", "resource", "tool",
                    "allowed", "reason", "approval", "created", "grant_revision") if key in decision}
         node_id = f"decision:{decision['task']}:{decision['id']}"
+        if operator_action(decision):  # Recorded beside the decisions, but not a file access.
+            nodes.append({"id": node_id, "task": str(decision["task"]), "worker": str(decision["worker"]),
+                          "kind": "operator", "label": f"Resume {decision['worker']}",
+                          "status": "operator action; runtime verified", "time": decision.get("created"),
+                          "details": details})
+            if (str(decision["task"]), str(decision["worker"])) in workers:
+                edges.append({"source": f"worker:{decision['task']}:{decision['worker']}", "target": node_id,
+                              "kind": "lifecycle"})
+            else:
+                missing.append(f"Operator action {node_id} names no recorded worker")
+            continue
         nodes.append({"id": node_id, "task": str(decision["task"]), "worker": str(decision["worker"]),
                       "kind": "decision", "label": f"{decision['operation']} {decision['resource']}",
                       "status": "allowed; effect unverified" if decision["allowed"] else "denied",

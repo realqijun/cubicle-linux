@@ -14,7 +14,7 @@ from artifact.scripts.prepare import snapshot
 
 from .alerts import companion, printable
 from .connector import PINNED_VERSION
-from .display import STOPPED, decision_lines, diff_lines, show_policy, shown, style, wait
+from .display import STOPPED, decision_lines, diff_lines, operator_lines, show_policy, shown, style, wait
 from .evaluation import BENCHMARK, prepare_run
 from .policy import Policy
 from .scripted_provider import ScriptedProvider
@@ -229,6 +229,11 @@ def show_log(directory: Path) -> None:
     print()
     print(style("File access decisions recorded by the supervisor", "1"))
     print("\n".join(decision_lines(history, root)))
+    actions = operator_lines(history)
+    if actions:
+        print()
+        print(style("Your actions", "1"))
+        print("\n".join(actions))
     print()
     print(style("Result", "1"))
     if result is None:

@@ -14,6 +14,7 @@ import sys
 from typing import Any
 
 from .alerts import companion, describe, printable
+from .records import operator_action
 
 # The planner records a run stopped with Ctrl-C as outcome "stopped" and applies none of its edits.
 STOPPED = "  stopped    you pressed Ctrl-C, so nothing from this run was applied"
@@ -67,8 +68,12 @@ def shown(path: str, root: Path) -> str:
     return printable(candidate.relative_to(root).as_posix() if candidate.is_relative_to(root) else path)
 
 
+def _clock(row: dict[str, Any]) -> str:
+    return datetime.fromtimestamp(row["created"]).strftime("%H:%M:%S")
+
+
 def decision_line(row: dict[str, Any], root: Path) -> str:
-    at = datetime.fromtimestamp(row["created"]).strftime("%H:%M:%S")
+    at = _clock(row)
     attempted, reason = describe(row, root)
     if row["allowed"]:
         return f"  {at}  allowed  {attempted}"
@@ -77,7 +82,7 @@ def decision_line(row: dict[str, Any], root: Path) -> str:
 
 def decision_lines(history: list[dict[str, Any]], root: Path) -> list[str]:
     """The worker's file accesses, then the applier's checks, one line each."""
-    rows = [row for row in history if not companion(row)]
+    rows = [row for row in history if not companion(row) and not operator_action(row)]
     worker = [row for row in rows if not application_check(row)]
     # The applier checks each change twice (validate, then apply); one line says the same.
     applying = list({(row["operation"], row["resource"], row["allowed"]): row
@@ -87,6 +92,11 @@ def decision_lines(history: list[dict[str, Any]], root: Path) -> list[str]:
         lines.append("  The worker stopped. Before copying its changes into your project, the supervisor checked again:")
         lines += [decision_line(row, root) for row in applying]
     return lines
+
+
+def operator_lines(history: list[dict[str, Any]]) -> list[str]:
+    """What the operator did, one line each; the supervisor records it beside the file accesses."""
+    return [f"  {_clock(row)}  you resumed the worker" for row in history if operator_action(row)]
 
 
 def diff_lines(before: Path, after: Path, paths: list[str]) -> list[str]:
