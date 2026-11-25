@@ -97,6 +97,14 @@ $p applications TASK
   the worker PID namespace and the mount are gone before reconciling. It never
   replays an edit and never revives expired or revoked authority.
   `--operator-confirms-cleanup` records your attestation when evidence is missing.
+- A worker that repeats the same refused operation `--denial-limit` times in a
+  row (default 3) is stopped and suspended, and `run` refuses it.
+  After reviewing why, `resume TASK worker --opencode PATH --fuse-helper PATH`
+  repeats the runtime check that `run` performs and reactivates the unchanged
+  grant; the next `run` is a new attempt.
+  Resume never revives revoked, expired or superseded authority, and an
+  unreconciled attempt blocks it.
+  `preflight` takes the same two paths and reports the check for an active worker.
 
 ## Single-use approvals
 
@@ -130,7 +138,8 @@ attempt. The real-runtime tests are `test_launcher`, `test_confined_opencode`,
 `PLANNER_RUN_LINUX_PROBES=1`, `PLANNER_OPENCODE_BINARY` and
 `PLANNER_FUSE_BRIDGE`. They cover permitted and denied reads and writes by tools
 and child processes, directory operations, conflicts, review mode, replay,
-cancellation, revocation, expiry, owner death and recovery, single-use and
+cancellation, revocation, expiry, owner death and recovery, suspension after
+repeated denials and resume, single-use and
 sensitive exceptions, external inputs, delegation, repository configuration
 isolation, live alerts and a real LaaS run. `test_demo_scenarios` also runs
 `scripts/demo.sh` on the real runtime when `PLANNER_RUN_DEMO_SCENARIOS=1` is set

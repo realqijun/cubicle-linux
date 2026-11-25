@@ -24,8 +24,8 @@ The final [recorded contract](../evidence/linux-private-workspace.json) passes
   polling interval plus scheduling delay. The Python API's optional authority
   callback is the trusted caller's responsibility.
 - This runner does not populate durable execution-attempt records, mediate model
-  inputs or provide network access to a provider. It does not make live-project
-  preflight succeed.
+  inputs or provide network access to a provider. It does not open the
+  live-project `Backend` gate.
 
 Repeat its contract tests after kernel, AppArmor, Bubblewrap or relevant code
 changes. See [the runner guide](LINUX_SANDBOX.md) for exact setup and restrictions.

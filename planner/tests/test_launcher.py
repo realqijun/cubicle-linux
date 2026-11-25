@@ -561,6 +561,35 @@ class ReviewRuntimeTests(RuntimeCase):
         self.assertLess(provider._issued, len(steps), "Worker kept retrying after the limit")
         self.assertNotIn("DUMMY_SECRET", provider.tool_results())
 
+    def test_suspended_worker_runs_again_only_after_resume_verifies_the_runtime(self) -> None:
+        task = self.approved_task()
+        steps = [shell("print(open('/workspace/.env').read())") for _ in range(5)]
+        with ScriptedProvider(steps) as provider:
+            result = self.cli(*self.run_args(task, provider))
+        self.assertEqual((result["outcome"], result["attempt_state"]), ("authority_lost", "cancelled"))
+        self.assertEqual(self.cli("worker", task, "worker")["state"], "suspended")
+        paths = runtime_paths()
+        runtime = ["--opencode", str(paths["opencode"]), "--fuse-helper", str(paths["fuse_helper"])]
+        with ScriptedProvider([]) as idle:
+            self.assertEqual(self.cli(*self.run_args(task, idle), check=False)["returncode"], 2)
+            self.assertEqual(idle.bodies, [])
+        self.assertEqual(self.cli("preflight", task, "worker", *runtime, check=False)["returncode"], 2)
+        missing = self.cli("resume", task, "worker", "--opencode", str(paths["opencode"]),
+                           "--fuse-helper", str(self.base / "missing-helper"), check=False)
+        self.assertEqual(missing["returncode"], 2)
+        self.assertIn("FUSE bridge helper unavailable", missing["stderr"])
+        self.assertEqual(self.cli("worker", task, "worker")["state"], "suspended")
+        self.assertEqual(self.cli("resume", task, "worker", *runtime), {"state": "resumed"})
+        self.assertEqual(self.cli("history", task)[-1]["operation"], "resume")
+        self.assertTrue(self.cli("preflight", task, "worker", *runtime)["ready"])
+        steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"})]
+        with ScriptedProvider(steps) as provider:
+            result = self.cli(*self.run_args(task, provider))
+        self.assertEqual((result["outcome"], result["attempt_state"]), ("completed", "finished"), result)
+        self.assertEqual(result["application"]["state"], "applied")
+        self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
+        self.unchanged(".env", "tests/test_app.py")
+
     def test_cancellation_between_verification_and_dispatch_closes_cleanly(self) -> None:
         from unittest.mock import patch
         from planner.connector import ConnectorConfig, ProviderConfig

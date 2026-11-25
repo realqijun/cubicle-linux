@@ -88,12 +88,15 @@ def parser() -> argparse.ArgumentParser:
         request.add_argument("approval")
         if name == "approve-exception":
             request.add_argument("--confirm-sensitive-provider-disclosure", action="store_true")
-    for name in ("preflight", "resume", "revoke"):
-        worker = commands.add_parser(name)
+    for name, purpose in (("preflight", "Check the connected runtime for an active worker"),
+                          ("resume", "Reactivate a suspended worker after checking the connected runtime"),
+                          ("revoke", "Revoke a worker and its descendants")):
+        worker = commands.add_parser(name, help=purpose)
         worker.add_argument("task")
         worker.add_argument("worker")
         if name != "revoke":
-            worker.add_argument("--model", required=True, help="Explicit provider/model")
+            worker.add_argument("--opencode", type=Path, required=True, help="Pinned OpenCode binary")
+            worker.add_argument("--fuse-helper", type=Path, required=True, help="Compiled fuse_bridge.c")
         if name == "resume":
             worker.add_argument("--cleanup-verified", action="store_true",
                                 help="Trusted operator confirms previous processes have stopped")
@@ -242,12 +245,15 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
     if command == "revoke":
         supervisor.revoke_worker(args.task, args.worker)
         return {"task": args.task, "worker": args.worker, "state": "revoked"}
-    if command == "preflight":
-        statuses = supervisor.preflight(args.task, args.worker, args.model)
+    if command in ("preflight", "resume"):
+        from .native.confined_opencode import runtime_status
+
+        backend, connector = runtime_status(args.opencode, args.fuse_helper)  # The same check as `run`.
+        if command == "resume":
+            supervisor.resume(args.task, args.worker, backend, connector, cleanup_verified=args.cleanup_verified)
+            return {"state": "resumed"}
+        statuses = supervisor.preflight(args.task, args.worker, backend, connector)
         return {"ready": all(s["available"] and s["verified"] for s in statuses), "checks": statuses}
-    if command == "resume":
-        supervisor.resume(args.task, args.worker, args.model, cleanup_verified=args.cleanup_verified)
-        return {"state": "resumed"}
     if command == "export":
         return supervisor.export(args.task)
     from .provenance import Provenance

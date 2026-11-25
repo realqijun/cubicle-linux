@@ -170,22 +170,30 @@ class DelegationRecoveryTests(unittest.TestCase):
             self.supervisor.prepare_attempt(self.task, "parent")
 
     def test_resume_only_restores_control_state_after_backend_and_connector_checks(self):
-        from unittest.mock import patch
-
         # These boundary fixtures test state recovery, not actual OS protection.
         fixture = ProtectionStatus(True, "fixture", "metadata-only fixture", verified=True)
         unavailable = ProtectionStatus(False, "fixture", "not available")
         for _ in range(3):
             self.supervisor.authorize(Action(self.task, "parent", "read", ".env"))
-        with patch("planner.supervisor.Backend.check", return_value=unavailable), \
-                patch("planner.supervisor.Connector.check", return_value=fixture):
-            with self.assertRaises(RuntimeError):
-                self.supervisor.resume(self.task, "parent", "fixture/model")
+        with self.assertRaises(RuntimeError):
+            self.supervisor.resume(self.task, "parent", unavailable, fixture)
         self.assertEqual(self.supervisor.worker_status(self.task, "parent")["state"], "suspended")
-        with patch("planner.supervisor.Backend.check", return_value=fixture), \
-                patch("planner.supervisor.Connector.check", return_value=fixture):
-            self.supervisor.resume(self.task, "parent", "fixture/model")
+        self.supervisor.resume(self.task, "parent", fixture, fixture)
         self.assertEqual(self.supervisor.check_worker(self.task, "parent").worker_id, "parent")
+
+    def test_resumed_parent_restores_its_children_without_widening_them(self):
+        fixture = ProtectionStatus(True, "fixture", "metadata-only fixture", verified=True)
+        child = Grant(self.task, "child", ("src/**",), parent_id="parent")
+        self.supervisor.approve_worker(child)
+        for _ in range(3):
+            self.supervisor.authorize(Action(self.task, "parent", "read", ".env"))
+        with self.assertRaisesRegex(ValueError, "suspended"):
+            self.supervisor.resume(self.task, "child", fixture, fixture)
+        with self.assertRaises(ValueError):
+            self.supervisor.check_worker(self.task, "child")
+        self.supervisor.resume(self.task, "parent", fixture, fixture)
+        self.assertEqual(self.supervisor.check_worker(self.task, "child"), child)
+        self.assertFalse(self.supervisor.authorize(Action(self.task, "child", "write", "src/app.py")).allowed)
 
 
 if __name__ == "__main__":

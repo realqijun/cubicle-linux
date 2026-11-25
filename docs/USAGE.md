@@ -66,6 +66,8 @@ Append `--json` before the command for machine-readable output.
 | `run TASK WORKER --prompt TEXT ...` | Run one confined attempt; `--mode review` retains edits; `--alert` warns and sounds an alert on each refusal while it runs |
 | `apply ATTEMPT` / `applications TASK` | Apply a retained changeset / list application outcomes |
 | `recover TASK WORKER ...` | Verify cleanup after owner loss, then reconcile |
+| `resume TASK WORKER --opencode PATH --fuse-helper PATH` | Reactivate a suspended worker after checking the connected runtime |
+| `preflight TASK WORKER --opencode PATH --fuse-helper PATH` | Check the connected runtime for an active worker |
 | `export TASK` | Export readable metadata |
 | `report TASK /absolute/report.html` | Generate a report from actual task records |
 
@@ -116,11 +118,14 @@ intent and transition history. `reconcile TASK` marks unresolved work interrupte
 suspends affected workers, and revokes their live exceptions. A database state
 change does not prove that any process stopped.
 
-`preflight TASK WORKER --model provider/model` returns exit 2 while protection
-is unavailable. `resume` requires fresh protection checks and reconciled cleanup;
-it restores durable authority only and starts no process. Its
-`--cleanup-verified` option belongs to the trusted operator. Revoked or expired
-grants and old approvals cannot be revived by recovery.
+A worker that repeats the same refused operation `--denial-limit` times in a row is suspended, and `run` refuses it.
+`resume TASK WORKER --opencode PATH --fuse-helper PATH` reactivates it after the same connected-runtime check that `run` performs.
+It restores the unchanged grant only, starts no process and records a `resume` entry in `history TASK`.
+The worker then starts a new sequence of permitted retries.
+An unavailable runtime, a revoked worker, a cancelled or expired task, a changed policy revision or an unreconciled attempt keeps the worker suspended.
+After `reconcile`, an interrupted attempt also needs `--cleanup-verified`, which belongs to the trusted operator.
+Revoked or expired grants and old approvals cannot be revived by recovery.
+`preflight TASK WORKER --opencode PATH --fuse-helper PATH` reports the runtime check for an active worker and returns exit 2 while protection is unavailable.
 
 Project notes support `memory PROJECT list [--query TEXT]`,
 `memory PROJECT inspect --note ID`, and `memory PROJECT delete --note ID`.

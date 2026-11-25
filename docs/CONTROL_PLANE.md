@@ -25,6 +25,8 @@ Repeated-denial detection compares the complete normalized operation/resource/
 tool set. Repeating a denied multi-resource request cannot evade suspension by
 alternating its resource rows. `access_requests(task)` and exports retain these
 metadata-only request groups; they contain no command bodies or file contents.
+A reactivated worker starts a new sequence: only requests recorded after its
+latest `resume` or successful `recover_attempt` count toward the limit.
 
 ## Reviewed automatic assignments
 
@@ -95,11 +97,20 @@ attempt and new verification. Unsuccessful checks remain `interrupted` with
 fixed reasons such as `cleanup_unverified`, `protection_unavailable`, or
 `authority_invalid`.
 
-`resume(task, worker, model, cleanup_verified=False)` obtains real backend and
-connector preflight results and applies those same controls. It restores only
-durable control state; it starts no worker. Live-project/model-launcher
-preflight still blocks on every platform. `cleanup_verified` belongs to the trusted operator
-channel and must not be an option accepted from worker text or a tool request.
+`resume(task, worker, backend, connector, cleanup_verified=False)` reactivates a suspended worker.
+The trusted caller supplies the runtime statuses.
+The operator CLI `resume TASK WORKER --opencode PATH --fuse-helper PATH` obtains them from `runtime_status`, the same connected-runtime check that `run` uses.
+Both statuses must be `available` and `verified`.
+The task must be approved and unexpired, and the worker must be suspended, unrevoked and installed under the current policy revision with valid ancestry.
+A prepared, verified, running or stopping attempt blocks resumption until it is reconciled.
+An interrupted attempt is closed through `recover_attempt`, which still requires `cleanup_verified`.
+Resumption restores the existing grant unchanged: it starts no worker, widens no scope and restores no exception.
+Each success appends a `resume` decision with tool `operator` to the task history and export.
+`cleanup_verified` belongs to the trusted operator channel and must not be an option accepted from worker text or a tool request.
+
+`preflight(task, worker, backend, connector)` returns the supplied statuses for a worker that may run now.
+The CLI `preflight TASK WORKER --opencode PATH --fuse-helper PATH` exits 2 unless both are verified.
+The generic live-project `Backend` still refuses every launch; neither command uses it.
 
 Legacy workers receive a nullable template-attribution column. Earlier decision
 records retain unknown grant-revision evidence. New tables do not invent past
