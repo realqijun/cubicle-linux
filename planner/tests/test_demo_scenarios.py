@@ -498,27 +498,35 @@ class DemoScriptRuntimeTests(DemoScenarioCase):
         self.assertEqual(applying.count("allowed  write src/greeting.py"), 1)
         self.assertIn("console.log  (everything the demo printed)", log.stdout)
 
-    def test_ctrl_c_stops_the_demo_after_recording_the_current_run(self):
+    def ctrl_c(self, presses):
         runtime = self.link_runtime()
         environment = {**self.environment, "PLANNER_PROVIDER_URL": "http://127.0.0.1:9/v1",
                        "PLANNER_MODEL": "fixture/model", "PLANNER_API_KEY_ENV": "DEMO_FIXTURE_KEY",
                        "DEMO_FIXTURE_KEY": "dummy-fixture-credential"}
         code, output = press_ctrl_c(["bash", str(ROOT / "scripts/demo.sh"), SCRIPTED, "normal", "--yes"],
                                     self.base, environment, lambda text: "Running a scripted worker" in text,
-                                    delay=5)  # During confined startup, before the scripted steps.
+                                    delay=5, presses=presses)  # During confined startup, before the scripted steps.
         self.assertEqual(code, 130, output[-5000:])
         self.assertIn("stopped    you pressed Ctrl-C, so nothing from this run was applied", output)
         self.assertTrue(output.rstrip().endswith("Stopped."), output[-2000:])
         self.assertNotIn("Traceback", output)
         self.assertNotIn("== normal", output)  # The next scenario never starts.
         [case] = runtime.glob("demo-*")
-        self.assertIn("you pressed Ctrl-C", (case / "console.log").read_text())  # tee kept writing.
+        console = (case / "console.log").read_text()
+        self.assertIn("you pressed Ctrl-C", console)  # tee kept writing.
+        self.assertIn("Still waiting for the planner to stop the worker and clean up...", console)
         result = json.loads((case / "run.json").read_text())
-        # Before the worker starts the attempt is withdrawn ("blocked"); after, it ends "failed".
+        # Withdrawn before the attempt starts ("blocked"); once it started, even while the jail starts, "failed".
         self.assertEqual(result["outcome"], "stopped")
         self.assertIn(result["attempt_state"], ("blocked", "failed"))
         self.assertEqual(result["application"]["state"], "not_applied")
         self.assertFalse(inspect_demo(case)["protected_paths_changed"])
+
+    def test_ctrl_c_stops_the_demo_after_recording_the_current_run(self):
+        self.ctrl_c(1)
+
+    def test_a_second_ctrl_c_waits_for_the_same_cleanup(self):
+        self.ctrl_c(2)
 
     def test_a_failed_scenario_does_not_stop_the_next_one(self):
         class Refuse(BaseHTTPRequestHandler):

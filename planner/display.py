@@ -5,6 +5,7 @@ decisions and diffs the same way. Every worker- or model-chosen string is
 escaped with ``printable`` before it reaches the terminal.
 """
 
+from collections.abc import Callable
 from datetime import datetime
 import difflib
 import os
@@ -24,17 +25,25 @@ def style(text: str, code: str) -> str:
     return text if os.environ.get("NO_COLOR") else f"\033[{code}m{text}\033[0m"
 
 
-def wait(process: subprocess.Popen[Any]) -> int:
+def wait(process: subprocess.Popen[Any], on_interrupt: Callable[[], None] | None = None) -> int:
     """Wait for the planner, including after Ctrl-C, which reaches it too.
 
     ``subprocess.run`` would kill it 0.25 seconds after an interrupt, before
     it has stopped the worker, unmounted the workspace and closed its records.
+    Each Ctrl-C calls ``on_interrupt``, or by default says so on stderr.
     """
     while True:
         try:
             return process.wait()
         except KeyboardInterrupt:
-            print("Still waiting for the planner to stop the worker and clean up...", file=sys.stderr)
+            pass
+        try:
+            if on_interrupt is None:
+                print("Still waiting for the planner to stop the worker and clean up...", file=sys.stderr)
+            else:
+                on_interrupt()
+        except KeyboardInterrupt:
+            pass  # Pressed again while saying so; keep waiting.
 
 
 def show_policy(proposal: dict[str, Any]) -> str:

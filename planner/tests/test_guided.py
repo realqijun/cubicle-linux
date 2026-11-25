@@ -98,8 +98,9 @@ class FakePlanner(Planner):
             return apply_held(self, args[1])
         return super().call(*args)
 
-    def run(self, args, output, console):
+    def run(self, args, output, console, on_interrupt=None):
         self.run_args.append(args)
+        self.on_interrupt = on_interrupt  # A stand-in run presses Ctrl-C by calling it.
         output.write_text(json.dumps(self.runs.pop(0)(self, args[1], "--mode" in args)))
         return 0
 
@@ -244,6 +245,32 @@ class GuideTests(GuidedCase):
         self.assertNotIn("ERROR", self.stderr)
         self.assertEqual(self.status(), "cancelled")
         self.unchanged("src/app.py", "tests/test_app.py")
+
+    def pressed_after_finishing(self, planner, task, review):
+        """Ctrl-C while the planner closed the records of a run whose worker had already finished."""
+        result = worker_run(denied=[("write", "tests/test_app.py")], write=("src/app.py", "VALUE = 2\n"))(
+            planner, task, review)
+        planner.on_interrupt()
+        return {**result, "stop_requested": True}
+
+    def test_ctrl_c_after_the_worker_finished_shows_the_result_and_ends_the_session(self):
+        self.assertEqual(self.guide("y\n", [self.pressed_after_finishing]), 130)
+        self.assertIn("Still waiting for the planner to stop the worker and clean up...", self.stdout)
+        self.assertIn("  changed    src/app.py", self.stdout)
+        self.assertIn("The run had already ended when you pressed Ctrl-C, so its result above stands.", self.stdout)
+        self.assertNotIn("wanted to change", self.stdout)  # No access request is asked about.
+        self.assertNotIn("Run again", self.stdout)
+        self.assertNotIn("ERROR", self.stderr)
+        self.assertIn("Still waiting for the planner", (self.session / "console.log").read_text())
+        self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
+        self.assertEqual(len(self.planner.run_args), 1)
+
+    def test_ctrl_c_after_the_worker_finished_does_not_ask_to_apply_held_changes(self):
+        self.assertEqual(self.guide("y\ny\n", [self.pressed_after_finishing], review=True), 130)
+        self.assertIn("  held       src/app.py  (not in your project yet)", self.stdout)
+        self.assertNotIn("Apply them now?", self.stdout)
+        self.assertEqual(self.planner.named("apply"), [])
+        self.unchanged("src/app.py")
 
     def approvals(self):
         supervisor = self.planner.supervisor()
@@ -560,7 +587,7 @@ class ScriptTests(GuidedCase):
 class InterruptTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "posix", "Interrupt delivery requires POSIX signals")
     def test_a_run_waits_for_the_planner_after_ctrl_c_and_relays_its_output(self):
-        # The interrupt goes to a separate waiter process, never to this test runner.
+        # The interrupts go to a separate waiter process, never to this test runner.
         planner = ("import signal, sys, time; signal.signal(signal.SIGINT, signal.SIG_IGN); time.sleep(3); "
                    "sys.stderr.write('BLOCKED while stopping\\n'); print('{\"stopped\": true}')")
         with tempfile.TemporaryDirectory(prefix="planner-guided-interrupt-") as directory:
@@ -570,21 +597,25 @@ class InterruptTests(unittest.TestCase):
                  "from planner.guided import Console, Planner\n"
                  "class Stub(Planner):\n"
                  f"    def command(self, *args): return [sys.executable, '-c', {planner!r}]\n"
+                 "console = Console(sys.stdin, sys.stdout, sys.stderr)\n"
                  "print('ready', flush=True)\n"
-                 "sys.exit(Stub(Path('unused')).run([], Path(sys.argv[1]), Console(sys.stdin, sys.stdout, sys.stderr)))\n",
+                 "sys.exit(Stub(Path('unused')).run([], Path(sys.argv[1]), console, lambda: console.say('noted')))\n",
                  str(output)], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             try:
                 self.assertEqual(waiter.stdout.readline().strip(), "ready")
                 time.sleep(0.5)  # Let the waiter reach wait(); its planner runs for 3 seconds.
                 waiter.send_signal(signal.SIGINT)
-                _, stderr = waiter.communicate(timeout=30)
+                time.sleep(0.5)
+                waiter.send_signal(signal.SIGINT)  # A second Ctrl-C waits too.
+                stdout, stderr = waiter.communicate(timeout=30)
             finally:
                 if waiter.poll() is None:
                     waiter.kill()
                     waiter.communicate()
             self.assertEqual(waiter.returncode, 0, stderr)  # The planner finished its own shutdown.
             self.assertEqual(json.loads(output.read_text()), {"stopped": True})
-        self.assertIn("Still waiting for the planner to stop the worker and clean up", stderr)
+        self.assertEqual(stdout.split(), ["noted", "noted"])  # Through the console, not the default note.
+        self.assertNotIn("Still waiting", stderr)
         self.assertIn("BLOCKED while stopping", stderr)
 
 
@@ -641,7 +672,7 @@ class GuidedScriptRuntimeTests(GuidedCase):
         console = ANSI.sub("", (session / "console.log").read_text())
         return result, provider, session, console
 
-    def test_ctrl_c_stops_the_run_records_it_and_applies_nothing(self):
+    def ctrl_c(self, presses):
         script = ("import time; from pathlib import Path\n"
                   "Path('/workspace/src/app.py').write_text('VALUE = 2\\n')\n"
                   "Path('/workspace/src/started.txt').write_text('1')\n"
@@ -651,7 +682,8 @@ class GuidedScriptRuntimeTests(GuidedCase):
                            "PLANNER_MODEL": "fixture/model", "GUIDED_TEST_KEY": "dummy-fixture-credential"}
             started = lambda _: bool(list(self.home.glob("projects/*/runs/*/fs/backing/src/started.txt")))
             code, output = press_ctrl_c(["bash", str(ROOT / "scripts/run.sh"), str(self.project),
-                                         "Change VALUE to 2 in src/app.py.", "--yes"], self.base, environment, started)
+                                         "Change VALUE to 2 in src/app.py.", "--yes"], self.base, environment, started,
+                                        presses=presses)
         self.assertEqual(code, 130, output[-5000:])
         self.assertIn("stopped    you pressed Ctrl-C, so nothing from this run was applied", output)
         self.assertNotIn("Traceback", output)
@@ -662,7 +694,15 @@ class GuidedScriptRuntimeTests(GuidedCase):
         self.assertEqual((run["outcome"], run["attempt_state"], run["application"]["state"]),
                          ("stopped", "failed", "not_applied"))
         self.assertTrue(run["cleanup_verified"])
-        self.assertIn("you pressed Ctrl-C", (session / "console.log").read_text())
+        console = (session / "console.log").read_text()
+        self.assertIn("you pressed Ctrl-C", console)
+        self.assertIn("Still waiting for the planner to stop the worker and clean up...", console)
+
+    def test_ctrl_c_stops_the_run_records_it_and_applies_nothing(self):
+        self.ctrl_c(1)
+
+    def test_a_second_ctrl_c_waits_for_the_same_cleanup(self):
+        self.ctrl_c(2)
 
     def test_happy_path_applies_an_allowed_fix(self):
         steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"}), None]

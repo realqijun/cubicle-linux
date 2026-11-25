@@ -13,11 +13,13 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import sqlite3
 import stat
 import subprocess
 import threading
 import time
+from types import FrameType
 from typing import Any
 
 from .broker_server import BrokerServer
@@ -31,6 +33,7 @@ from .supervisor import Supervisor
 
 _SUMMARY_LIMIT = 50
 APPLIER = "applier.json"  # Owner of a reviewed apply, beside the run's journal.
+_STOPPED = "Stopped by the operator"
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,57 @@ class _Authority:
         item = self.supervisor.attempt(self.attempt)
         if item["state"] != "running" or item["expires"] <= self.supervisor.clock():
             raise PermissionError("Execution attempt is no longer running")
+
+
+class _StopRequest:
+    """Ctrl-C during one run: always recorded, acted on only where it leaves nothing half-done.
+
+    The runner owns SIGINT for the call, in the main thread only; elsewhere, or
+    when SIGINT is ignored, Python's own KeyboardInterrupt applies. The handler
+    never raises: it sets ``requested``, which the runner checks between steps.
+    A KeyboardInterrupt raised mid-step could cut short an HTTP exchange with
+    the jail, a record or an application, or land after a step started a
+    process or mount but before its cleanup was registered. Within ``halting``
+    the handler also calls ``halt``, which ends a slow step from outside, so the
+    step fails through its own cleanup.
+    """
+
+    def __init__(self) -> None:
+        self.requested = False
+        self._halt: Callable[[], None] | None = None
+        self._previous: Any = None
+        self._owned = False
+
+    def install(self) -> None:
+        if (threading.current_thread() is threading.main_thread()
+                and signal.getsignal(signal.SIGINT) is not signal.SIG_IGN):
+            self._previous = signal.signal(signal.SIGINT, self._signalled)
+            self._owned = True
+
+    def restore(self) -> None:
+        if self._owned:
+            # None: the earlier handler was not set from Python and cannot be put back.
+            signal.signal(signal.SIGINT, signal.SIG_DFL if self._previous is None else self._previous)
+            self._owned = False
+
+    def _signalled(self, signum: int, frame: FrameType | None) -> None:
+        self.requested = True
+        if self._halt is not None:
+            self._halt()
+
+    def check(self) -> None:
+        """Stop here, as KeyboardInterrupt, if Ctrl-C was pressed."""
+        if self.requested:
+            raise KeyboardInterrupt
+
+    @contextmanager
+    def halting(self, halt: Callable[[], None]) -> Iterator[None]:
+        """Within the block, every Ctrl-C also calls ``halt``."""
+        self._halt = halt
+        try:
+            yield
+        finally:
+            self._halt = None
 
 
 def _start_time(pid: int) -> str | None:
@@ -319,6 +373,11 @@ def _apply(supervisor: Supervisor, attempt_id: str, changes: Changeset, mode: st
         return supervisor.record_application(attempt_id, mode=mode, state=state,
                                              reason=f"{type(error).__name__}: {error}",
                                              changes=preview, journal=journal)
+    except BaseException as error:  # E.g. Ctrl-C where no runner owns SIGINT: record it, then stop.
+        supervisor.record_application(attempt_id, mode=mode, state="interrupted",
+                                      reason=f"{type(error).__name__} during application",
+                                      changes=preview, journal=journal)
+        raise
     return supervisor.record_application(attempt_id, mode=mode, state="applied", reason="complete",
                                          changes=applied, journal=journal)
 
@@ -340,6 +399,12 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
     a display hook: every refusal has already been enforced and recorded before
     it is called. It must not raise; an exception while the worker runs stops
     the attempt like any runtime error, and one afterwards is ignored.
+
+    Ctrl-C (SIGINT) while the worker starts or runs stops it with outcome
+    ``stopped``: the attempt and its records are closed and nothing is applied.
+    Once the worker has finished, Ctrl-C interrupts nothing: the records are
+    closed and the changes applied as usual. Either way ``stop_requested`` in
+    the result says that Ctrl-C was pressed.
     """
     from .native.confined_opencode import ConfinedOpenCode, runtime_status
     from .native.mediatedfs import INPUTS, MediatedWorkspace
@@ -351,7 +416,9 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         raise ValueError("An explicit provider and its configured credential are required")
     credentials = {provider.api_key_env: credential} if provider.api_key_env and credential else {}
     supervisor = Supervisor(state, denial_limit=runtime.denial_limit)
+    stop = _StopRequest()
     try:
+        stop.install()
         policy = supervisor.policy(task)
         grant = supervisor.check_worker(task, worker)
         runs = runtime.runs.resolve()
@@ -367,8 +434,8 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                                   "mediated": mediated}
         if verified["state"] != "verified":
             supervisor.record_application(attempt, mode=mode, state="not_applied", reason=verified["reason"])
-            return {**result, "outcome": "blocked", "reason": verified["reason"],
-                    "checks": verified["checks"], "application": supervisor.application(attempt)}
+            return {**result, "outcome": "blocked", "reason": verified["reason"], "checks": verified["checks"],
+                    "stop_requested": stop.requested, "application": supervisor.application(attempt)}
         runs.mkdir(mode=0o700, parents=True, exist_ok=True)
         run = runs / attempt
         run.mkdir(mode=0o700)
@@ -442,7 +509,14 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
             finally:
                 authority.supervisor.close()
 
+        def halt() -> None:
+            """Ctrl-C while the jail starts: killing it ends the startup through its own error path."""
+            confined = holder.get("runtime")
+            if confined is not None and confined.process is not None:
+                confined.process.kill()  # Popen ignores a process that already exited.
+
         try:
+            stop.check()  # Ctrl-C during preparation: the verified attempt is withdrawn, nothing started.
             bindings = supervisor.reserve_exceptions(attempt)
             inside = [item for item in bindings if Path(item["resource"]).is_relative_to(policy.root)]
             relative = {item["id"]: Path(item["resource"]).relative_to(policy.root).as_posix() for item in inside}
@@ -480,22 +554,28 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                     holder["runtime"] = confined
                     earlier = supervisor.history(task)
                     holder["announced"] = earlier[-1]["id"] if earlier else 0  # Only this attempt.
+                    stop.check()  # Ctrl-C while mounting: withdrawn before the attempt starts.
                     supervisor.start_attempt(attempt)
                     try:
-                        with confined:
+                        with ExitStack() as jail:
+                            with stop.halting(halt):  # Startup can take minutes; Ctrl-C kills the jail instead.
+                                jail.enter_context(confined)
                             assert confined.server is not None and confined.process is not None
                             processes.data["namespace"] = _namespace(confined.process.pid)
                             processes.data["transport"] = str(confined.transport)
                             processes.add("worker", confined.process.pid)
+                            stop.check()  # Pressed as the jail finished starting: no task is dispatched.
                             session = confined.server.submit(prompt, config.model)
                             deadline = time.monotonic() + runtime.run_seconds
                             while True:
                                 time.sleep(runtime.poll_seconds)
                                 announce()
-                                if confined.authority_lost:
+                                if stop.requested:
+                                    outcome, failure = "stopped", _STOPPED  # Leaving the loop kills the namespace.
+                                elif confined.authority_lost:
                                     outcome = "authority_lost"
                                 elif broker is not None and not broker.healthy:
-                                    outcome = "connector_lost"  # Leaving the loop kills the namespace.
+                                    outcome = "connector_lost"
                                 elif confined.process.poll() is not None:
                                     outcome = "worker_exited"
                                 elif not confined.server.active(session):
@@ -506,13 +586,18 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                                     continue
                                 break
                     except KeyboardInterrupt:  # Ctrl-C: the jail is already stopped; close the records, apply nothing.
-                        outcome, failure = "stopped", "Stopped by the operator"
+                        outcome, failure = "stopped", _STOPPED
                     except Exception as error:  # Every failure still reaches the closing records.
-                        outcome = "authority_lost" if confined.authority_lost else f"runtime_error:{type(error).__name__}"
-                        failure = f"{type(error).__name__}: {error}"[:500]
+                        if confined.authority_lost:
+                            outcome = "authority_lost"
+                        elif stop.requested:  # halt() killed the starting jail.
+                            outcome, failure = "stopped", _STOPPED
+                        else:
+                            outcome = f"runtime_error:{type(error).__name__}"
+                        failure = failure or f"{type(error).__name__}: {error}"[:500]
                     cleaned = confined.cleaned
         except KeyboardInterrupt:
-            outcome, failure = "stopped", "Stopped by the operator"
+            outcome, failure = "stopped", _STOPPED
         except Exception as error:
             if outcome == "runtime_error":
                 outcome = f"runtime_error:{type(error).__name__}"
@@ -541,7 +626,7 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
         result["requests"] = _request_reconsideration(supervisor, task, worker, attempt,
                                                       [(operation, original(name)) for operation, name in denials])
         result.update(outcome=outcome, error=failure, attempt_state=finished["state"],
-                      cleanup_verified=finished["cleanup_verified"],
+                      cleanup_verified=finished["cleanup_verified"], stop_requested=stop.requested,
                       filesystem_denials=[{"operation": op, "resource": name}
                                           for op, name in denials[:_SUMMARY_LIMIT]])
         if finished["state"] != "finished" or changes is None:
@@ -567,7 +652,10 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                 pass  # Display only: the outcome above is already recorded and must still be returned.
         return {**result, "application": application}
     finally:
-        supervisor.close()
+        try:
+            supervisor.close()
+        finally:
+            stop.restore()
 
 
 def summary(result: dict[str, Any]) -> str:

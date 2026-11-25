@@ -177,7 +177,8 @@ mkdir -p "$planner_home"
 index=0
 failed=()
 stopped=0
-# Ctrl-C reaches the planner, which stops the worker and records the run; then the demo stops.
+# Ctrl-C reaches the planner, which stops the worker and records the run, or completes the run if the
+# worker had already finished. Either way the planner exits normally and the demo stops before the next scenario.
 trap 'stopped=1' INT
 for scenario in "${selected[@]}"; do
   ((!stopped)) || break

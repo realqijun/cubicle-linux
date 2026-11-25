@@ -8,6 +8,7 @@ and resuming a suspended worker always need the user's own answer.
 """
 
 import argparse
+from collections.abc import Callable
 from dataclasses import dataclass
 import hashlib
 import json
@@ -163,7 +164,10 @@ class Planner:
             try:
                 stdout, stderr = process.communicate()
                 break
-            except KeyboardInterrupt:  # Ctrl-C reaches the planner too; let it finish its transaction.
+            except KeyboardInterrupt:
+                # Ctrl-C reaches the planner too, in the same process group: its KeyboardInterrupt
+                # aborts the command, and SQLite rolls back an unfinished transaction. Wait until it
+                # has exited, so no command outlives the session, then stop.
                 interrupted = True
         if interrupted:
             raise KeyboardInterrupt
@@ -172,8 +176,12 @@ class Planner:
             raise Stop(printable(reason.removeprefix("BLOCKED: "), limit=500))
         return json.loads(stdout)
 
-    def run(self, args: list[str], output: Path, console: Console) -> int:
-        """Run the worker: its result to ``output``, its live alerts to the console."""
+    def run(self, args: list[str], output: Path, console: Console,
+            on_interrupt: Callable[[], None] | None = None) -> int:
+        """Run the worker: its result to ``output``, its live alerts to the console.
+
+        Ctrl-C reaches the planner, which handles it; ``on_interrupt`` is called for each press.
+        """
         with output.open("w") as result:
             process = subprocess.Popen(self.command(*args), cwd=ROOT, stdin=subprocess.DEVNULL, stdout=result,
                                        stderr=subprocess.PIPE, text=True, errors="replace")
@@ -187,7 +195,7 @@ class Planner:
             reader = threading.Thread(target=relay)
             reader.start()
             try:
-                return wait(process)
+                return wait(process, on_interrupt)
             finally:
                 reader.join()
                 stream.close()
@@ -215,6 +223,7 @@ class Guide:
         self.task: str | None = None
         self.policy: Policy | None = None
         self.held: str | None = None  # A reviewed changeset the user has not applied yet.
+        self.interrupted = False  # Ctrl-C during a run ends the session once its result is shown.
         self.data: dict[str, Any] = {}
 
     # Records
@@ -275,8 +284,10 @@ class Guide:
             result, ok, suspended = self.run_worker(number)
             if result is None:
                 return 1
-            if result.get("outcome") == "stopped":
-                return 130  # Ctrl-C ends the session.
+            if result.get("outcome") == "stopped" or self.interrupted:
+                if result.get("outcome") != "stopped":
+                    say("The run had already ended when you pressed Ctrl-C, so its result above stands.")
+                return 130  # Ctrl-C ends the session without asking anything more.
             again = False
             if self.held is not None:
                 ok = self.offer_apply() and ok
@@ -385,7 +396,7 @@ class Guide:
                 "--opencode", str(self.settings.opencode), "--fuse-helper", str(self.settings.fuse_helper),
                 "--runs", str(self.records / "runs"), "--run-seconds", str(RUN_SECONDS),
                 "--timeout", str(TIMEOUT), "--alert"] + (["--mode", "review"] if self.review else [])
-        self.planner.run(args, directory / "run.json", self.console)
+        self.planner.run(args, directory / "run.json", self.console, self.interrupt)
         self.save_reports()
         result = _load(directory / "run.json")
         self.held = None
@@ -408,6 +419,11 @@ class Guide:
         for problem in [] if suspended else problems:  # A suspension is explained instead.
             self.console.error(problem)
         return result, not problems and not suspended, suspended
+
+    def interrupt(self) -> None:
+        """Ctrl-C during a run. The planner gets it too and stops the worker if it is still running."""
+        self.interrupted = True
+        self.console.say("Still waiting for the planner to stop the worker and clean up...")
 
     def save_reports(self) -> None:
         """The whole task's permission records and provenance report, after every run."""

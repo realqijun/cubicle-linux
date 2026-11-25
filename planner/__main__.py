@@ -176,6 +176,9 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
             supervisor.close()
             return recover(args.state, args.task, args.worker, Runtime(args.opencode, args.fuse_helper, args.runs),
                            operator_confirmed=args.operator_confirms_cleanup)
+        import signal
+        import threading
+
         from .alerts import Alarm
         from .connector import ConnectorConfig, ProviderConfig
 
@@ -184,11 +187,15 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
         alarm = Alarm(Path(supervisor.status(args.task)["policy"]["root"])) if args.alert else None
         supervisor.close()  # The runner owns its own connections and threads.
         try:
-            return run_task(args.state, args.task, args.worker, args.prompt,
-                            ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
-                            Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds,
-                                    denial_limit=args.denial_limit),
-                            credential=credential, mode=args.mode, on_denial=alarm)
+            result = run_task(args.state, args.task, args.worker, args.prompt,
+                              ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
+                              Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds,
+                                      denial_limit=args.denial_limit),
+                              credential=credential, mode=args.mode, on_denial=alarm)
+            if threading.current_thread() is threading.main_thread():
+                # Every record is closed; a late Ctrl-C must not lose the result printed below.
+                signal.signal(signal.SIGINT, signal.SIG_IGN)
+            return result
         finally:
             if alarm is not None:
                 alarm.close()

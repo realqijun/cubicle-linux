@@ -27,11 +27,13 @@ def runtime_paths() -> dict[str, Path]:
 
 
 def press_ctrl_c(command: list[str], cwd: Path, env: Mapping[str, str], ready: Callable[[str], bool],
-                 *, delay: float = 1, timeout: float = 1800) -> tuple[int, str]:
+                 *, delay: float = 1, presses: int = 1, gap: float = 0.5,
+                 timeout: float = 1800) -> tuple[int, str]:
     """Run ``command`` in a terminal and press Ctrl-C once ``ready`` sees what it waits for.
 
     The terminal delivers SIGINT to the whole foreground process group, as it
-    does for a person. Returns the exit status and the uncoloured output.
+    does for a person. Further presses follow ``gap`` seconds apart, while the
+    first is still being handled. Returns the exit status and the uncoloured output.
     """
     import pty  # POSIX only; imported here so the module still loads elsewhere.
 
@@ -39,7 +41,7 @@ def press_ctrl_c(command: list[str], cwd: Path, env: Mapping[str, str], ready: C
     if pid == 0:
         os.chdir(cwd)
         os.execvpe(command[0], command, dict(env))
-    output, seen, pressed = b"", None, False
+    output, seen, pressed = b"", None, 0
     deadline = time.monotonic() + timeout
     try:
         while time.monotonic() < deadline:
@@ -53,15 +55,15 @@ def press_ctrl_c(command: list[str], cwd: Path, env: Mapping[str, str], ready: C
                 output += chunk
             if seen is None and ready(output.decode(errors="replace")):
                 seen = time.monotonic()
-            if not pressed and seen is not None and time.monotonic() - seen >= delay:
+            if pressed < presses and seen is not None and time.monotonic() - seen >= delay + pressed * gap:
                 os.write(terminal, b"\x03")
-                pressed = True
+                pressed += 1
     finally:
         if time.monotonic() >= deadline:
             os.kill(pid, 9)
         _, status = os.waitpid(pid, 0)
         os.close(terminal)
     text = re.sub(r"\x1b\[[0-9;]*m", "", output.decode(errors="replace")).replace("\r\n", "\n")
-    if not pressed:
-        raise AssertionError("Ctrl-C was never pressed:\n" + text[-3000:])
+    if pressed < presses:
+        raise AssertionError(f"Ctrl-C was pressed {pressed} of {presses} times:\n" + text[-3000:])
     return os.waitstatus_to_exitcode(status), text
