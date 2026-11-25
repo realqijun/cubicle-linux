@@ -24,7 +24,7 @@ import time
 from typing import Any, TextIO
 
 from .alerts import companion, printable
-from .display import STOPPED, decision_lines, diff_lines, show_policy, shown, style, wait
+from .display import STOPPED, decision_lines, diff_lines, operator_lines, show_policy, shown, style, wait
 from .policy import Policy
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,8 +65,9 @@ def locate(home: Path, argument: str) -> tuple[Path, Path]:
         raise Stop(f"The planner keeps its records in {printable(str(home))}, which is inside "
                    f"{printable(str(project))}. The worker must not see them: choose a smaller project "
                    "folder, or set PLANNER_HOME somewhere outside it.")
-    if project.is_relative_to(home / "projects"):
-        raise Stop(f"{printable(str(project))} holds the planner's own records, not a project.")
+    if project.is_relative_to(home):
+        raise Stop(f"{printable(str(project))} is inside {printable(str(home))}, which holds the planner's "
+                   "runtime and records, not a project. Choose a project folder outside it.")
     return project, project_directory(home, project)
 
 
@@ -310,17 +311,24 @@ class Guide:
 
     def finish(self) -> None:
         """Close the task unless something still needs it, and say where the log is."""
-        runs = self.data.get("runs", [])
-        final = not runs or runs[-1].get("attempt_state") in FINAL_ATTEMPT_STATES
-        if self.data.get("approved") and self.held is None and final:
+        if self.data.get("approved") and self.held is None:
             try:
-                self.planner.call("cancel", str(self.task))  # Its approvals and grant stop working.
+                # The planner's records, not the session's: a run may have stopped before or after its attempt.
+                states = [item["state"] for item in self.planner.call("attempts", str(self.task))]
+                if all(state in FINAL_ATTEMPT_STATES for state in states):
+                    self.planner.call("cancel", str(self.task))  # Its approvals and grant stop working.
+                else:
+                    self.console.say()
+                    self.console.say("The task stays open because a run's records are not closed. "
+                                     "See 'recover' in docs/CONNECTED_RUNTIME.md.")
             except Stop:
                 pass  # Already closed or expired.
         if self.held is not None:
+            command = (f"cd {shlex.quote(str(ROOT))} && python3 -m planner --state "
+                       f"{shlex.quote(str(self.planner.state))} apply {shlex.quote(self.held)}")
             self.console.say()
             self.console.say("The held changes stay available until the task expires. To apply them later:")
-            self.console.say(f"  python3 -m planner --state {self.planner.state} apply {self.held}")
+            self.console.say("  " + printable(command, limit=2000))
         self.console.say()
         self.console.say("Full log:  scripts/run.sh log " + printable(shlex.quote(str(self.project)), limit=1000))
         self.console.say("Saved in   " + printable(str(self.session), limit=1000))
@@ -655,8 +663,10 @@ def show_log(directory: Path, out: TextIO) -> None:
             say(indent(lines + ["  problem: " + problem for problem in problems], "  "))
         if entry.get("applied") is not None:
             say("    held changes " + ("applied by you" if entry["applied"] else "not applied"))
-        if entry.get("resumed"):
-            say("    The worker was suspended for repeating a blocked operation; you resumed it.")
+        resumes = operator_lines(rows)
+        if entry.get("resumed") or resumes:
+            say("    The worker was suspended for repeating a blocked operation.")
+            say(indent(resumes or ["  you resumed the worker"], "  "))
         if entry.get("requests"):
             say("  Access requests")
             for request in entry["requests"]:

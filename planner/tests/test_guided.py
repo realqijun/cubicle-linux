@@ -8,7 +8,6 @@ from pathlib import Path
 import re
 import shlex
 import signal
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -20,7 +19,7 @@ from urllib.request import Request, urlopen
 
 from planner.guided import Console, Guide, Planner, Settings, Stop, locate, project_directory
 from planner.launcher import _request_reconsideration
-from planner.records import Action
+from planner.records import Action, ProtectionStatus
 from planner.scripted_provider import ScriptedProvider
 from planner.supervisor import Supervisor
 from planner.tests.runtime_fixtures import press_ctrl_c, shell
@@ -31,6 +30,7 @@ GATE = (sys.platform == "linux" and os.environ.get("PLANNER_RUN_GUIDED") == "1"
 ORIGINAL = {"README.md": "Example service.\n", "src/app.py": "VALUE = 1\n",
             "tests/test_app.py": "from src.app import VALUE\nassert VALUE == 2\n", ".env": "TOKEN=DUMMY_SECRET\n"}
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
+VERIFIED = ProtectionStatus(True, "fixture-only", "Not OS evidence", verified=True)
 
 
 class GuidedCase(unittest.TestCase):
@@ -339,10 +339,12 @@ class GuideTests(GuidedCase):
 
     def test_suspended_worker_is_resumed_through_the_resume_command(self):
         def resume(planner):
-            database = sqlite3.connect(planner.state)  # Stands in for the runtime checks resume makes.
-            with database:
-                database.execute("UPDATE workers SET state='active'")
-            database.close()
+            command = planner.named("resume")[-1]
+            supervisor = planner.supervisor()
+            try:  # The real resume, with the runtime checks it makes stubbed as passed.
+                supervisor.resume(command[command.index("resume") + 1], "worker", VERIFIED, VERIFIED)
+            finally:
+                supervisor.close()
             return {"state": "resumed"}
 
         runs = [worker_run(suspend=("write", "tests/test_app.py", "file")),
@@ -357,6 +359,13 @@ class GuideTests(GuidedCase):
                                    "--fuse-helper", str(self.base / "fuse-bridge")])
         self.assertEqual(len(self.planner.run_args), 2)
         self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
+        log = self.script("log", str(self.project)).stdout
+        first = log[log.index("Run 1"):log.index("Run 2")]
+        decisions = first[:first.index("  Result")]
+        self.assertEqual(decisions.count("BLOCKED  write tests/test_app.py"), 3)
+        self.assertNotIn("resume", decisions)  # The resume is not a file access.
+        self.assertRegex(first, r"    The worker was suspended for repeating a blocked operation\.\n"
+                                r"    \d\d:\d\d:\d\d  you resumed the worker\n")
 
     def test_declining_to_resume_ends_the_session_as_a_failure(self):
         status = self.guide("y\n\n", [worker_run(suspend=("write", "tests/test_app.py", "file"))])
@@ -367,11 +376,11 @@ class GuideTests(GuidedCase):
 
     def test_failed_resume_is_reported(self):
         def broken(planner):
-            raise Stop("the following arguments are required: --model")
+            raise Stop("linux-connected: FUSE bridge helper unavailable")  # As Planner.call reports it.
 
         status = self.guide("y\ny\n", [worker_run(suspend=("write", "tests/test_app.py", "file"))], resume=broken)
         self.assertEqual(status, 1)
-        self.assertIn("ERROR: Could not resume the worker: the following arguments are required: --model", self.stderr)
+        self.assertIn("ERROR: Could not resume the worker: linux-connected: FUSE bridge helper unavailable", self.stderr)
         self.assertEqual(len(self.planner.run_args), 1)
 
     def test_review_mode_holds_changes_until_applied(self):
@@ -390,9 +399,40 @@ class GuideTests(GuidedCase):
         self.assertEqual(status, 0, self.stderr)
         self.unchanged("src/app.py")
         [args] = self.planner.run_args
-        self.assertIn("apply " + json.loads((self.session / "run-1/run.json").read_text())["attempt"], self.stdout)
+        attempt = json.loads((self.session / "run-1/run.json").read_text())["attempt"]
+        [hint] = [line for line in self.stdout.splitlines() if line.endswith(" apply " + attempt)]
+        self.assertEqual(hint, f"  cd {shlex.quote(str(ROOT))} && python3 -m planner --state "
+                               f"{shlex.quote(str(self.planner.state))} apply {attempt}")
         self.assertEqual(self.status(), "approved")
         self.assertEqual(self.planner.named("apply"), [])
+        # The same command prefix works from another folder.
+        status = subprocess.run(["bash", "-c", hint.rsplit(" apply ", 1)[0] + " status " + self.task()],
+                                cwd=self.base, capture_output=True, text=True, timeout=60)
+        self.assertEqual(status.returncode, 0, status.stderr)
+        self.assertEqual(json.loads(status.stdout)["state"], "approved")
+
+    def test_a_run_without_an_attempt_closes_the_task_and_an_unfinished_one_keeps_it(self):
+        def lost(planner, task, review):
+            raise Stop("The planner stopped before the worker started.")
+
+        def unfinished(planner, task, review):
+            supervisor = planner.supervisor()
+            try:
+                attempt = supervisor.prepare_attempt(task, "worker")["id"]
+                supervisor.verify_attempt(attempt, VERIFIED, VERIFIED)
+                supervisor.start_attempt(attempt)
+            finally:
+                supervisor.close()
+            raise Stop("The planner stopped while the worker ran.")
+
+        for run, state in ((lost, "cancelled"), (unfinished, "approved")):
+            with self.subTest(state=state):
+                self.assertEqual(self.guide("y\n", [run]), 1)
+                self.assertEqual(self.status(), state)
+                entry = json.loads((self.session / "session.json").read_text())["runs"][-1]
+                self.assertIsNone(entry["attempt_state"])
+                kept = "The task stays open because a run's records are not closed." in self.stdout
+                self.assertEqual(kept, state == "approved")
 
     def test_worker_chosen_names_are_escaped(self):
         name = "src/\x1b[2Jevil\a.py"
@@ -443,9 +483,12 @@ class GuideTests(GuidedCase):
             locate(self.project / "planner-home", str(self.project))
         with self.assertRaisesRegex(Stop, "inside"):
             locate(self.home, str(self.base))  # The default home under a project folder.
-        (records / "runs").mkdir(parents=True)
-        with self.assertRaisesRegex(Stop, "holds the planner's own records"):
-            locate(self.home, str(records / "runs"))
+        for inside in (records / "runs", self.home / "opencode-2.2.5", self.home):
+            inside.mkdir(parents=True, exist_ok=True)
+            with self.subTest(inside=inside), self.assertRaisesRegex(Stop, "inside"):
+                locate(self.home, str(inside))
+        with self.assertRaisesRegex(Stop, "holds the planner's runtime and records, not a project"):
+            locate(self.home, str(self.home / "opencode-2.2.5"))
 
 
 class ScriptTests(GuidedCase):
@@ -545,20 +588,35 @@ class InterruptTests(unittest.TestCase):
         self.assertIn("BLOCKED while stopping", stderr)
 
 
+def post(url, messages=()):
+    body = json.dumps({"tools": [{}], "messages": list(messages)}).encode()
+    with urlopen(Request(url + "/chat/completions", data=body, method="POST",
+                         headers={"Content-Type": "application/json"}), timeout=10) as response:
+        return response.read().decode()
+
+
 class ScriptedProviderTests(unittest.TestCase):
     def test_a_none_step_ends_one_run_and_the_next_steps_serve_the_next(self):
-        def post(url):
-            body = json.dumps({"tools": [{}], "messages": []}).encode()
-            with urlopen(Request(url + "/chat/completions", data=body, method="POST",
-                                 headers={"Content-Type": "application/json"}), timeout=10) as response:
-                return response.read().decode()
-
         with ScriptedProvider([("read", {"path": "a"}), None, ("write", {"path": "b"})], final="END") as provider:
             replies = [post(provider.url) for _ in range(4)]
         self.assertIn('"name": "read"', replies[0])
         self.assertIn('"content": "END"', replies[1])
         self.assertIn('"name": "write"', replies[2])
         self.assertIn('"content": "END"', replies[3])
+
+    def test_isolated_runs_skip_the_steps_a_stopped_run_left(self):
+        steps = [("read", {"path": "a"}), ("read", {"path": "b"}), None, ("write", {"path": "c"}), None,
+                 ("write", {"path": "d"}), None]
+        result = [{"role": "tool", "tool_call_id": "call_0", "content": "refused"}]
+        with ScriptedProvider(steps, final="END", isolate_runs=True) as provider:
+            replies = [post(provider.url),  # Run 1 starts; it is stopped before asking again.
+                       post(provider.url),  # Run 2 starts after the rest of run 1's steps.
+                       post(provider.url, result),  # Run 2 ends at its own None.
+                       post(provider.url)]  # Run 3 starts right after it.
+        self.assertIn('"path\\": \\"a\\"', replies[0])
+        self.assertIn('"path\\": \\"c\\"', replies[1])
+        self.assertIn('"content": "END"', replies[2])
+        self.assertIn('"path\\": \\"d\\"', replies[3])
 
 
 @unittest.skipUnless(GATE, "Actual Linux connected runtime required for the guided script")
@@ -572,8 +630,8 @@ class GuidedScriptRuntimeTests(GuidedCase):
         (runtime / "opencode").symlink_to(Path(os.environ["PLANNER_OPENCODE_BINARY"]))
         (self.home / "fuse-bridge").symlink_to(Path(os.environ["PLANNER_FUSE_BRIDGE"]))
 
-    def guided(self, steps, answers, *options):
-        with ScriptedProvider(steps) as provider:
+    def guided(self, steps, answers, *options, isolate_runs=False):
+        with ScriptedProvider(steps, isolate_runs=isolate_runs) as provider:
             environment = {**self.environment, "PLANNER_PROVIDER_URL": provider.url,
                            "PLANNER_MODEL": "fixture/model", "GUIDED_TEST_KEY": "dummy-fixture-credential"}
             # Confined startup has exceeded 90 seconds on a loaded guest; each run may take minutes.
@@ -639,6 +697,49 @@ class GuidedScriptRuntimeTests(GuidedCase):
         self.assertEqual(second["application"]["state"], "applied", second)
         self.assertEqual((self.project / "tests/test_app.py").read_text(), "APPROVED\n")
         self.unchanged("src/app.py", ".env")
+
+    def test_suspended_worker_is_resumed_through_the_real_resume_and_the_rerun_applies_the_fix(self):
+        # Run 1 repeats one refused read until the supervisor suspends the worker; it may be
+        # stopped before it asks for its last step, so each run gets only its own steps.
+        refused = ("read", {"path": "/workspace/.env"})
+        steps = [refused, refused, refused, None,
+                 ("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"}), None]
+        # Approve the permissions, then resume. A suspended run asks about no access requests,
+        # and run 2 has none, so nothing else is asked.
+        result, provider, session, console = self.guided(steps, "y\ny\n", isolate_runs=True)
+        self.assertEqual(result.returncode, 0, result.stdout[-5000:] + result.stderr)
+        self.assertIn("The worker was suspended because it kept repeating the same blocked operation.", console)
+        self.assertIn("Resume the worker and run again? [y/N] y\nThe next run starts a fresh worker", console)
+        self.assertNotIn("Access requests", console)
+        self.assertNotIn("Could not resume", console)
+        first = json.loads((session / "run-1/run.json").read_text())
+        self.assertEqual(first["attempt_state"], "cancelled", first)  # Stopped by the suspension.
+        second = json.loads((session / "run-2/run.json").read_text())
+        self.assertEqual((second["outcome"], second["attempt_state"], second["application"]["state"]),
+                         ("completed", "finished", "applied"), second)
+        self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
+        self.unchanged(".env", "tests/test_app.py", "README.md")
+        self.assertNotIn("DUMMY_SECRET", provider.tool_results())
+        data = json.loads((session / "session.json").read_text())
+        self.assertTrue(data["runs"][0]["resumed"])
+        supervisor = Supervisor(Path(data["state"]))
+        try:
+            history = supervisor.history(data["task"])
+            attempts = supervisor.attempts(data["task"])
+        finally:
+            supervisor.close()
+        [resume] = [row for row in history if row["operation"] == "resume"]  # Recorded by the real CLI.
+        self.assertEqual((resume["worker"], resume["tool"], resume["allowed"]), ("worker", "operator", 1))
+        before = [row for row in history if row["id"] < resume["id"] and row["tool"] == "file"]
+        self.assertEqual([(row["operation"], row["allowed"]) for row in before], [("read", 0)] * 3, before)
+        self.assertTrue(any(row["operation"] == "write" and row["allowed"] and row["tool"] == "file"
+                            for row in history if row["id"] > resume["id"]))
+        self.assertEqual([item["id"] for item in attempts], [first["attempt"], second["attempt"]])
+        self.assertTrue(any(event["reason"] == "repeated_denials" for event in attempts[0]["events"]))
+        log = self.script("log", str(self.project))
+        self.assertEqual(log.returncode, 0, log.stderr)
+        self.assertRegex(log.stdout, r"\d\d:\d\d:\d\d  you resumed the worker\n")
+        self.assertNotIn("allowed  resume", log.stdout)
 
     def test_review_mode_holds_the_fix_until_applied(self):
         steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"}), None]

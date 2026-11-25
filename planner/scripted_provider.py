@@ -17,14 +17,17 @@ class ScriptedProvider:
 
     A ``None`` step answers with the final text instead, which ends that run;
     the steps after it serve the next run against the same provider.
+    With ``isolate_runs``, a request that starts a new conversation (no tool
+    results yet) first skips what is left of the previous run's steps, through
+    its ``None``, so a run the supervisor stopped early leaves none to the next.
     ``on_request(index, body)`` runs before each response so tests can change
     host state at an exact point of the conversation.
     """
 
     def __init__(self, steps: Sequence[tuple[str, dict[str, Any]] | None], *,
                  on_request: Callable[[int, dict[str, Any]], None] | None = None,
-                 final: str = "FIXTURE_DONE") -> None:
-        self.steps, self.on_request = list(steps), on_request
+                 final: str = "FIXTURE_DONE", isolate_runs: bool = False) -> None:
+        self.steps, self.on_request, self.isolate_runs = list(steps), on_request, isolate_runs
         self.bodies: list[dict[str, Any]] = []
         self.raw: list[bytes] = []
         self._issued = 0
@@ -43,6 +46,9 @@ class ScriptedProvider:
                     owner.bodies.append(body)
                     index = len(owner.bodies) - 1
                     step = None
+                    if body.get("tools") and owner._unfinished(body):
+                        rest = owner.steps[owner._issued:]
+                        owner._issued += rest.index(None) + 1 if None in rest else len(rest)
                     if body.get("tools") and owner._issued < len(owner.steps):
                         step = owner.steps[owner._issued]
                         owner._issued += 1
@@ -70,6 +76,12 @@ class ScriptedProvider:
 
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.url = f"http://127.0.0.1:{self.server.server_port}/v1"
+
+    def _unfinished(self, body: dict[str, Any]) -> bool:
+        """Whether ``body`` starts a new run while the previous run's steps are not used up."""
+        started = 0 < self._issued < len(self.steps) and self.steps[self._issued - 1] is not None
+        return self.isolate_runs and started and not any(
+            isinstance(message, dict) and message.get("role") == "tool" for message in body.get("messages", []))
 
     def __enter__(self) -> "ScriptedProvider":
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
