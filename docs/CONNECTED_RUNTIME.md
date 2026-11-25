@@ -74,9 +74,15 @@ $p applications TASK
 
 - `--mode review` retains edits; `apply ATTEMPT` applies them later with the
   same checks and never twice.
-- Ctrl-C during `run` stops the worker, closes the attempt with outcome
-  `stopped` and applies nothing. Killing the runner instead leaves an
-  `interrupted` attempt for `recover`.
+- Ctrl-C during `run`, before the worker has finished, stops it with outcome `stopped` and applies nothing.
+  The runner owns SIGINT while it runs: Ctrl-C only records the request, and the runner acts on it between steps, so it never interrupts a record, a cleanup or an application.
+  Pressed while the runtime is checked or the workspace is mounted, it withdraws the attempt (`blocked`) before any worker starts.
+  Pressed while the jail starts, it kills the jail, so no task is dispatched.
+  Stopping can then take up to `--timeout` seconds (three minutes in the scripts); see [Limits](#limits).
+  Pressed while the worker runs, it stops the worker at the next poll, and the attempt ends `failed` once its cleanup is verified.
+  Once the worker has finished, Ctrl-C interrupts nothing: the runner closes the records and applies the changes as usual, and the result shows the real outcome.
+  Pressing Ctrl-C again changes nothing, and the result's `stop_requested` is true either way.
+- Killing the runner instead, for example with SIGKILL, leaves the attempt `running`, so the next `run` is refused until `recover` verifies the cleanup and reconciles it.
 - `--alert` prints a `BLOCKED` warning on stderr for each refusal recorded for
   the worker while it runs, and once more for refusals recorded as it stops,
   including any found when changes are checked before application. Duplicate
@@ -141,7 +147,8 @@ attempt. The real-runtime tests are `test_launcher`, `test_confined_opencode`,
 `PLANNER_RUN_LINUX_PROBES=1`, `PLANNER_OPENCODE_BINARY` and
 `PLANNER_FUSE_BRIDGE`. They cover permitted and denied reads and writes by tools
 and child processes, directory operations, conflicts, review mode, replay,
-cancellation, revocation, expiry, owner death and recovery, suspension after
+cancellation, revocation, expiry, Ctrl-C while starting and running (pressed
+once or twice), owner death and recovery, suspension after
 repeated denials and resume, single-use and
 sensitive exceptions, external inputs, delegation, repository configuration
 isolation, live alerts and a real LaaS run. `test_demo_scenarios` also runs
@@ -161,6 +168,8 @@ when `PLANNER_RUN_GUIDED=1` is set with the same two path variables.
 - The mediator is single-threaded Python; large builds are slow.
 - One worker per attempt. Native OpenCode subagents are unavailable; delegated
   children are separate supervisor-launched workers.
-- Owner death leaves an `interrupted` record until `recover` runs.
+- Owner death leaves the attempt `running` until `recover` marks it `interrupted`.
+  `recover` reconciles it only once cleanup is verified and the task's authority is still valid.
+- Ctrl-C while the jail starts can take up to `--timeout` seconds to stop the run, because the jail's control channel waits that long for a connection.
 - No Landlock rules are applied; see [known limitations](KNOWN_LIMITATIONS.md#connected-runtime).
 - Model output quality is outside the guarantee; authorized edits can be wrong.
