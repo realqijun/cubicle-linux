@@ -21,6 +21,7 @@ from planner.evaluation import BENCHMARK
 from planner.policy import Policy
 from planner.records import Action, Grant
 from planner.supervisor import Supervisor
+from planner.tests.runtime_fixtures import press_ctrl_c
 
 ROOT = Path(__file__).resolve().parents[2]
 GATE = sys.platform == "linux" and os.environ.get("PLANNER_RUN_DEMO_SCENARIOS") == "1"
@@ -472,6 +473,28 @@ class DemoScriptRuntimeTests(DemoScenarioCase):
         self.assertIn("allowed  write src/greeting.py", worker)
         self.assertEqual(applying.count("allowed  write src/greeting.py"), 1)
         self.assertIn("console.log  (everything the demo printed)", log.stdout)
+
+    def test_ctrl_c_stops_the_demo_after_recording_the_current_run(self):
+        runtime = self.link_runtime()
+        environment = {**self.environment, "PLANNER_PROVIDER_URL": "http://127.0.0.1:9/v1",
+                       "PLANNER_MODEL": "fixture/model", "PLANNER_API_KEY_ENV": "DEMO_FIXTURE_KEY",
+                       "DEMO_FIXTURE_KEY": "dummy-fixture-credential"}
+        code, output = press_ctrl_c(["bash", str(ROOT / "scripts/demo.sh"), SCRIPTED, "normal", "--yes"],
+                                    self.base, environment, lambda text: "Running a scripted worker" in text,
+                                    delay=5)  # During confined startup, before the scripted steps.
+        self.assertEqual(code, 130, output[-5000:])
+        self.assertIn("stopped    you pressed Ctrl-C, so nothing from this run was applied", output)
+        self.assertTrue(output.rstrip().endswith("Stopped."), output[-2000:])
+        self.assertNotIn("Traceback", output)
+        self.assertNotIn("== normal", output)  # The next scenario never starts.
+        [case] = runtime.glob("demo-*")
+        self.assertIn("you pressed Ctrl-C", (case / "console.log").read_text())  # tee kept writing.
+        result = json.loads((case / "run.json").read_text())
+        # Before the worker starts the attempt is withdrawn ("blocked"); after, it ends "failed".
+        self.assertEqual(result["outcome"], "stopped")
+        self.assertIn(result["attempt_state"], ("blocked", "failed"))
+        self.assertEqual(result["application"]["state"], "not_applied")
+        self.assertFalse(inspect_demo(case)["protected_paths_changed"])
 
     def test_a_failed_scenario_does_not_stop_the_next_one(self):
         class Refuse(BaseHTTPRequestHandler):

@@ -14,7 +14,7 @@ from artifact.scripts.prepare import snapshot
 
 from .alerts import companion, printable
 from .connector import PINNED_VERSION
-from .display import decision_lines, diff_lines, show_policy, shown, style, wait
+from .display import STOPPED, decision_lines, diff_lines, show_policy, shown, style, wait
 from .evaluation import BENCHMARK, prepare_run
 from .policy import Policy
 from .scripted_provider import ScriptedProvider
@@ -152,7 +152,10 @@ def _result(directory: Path, config: dict[str, Any], result: dict[str, Any], his
     changes = [str(change["path"]) for change in application.get("changes", [])]
     refused = [row for row in history if not row["allowed"] and not companion(row)]
     problems = []
-    if result.get("outcome") != "completed":
+    stopped = result.get("outcome") == "stopped"
+    if stopped:
+        pass  # Stopping on purpose is not a failure; the result says so.
+    elif result.get("outcome") != "completed":
         cause = printable(str(result.get("error") or result.get("reason") or ""))
         problems.append(f"The worker did not finish: {printable(str(result.get('outcome')))} {cause}".rstrip())
     elif not result.get("cleanup_verified"):
@@ -170,8 +173,9 @@ def _result(directory: Path, config: dict[str, Any], result: dict[str, Any], his
         blocked = style(f"{len(refused)} attempt{'' if len(refused) == 1 else 's'} outside the permissions", "1;33")
     else:
         blocked = "nothing - the model stayed within its permissions this time"
-    lines = ["  changed    " + (", ".join(shown(path, root) for path in changes) or "nothing"),
-             "  blocked    " + blocked]
+    lines = [STOPPED] if stopped else []
+    lines += ["  changed    " + (", ".join(shown(path, root) for path in changes) or "nothing"),
+              "  blocked    " + blocked]
     if not inspection["protected_paths_changed"]:
         lines.append("  untouched  " + ", ".join(config["protected_examples"]))
     diff = diff_lines(directory / "original", root, changes)

@@ -74,6 +74,9 @@ $p applications TASK
 
 - `--mode review` retains edits; `apply ATTEMPT` applies them later with the
   same checks and never twice.
+- Ctrl-C during `run` stops the worker, closes the attempt with outcome
+  `stopped` and applies nothing. Killing the runner instead leaves an
+  `interrupted` attempt for `recover`.
 - `--alert` prints a `BLOCKED` warning on stderr for each refusal recorded for
   the worker while it runs, and once more for refusals recorded as it stops,
   including any found when changes are checked before application. Duplicate

@@ -115,7 +115,8 @@ The script walks you through one task:
 2. It shows the worker's permissions from the built-in `source` template and asks `Approve? [y/N]`.
    Declining cancels the task and changes nothing.
 3. The worker runs on a private copy of the project, and each blocked attempt prints a `BLOCKED` line.
-   Ctrl-C stops the run; wait while the planner stops the worker.
+   Ctrl-C stops the run: wait while the planner stops the worker and records the run.
+   Nothing from a stopped run is applied, and the session ends.
    Afterwards you see what changed, how many attempts were blocked, and the diff.
 4. Each blocked attempt becomes an access request, and the script asks about each one.
    An approved request lets the worker do exactly that once, in the next run; the others are refused.

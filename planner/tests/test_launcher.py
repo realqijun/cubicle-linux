@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
@@ -303,6 +304,41 @@ class LauncherTests(RuntimeCase):
         paths = runtime_paths()
         return ["recover", task, "worker", "--opencode", str(paths["opencode"]),
                 "--fuse-helper", str(paths["fuse_helper"]), "--runs", str(self.runs)]
+
+    def test_ctrl_c_stops_the_worker_records_the_attempt_and_applies_nothing(self) -> None:
+        task = self.approved_task()
+        marker = f"planner-interrupt-{os.getpid()}-{time.monotonic_ns()}"
+        script = ("import time; from pathlib import Path\n"
+                  "Path('/workspace/src/app.py').write_text('VALUE = 2\\n')\n"
+                  "Path('/workspace/src/started.txt').write_text('1')\n"
+                  f"time.sleep(120)  # {marker}\n")
+        with ScriptedProvider([shell(script)]) as provider:
+            owner = subprocess.Popen([sys.executable, "-m", "planner", "--json", "--state", str(self.state),
+                                      *self.run_args(task, provider)], cwd=Path(__file__).parents[2],
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                deadline = time.monotonic() + STARTUP_SECONDS
+                while not list(self.runs.glob("*/fs/backing/src/started.txt")):
+                    self.assertIsNone(owner.poll(), "The run ended before the worker started")
+                    self.assertLess(time.monotonic(), deadline, "Worker never started")
+                    time.sleep(0.2)
+                owner.send_signal(signal.SIGINT)  # What Ctrl-C in the terminal delivers.
+                stdout, stderr = owner.communicate(timeout=120)
+            finally:
+                if owner.poll() is None:
+                    owner.kill()
+                    owner.communicate()
+        self.assertEqual(owner.returncode, 0, stderr)
+        result = json.loads(stdout)
+        self.assertEqual((result["outcome"], result["attempt_state"]), ("stopped", "failed"))
+        self.assertTrue(result["cleanup_verified"])
+        self.assertEqual(result["application"]["state"], "not_applied")
+        self.assertEqual(subprocess.run(["pgrep", "-f", marker], capture_output=True).returncode, 1)
+        self.unchanged("src/app.py")  # An interrupted run applies none of its edits.
+        self.assertEqual(self.cli("worker", task, "worker")["state"], "active")
+        steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"})]
+        with ScriptedProvider(steps) as again:  # Nothing is left for recover to resolve.
+            self.assertEqual(self.cli(*self.run_args(task, again))["application"]["state"], "applied")
 
     def test_owner_death_stops_worker_and_recovery_verifies_before_reuse(self) -> None:
         task = self.approved_task()

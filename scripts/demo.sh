@@ -176,16 +176,21 @@ run_demo() {
 mkdir -p "$planner_home"
 index=0
 failed=()
+stopped=0
+# Ctrl-C reaches the planner, which stops the worker and records the run; then the demo stops.
+trap 'stopped=1' INT
 for scenario in "${selected[@]}"; do
+  ((!stopped)) || break
   index=$((index + 1))
   position=""
   ((${#selected[@]} == 1)) || position=" ($index of ${#selected[@]})"
   demo=$(mktemp -d "$planner_home/demo-$(date +%Y%m%d-%H%M%S)-$scenario-XXXX")
   # Not "run_demo ... || ...": that would disable errexit inside run_demo.
   set +e
-  (set -e; run_demo "$scenario" "$demo" "$position") 2>&1 | tee "$demo/console.log"
+  (set -e; run_demo "$scenario" "$demo" "$position") 2>&1 | tee -i "$demo/console.log"
   status=${PIPESTATUS[0]}
   set -e
   ((status == 0)) || failed+=("$scenario")
 done
+if ((stopped)); then echo "Stopped."; exit 130; fi
 ((${#failed[@]} == 0)) || fail "Did not finish cleanly: ${failed[*]}. See: scripts/demo.sh log NAME"

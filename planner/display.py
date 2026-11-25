@@ -15,6 +15,9 @@ from typing import Any
 
 from .alerts import companion, describe, printable
 
+# The planner records a run stopped with Ctrl-C as outcome "stopped" and applies none of its edits.
+STOPPED = "  stopped    you pressed Ctrl-C, so nothing from this run was applied"
+
 
 def style(text: str, code: str) -> str:
     return text if os.environ.get("NO_COLOR") else f"\033[{code}m{text}\033[0m"

@@ -505,10 +505,14 @@ def run_task(state: Path, task: str, worker: str, prompt: str, config: Connector
                                 else:
                                     continue
                                 break
+                    except KeyboardInterrupt:  # Ctrl-C: the jail is already stopped; close the records, apply nothing.
+                        outcome, failure = "stopped", "Stopped by the operator"
                     except Exception as error:  # Every failure still reaches the closing records.
                         outcome = "authority_lost" if confined.authority_lost else f"runtime_error:{type(error).__name__}"
                         failure = f"{type(error).__name__}: {error}"[:500]
                     cleaned = confined.cleaned
+        except KeyboardInterrupt:
+            outcome, failure = "stopped", "Stopped by the operator"
         except Exception as error:
             if outcome == "runtime_error":
                 outcome = f"runtime_error:{type(error).__name__}"

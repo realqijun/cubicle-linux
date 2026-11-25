@@ -24,7 +24,7 @@ import time
 from typing import Any, TextIO
 
 from .alerts import companion, printable
-from .display import decision_lines, diff_lines, show_policy, shown, style, wait
+from .display import STOPPED, decision_lines, diff_lines, show_policy, shown, style, wait
 from .policy import Policy
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -274,6 +274,8 @@ class Guide:
             result, ok, suspended = self.run_worker(number)
             if result is None:
                 return 1
+            if result.get("outcome") == "stopped":
+                return 130  # Ctrl-C ends the session.
             again = False
             if self.held is not None:
                 ok = self.offer_apply() and ok
@@ -526,7 +528,10 @@ def outcome(directory: Path, result: dict[str, Any], rows: list[dict[str, Any]],
     paths = [str(change["path"]) for change in changes]
     refused = [row for row in rows if not row["allowed"] and not companion(row)]
     problems = []
-    if result.get("outcome") != "completed":
+    stopped = result.get("outcome") == "stopped"
+    if stopped:
+        pass  # Stopping on purpose is not a failure; the result says so.
+    elif result.get("outcome") != "completed":
         cause = printable(str(result.get("error") or result.get("reason") or ""))
         problems.append(f"The worker did not finish: {printable(str(result.get('outcome')))} {cause}".rstrip())
     elif not result.get("cleanup_verified"):
@@ -535,16 +540,17 @@ def outcome(directory: Path, result: dict[str, Any], rows: list[dict[str, Any]],
         problems.append(f"Changes were not applied: {printable(str(state))} "
                         f"({printable(str(application.get('reason')))}).")
     listed = ", ".join(shown(path, project) for path in paths) or "nothing"
+    lines = [STOPPED] if stopped else []
     if state == "retained":
-        lines = ["  held       " + listed + ("  (not in your project yet)" if paths else "")]
+        lines.append("  held       " + listed + ("  (not in your project yet)" if paths else ""))
     else:
-        lines = ["  changed    " + listed]
+        lines.append("  changed    " + listed)
     if refused:
         lines.append("  blocked    " + style(f"{len(refused)} attempt{'' if len(refused) == 1 else 's'} "
                                              "outside the permissions", "1;33"))
     else:
         lines.append("  blocked    nothing - the worker stayed within its permissions")
-    if not problems and not paths and not refused:
+    if not problems and not paths and not refused and not stopped:
         lines.append("  The model made no changes and tried nothing. If you expected changes, check "
                      "PLANNER_MODEL, PLANNER_PROVIDER_URL and the API key.")
     before, after = directory / "before", directory / "after"

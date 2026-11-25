@@ -21,7 +21,7 @@ from planner.launcher import _request_reconsideration
 from planner.records import Action
 from planner.scripted_provider import ScriptedProvider
 from planner.supervisor import Supervisor
-from planner.tests.runtime_fixtures import shell
+from planner.tests.runtime_fixtures import press_ctrl_c, shell
 
 ROOT = Path(__file__).resolve().parents[2]
 GATE = (sys.platform == "linux" and os.environ.get("PLANNER_RUN_GUIDED") == "1"
@@ -197,6 +197,19 @@ class GuideTests(GuidedCase):
             return supervisor.status(self.task())["state"]
         finally:
             supervisor.close()
+
+    def test_ctrl_c_ends_the_session_without_asking_about_requests(self):
+        def stopped(planner, task, review):
+            result = worker_run(denied=[("write", "tests/test_app.py")])(planner, task, review)
+            return {**result, "outcome": "stopped", "error": "Stopped by the operator", "attempt_state": "failed",
+                    "application": {"state": "not_applied", "reason": "attempt_failed:interrupted", "changes": []}}
+
+        self.assertEqual(self.guide("y\n", [stopped]), 130)
+        self.assertIn("  stopped    you pressed Ctrl-C, so nothing from this run was applied", self.stdout)
+        self.assertNotIn("wanted to change", self.stdout)
+        self.assertNotIn("ERROR", self.stderr)
+        self.assertEqual(self.status(), "cancelled")
+        self.unchanged("src/app.py", "tests/test_app.py")
 
     def approvals(self):
         supervisor = self.planner.supervisor()
@@ -535,6 +548,29 @@ class GuidedScriptRuntimeTests(GuidedCase):
         [session] = project_directory(self.home, self.project).glob("sessions/*")
         console = ANSI.sub("", (session / "console.log").read_text())
         return result, provider, session, console
+
+    def test_ctrl_c_stops_the_run_records_it_and_applies_nothing(self):
+        script = ("import time; from pathlib import Path\n"
+                  "Path('/workspace/src/app.py').write_text('VALUE = 2\\n')\n"
+                  "Path('/workspace/src/started.txt').write_text('1')\n"
+                  "time.sleep(300)\n")
+        with ScriptedProvider([shell(script), None]) as provider:
+            environment = {**self.environment, "PLANNER_PROVIDER_URL": provider.url,
+                           "PLANNER_MODEL": "fixture/model", "GUIDED_TEST_KEY": "dummy-fixture-credential"}
+            started = lambda _: bool(list(self.home.glob("projects/*/runs/*/fs/backing/src/started.txt")))
+            code, output = press_ctrl_c(["bash", str(ROOT / "scripts/run.sh"), str(self.project),
+                                         "Change VALUE to 2 in src/app.py.", "--yes"], self.base, environment, started)
+        self.assertEqual(code, 130, output[-5000:])
+        self.assertIn("stopped    you pressed Ctrl-C, so nothing from this run was applied", output)
+        self.assertNotIn("Traceback", output)
+        self.assertNotIn("Run again", output)
+        self.unchanged("src/app.py")
+        [session] = project_directory(self.home, self.project).glob("sessions/*")
+        run = json.loads((session / "run-1/run.json").read_text())
+        self.assertEqual((run["outcome"], run["attempt_state"], run["application"]["state"]),
+                         ("stopped", "failed", "not_applied"))
+        self.assertTrue(run["cleanup_verified"])
+        self.assertIn("you pressed Ctrl-C", (session / "console.log").read_text())
 
     def test_happy_path_applies_an_allowed_fix(self):
         steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"}), None]
