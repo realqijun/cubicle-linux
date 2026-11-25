@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 import re
 from typing import Any
+from urllib.error import HTTPError
 from urllib.request import build_opener, HTTPRedirectHandler, ProxyHandler, Request
 
 from .connector import ConnectorConfig
@@ -65,19 +66,30 @@ def plan(supervisor: Supervisor, project: Path, prompt: str, config: ConnectorCo
         handles = (context.observe(instructions, "trusted_template_catalog", "bundled-templates"),
                    context.observe(prompt, "user_instruction", "operator-task-prompt"))
 
-        def transport(inputs: tuple[str, ...]) -> str:
-            body = json.dumps({"model": config.model.split("/", 1)[1], "stream": False,
-                               "max_tokens": provider.output_tokens,
-                               "messages": [{"role": "system", "content": inputs[0]},
-                                            {"role": "user", "content": inputs[1]}],
-                               "response_format": {"type": "json_object"}}).encode()
-            request = Request(provider.base_url.rstrip("/") + "/chat/completions", data=body,
-                              headers={"Content-Type": "application/json"}, method="POST")
+        def request(inputs: tuple[str, ...], json_mode: bool) -> bytes:
+            body: dict[str, Any] = {"model": config.model.split("/", 1)[1], "stream": False,
+                                    "max_tokens": provider.output_tokens,
+                                    "messages": [{"role": "system", "content": inputs[0]},
+                                                 {"role": "user", "content": inputs[1]}]}
+            if json_mode:
+                body["response_format"] = {"type": "json_object"}
+            outgoing = Request(provider.base_url.rstrip("/") + "/chat/completions", data=json.dumps(body).encode(),
+                               headers={"Content-Type": "application/json"}, method="POST")
             if credential:
-                request.add_header("Authorization", "Bearer " + credential)
+                outgoing.add_header("Authorization", "Bearer " + credential)
             # Do not inherit proxy credentials/settings or follow cross-origin redirects.
-            with build_opener(ProxyHandler({}), _NoRedirect()).open(request, timeout=config.timeout_seconds) as response:
-                raw = response.read(max_response_bytes + 1)
+            with build_opener(ProxyHandler({}), _NoRedirect()).open(outgoing, timeout=config.timeout_seconds) as response:
+                return bytes(response.read(max_response_bytes + 1))
+
+        def transport(inputs: tuple[str, ...]) -> str:
+            try:
+                raw = request(inputs, json_mode=True)
+            except HTTPError as error:
+                error.close()
+                if error.code != 400:
+                    raise
+                # Some servers reject JSON mode; the proposal is validated strictly either way.
+                raw = request(inputs, json_mode=False)
             if len(raw) > max_response_bytes:
                 raise ValueError("Planning response exceeds configured limit")
             result = json.loads(raw)["choices"][0]["message"]["content"]

@@ -1,5 +1,6 @@
 """The guided run on a user's project: scripts/run.sh and planner.guided."""
 
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
@@ -11,6 +12,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -173,14 +175,14 @@ def apply_held(planner, attempt):
 
 
 class GuideTests(GuidedCase):
-    def guide(self, answers, runs, *, resume=None, **options):
-        settings = Settings(self.home, "fixture/model", "https://provider.invalid/v1", "GUIDED_TEST_KEY",
+    def guide(self, answers, runs, *, resume=None, provider="https://provider.invalid/v1", **options):
+        settings = Settings(self.home, "fixture/model", provider, "GUIDED_TEST_KEY",
                             self.base / "opencode", self.base / "fuse-bridge")
         records = project_directory(self.home, self.project)
         planner = FakePlanner(records / "state.sqlite", runs, resume=resume)
         stdout, stderr = io.StringIO(), io.StringIO()
         console = Console(io.StringIO(answers), stdout, stderr)
-        with patch.dict(os.environ, {"NO_COLOR": "1"}):
+        with patch.dict(os.environ, {"NO_COLOR": "1", "GUIDED_TEST_KEY": "dummy-fixture-credential"}):
             guide = Guide(settings, self.project, "Change VALUE to 2 in src/app.py.", planner=planner,
                           console=console, **options)
             status = guide.main()
@@ -197,6 +199,38 @@ class GuideTests(GuidedCase):
             return supervisor.status(self.task())["state"]
         finally:
             supervisor.close()
+
+    def test_plan_shows_the_model_proposal_and_allows_a_slow_model(self):
+        proposal = {"template": "source", "read": ["src/**"], "write": ["src/app.py"], "tools": ["file"]}
+
+        class Provider(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_POST(self):
+                self.rfile.read(int(self.headers["Content-Length"]))
+                data = json.dumps({"choices": [{"message": {"content": json.dumps(proposal)}}]}).encode()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Provider)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            status = self.guide("y\n", [worker_run(write=("src/app.py", "VALUE = 2\n"))], plan=True,
+                                provider=f"http://127.0.0.1:{server.server_port}/v1")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+        self.assertEqual(status, 0, self.stderr)
+        self.assertIn("The model narrowed the trusted source template.", self.stdout)
+        self.assertIn("  write  src/app.py", self.stdout)
+        [command] = self.planner.named("plan")
+        self.assertEqual(command[command.index("--timeout") + 1], "180")
+        self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
 
     def test_ctrl_c_ends_the_session_without_asking_about_requests(self):
         def stopped(planner, task, review):

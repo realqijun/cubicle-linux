@@ -299,7 +299,8 @@ class Guide:
         try:
             proposal = dict(self.planner.call(
                 *lifetime, "plan", str(self.project), "--prompt", self.prompt, "--model", self.settings.model,
-                "--provider-url", self.settings.provider_url, "--api-key-env", self.settings.key_env))
+                "--provider-url", self.settings.provider_url, "--api-key-env", self.settings.key_env,
+                "--timeout", str(TIMEOUT)))  # A large model can take minutes; the CLI default is 10 seconds.
         except Stop as error:
             raise Stop(f"The model's proposal was not usable: {error}. "
                        "Run again without --plan to use the built-in source template.") from None
