@@ -1,0 +1,26 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "soclaas": {
+      "name": "SoCLaaS",
+      "env": [
+        "SOCLAAS_API_KEY"
+      ],
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "https://soclaas-api.comp.nus.edu.sg/v1",
+        "apiKey": "{env:SOCLAAS_API_KEY}"
+      },
+      "models": {
+        "llama3.1": {
+          "modelID": "llama3.1:8b",
+          "name": "llama3.1:8b"
+        },
+        "qwen3.5": {
+          "modelID": "qwen3.5:9b",
+          "name": "qwen3.5:9b"
+        }
+      }
+    }
+  }
+}

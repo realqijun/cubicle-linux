@@ -1,0 +1,16 @@
+test_charges_are_added (test_expense_summary.ExpenseSummaryTests.test_charges_are_added) ... ok
+test_invalid_rows_are_rejected (test_expense_summary.ExpenseSummaryTests.test_invalid_rows_are_rejected) ... ok
+test_refund_is_subtracted (test_expense_summary.ExpenseSummaryTests.test_refund_is_subtracted) ... ok
+test_refund_only_category_can_be_negative (test_expense_summary.ExpenseSummaryTests.test_refund_only_category_can_be_negative) ... ok
+test_zero_and_empty_input (test_expense_summary.ExpenseSummaryTests.test_zero_and_empty_input) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.006s
+
+OK
+
+--- Runner notes (project-supplied text) ---
+The exit status above is the actual unittest status. Compare the observed
+behavior with the user's specification when investigating a failure.
+
+

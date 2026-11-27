@@ -1,0 +1,44 @@
+{
+  "workload": {
+    ".DS_Store": "d29e3642195245196ac6971d9b73d617c160a90a9a8f47820832d8d2fe67fc5a",
+    "README.md": "357eb72cfef12be54eaa41a51cf236fbda54dc061a4fe605baa6a638b8be1921",
+    "data/expenses.csv": "3a705bed21b2165ddc1cbe0fa0e3ea83c5fbf3641ce8db40765d56da8b99154e",
+    "docs/project-notes.md": "aa8be77c5907b952e3d3bc381780892791dd1b2e8ff10737a543d159e242fb13",
+    "docs/runner-notes.txt": "a5c77e0c1967d61fef7b366bfa7d008d5ec58d88caffb4108eac69dd1b1e6b65",
+    "src/__init__.py": "e032b7ad1c96194c9b34f1627d0a2b3d98ce94039afae0bbc121b0da6afdef9a",
+    "src/expense_summary.py": "593d1ec77d902448a9debcdc8c47ff17317228c1d5c94256f8d724b96b09c936",
+    "tests/test_expense_summary.py": "e1848c2b8f4d5c9e5bd742842eba86ff1c0b8f795580fb331463196e251d9127",
+    "tools/run_tests.py": "bc8934a868841e59c8900630209eaf5d795501b9cca6eac9778f070b83ba121b"
+  },
+  "skills": {
+    ".DS_Store": "53b414e9a02f97a0ebd97e7294877529715d9d3ceb6d9e4446371b480123bb06",
+    "LICENSE.superpowers": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+    "UPSTREAM.json": "10c9f7b9456fab307d5dda6f43328e1ed01c9096fd76b646d1332435cd5d9870",
+    "systematic-debugging/CREATION-LOG.md": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+    "systematic-debugging/SKILL.md": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+    "systematic-debugging/condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+    "systematic-debugging/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+    "systematic-debugging/defense-in-depth.md": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+    "systematic-debugging/find-polluter.sh": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+    "systematic-debugging/root-cause-tracing.md": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+    "systematic-debugging/test-academic.md": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+    "systematic-debugging/test-pressure-1.md": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+    "systematic-debugging/test-pressure-2.md": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+    "systematic-debugging/test-pressure-3.md": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+    "test-driven-development/SKILL.md": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+    "test-driven-development/writing-good-tests.md": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+    "verification-before-completion/SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+  },
+  "scripts": {
+    "check.py": "87d5d812a55fdb7b497a1970e87f1e1d93768bafa40d31d6548d3329693826f0",
+    "collect.py": "d053ac881d0463c4d35461a8eeeab07ab3b8dc814ca1576981cb21b339a84dc7",
+    "prepare.py": "3918c8686c2bd678b2f787b62ccd4dce6ce2733699f57c12a28faffb4d5d20e3"
+  },
+  "scenarios": {
+    "benign-quotation.json": "917d72b7ebb9e9bb4d4d888deed0276638ac91071e0761fbf4877f1a1227e052",
+    "documentation-injection.json": "8011a727e239df83584ddab52cb3e5a7ce434b11667baafa7a78b26152908cd7",
+    "normal.json": "8943f90b8343c6d61adcdbe3d7855e97dadbaf015a032742ffa86f63d2cc704b",
+    "tool-output-injection.json": "67df3c0a116d94f3e7e8bd6dbd5b59ea119627541a7a68280d2d4021b3f916be"
+  },
+  "task.md": "effc36d525b365b8d9048e9c3249600cfcd7777a341d68add843fa9c7808f368"
+}

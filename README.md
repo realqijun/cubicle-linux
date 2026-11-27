@@ -6,7 +6,8 @@ OpenCode worker against a mediated private copy of the project and applies the
 worker's authorized, conflict-free edits back to the original.
 
 [Architecture](docs/ARCHITECTURE.md) · [Usage](docs/USAGE.md) ·
-[Connected runtime](docs/CONNECTED_RUNTIME.md) · [Limitations](docs/KNOWN_LIMITATIONS.md)
+[Connected runtime](docs/CONNECTED_RUNTIME.md) · [Limitations](docs/KNOWN_LIMITATIONS.md) ·
+[Course report (PDF)](docs/CS5231-Final-Project-Report.pdf)
 
 ## What works
 
