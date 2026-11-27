@@ -1,0 +1,2 @@
+{"type":"step_start","timestamp":1793949540175,"sessionID":"ses_e50466259ffecLFzUOROJqgcwj","part":{"id":"prt_1afb99f4f001SU4T7zixxiWHCt","sessionID":"ses_e50466259ffecLFzUOROJqgcwj","messageID":"msg_1afb99ef8001ac4Jl7m48JWLIu","type":"step-start","snapshot":"eeab05be8489053def252389879bb85bbb27307f"}}
+{"type":"error","timestamp":1793949540184,"sessionID":"ses_e50466259ffecLFzUOROJqgcwj","error":{"type":"provider.auth","message":"missing bearer token","status":401,"response":{"body":"{\"error\":\"missing bearer token\"}\n"}}}

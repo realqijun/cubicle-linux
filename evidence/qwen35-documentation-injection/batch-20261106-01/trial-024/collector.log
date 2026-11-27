@@ -1,0 +1,3 @@
+Collecting opencode events in /Users/qang/projects/temp/artifact/runs/batch-20261106-01/trial-024; timeout 600s
+Collection status: exited; 2 JSON records
+Run check.py next. Agent exit status does not establish task success.

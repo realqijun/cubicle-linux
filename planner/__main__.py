@@ -9,6 +9,7 @@ import sqlite3
 import sys
 from typing import Any, Sequence, cast
 
+from .enforcement import ProtectionUnavailable
 from .policy import Policy
 from .records import Action, Grant, Operation
 from .supervisor import Supervisor
@@ -88,12 +89,15 @@ def parser() -> argparse.ArgumentParser:
         request.add_argument("approval")
         if name == "approve-exception":
             request.add_argument("--confirm-sensitive-provider-disclosure", action="store_true")
-    for name in ("preflight", "resume", "revoke"):
-        worker = commands.add_parser(name)
+    for name, purpose in (("preflight", "Check the connected runtime for an active worker"),
+                          ("resume", "Reactivate a suspended worker after checking the connected runtime"),
+                          ("revoke", "Revoke a worker and its descendants")):
+        worker = commands.add_parser(name, help=purpose)
         worker.add_argument("task")
         worker.add_argument("worker")
         if name != "revoke":
-            worker.add_argument("--model", required=True, help="Explicit provider/model")
+            worker.add_argument("--opencode", type=Path, required=True, help="Pinned OpenCode binary")
+            worker.add_argument("--fuse-helper", type=Path, required=True, help="Compiled fuse_bridge.c")
         if name == "resume":
             worker.add_argument("--cleanup-verified", action="store_true",
                                 help="Trusted operator confirms previous processes have stopped")
@@ -172,6 +176,9 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
             supervisor.close()
             return recover(args.state, args.task, args.worker, Runtime(args.opencode, args.fuse_helper, args.runs),
                            operator_confirmed=args.operator_confirms_cleanup)
+        import signal
+        import threading
+
         from .alerts import Alarm
         from .connector import ConnectorConfig, ProviderConfig
 
@@ -180,11 +187,15 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
         alarm = Alarm(Path(supervisor.status(args.task)["policy"]["root"])) if args.alert else None
         supervisor.close()  # The runner owns its own connections and threads.
         try:
-            return run_task(args.state, args.task, args.worker, args.prompt,
-                            ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
-                            Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds,
-                                    denial_limit=args.denial_limit),
-                            credential=credential, mode=args.mode, on_denial=alarm)
+            result = run_task(args.state, args.task, args.worker, args.prompt,
+                              ConnectorConfig(args.model, timeout_seconds=args.timeout, provider=provider),
+                              Runtime(args.opencode, args.fuse_helper, args.runs, run_seconds=args.run_seconds,
+                                      denial_limit=args.denial_limit),
+                              credential=credential, mode=args.mode, on_denial=alarm)
+            if threading.current_thread() is threading.main_thread():
+                # Every record is closed; a late Ctrl-C must not lose the result printed below.
+                signal.signal(signal.SIGINT, signal.SIG_IGN)
+            return result
         finally:
             if alarm is not None:
                 alarm.close()
@@ -242,12 +253,15 @@ def execute(args: argparse.Namespace, supervisor: Supervisor) -> Any:
     if command == "revoke":
         supervisor.revoke_worker(args.task, args.worker)
         return {"task": args.task, "worker": args.worker, "state": "revoked"}
-    if command == "preflight":
-        statuses = supervisor.preflight(args.task, args.worker, args.model)
+    if command in ("preflight", "resume"):
+        from .native.confined_opencode import runtime_status
+
+        backend, connector = runtime_status(args.opencode, args.fuse_helper)  # The same check as `run`.
+        if command == "resume":
+            supervisor.resume(args.task, args.worker, backend, connector, cleanup_verified=args.cleanup_verified)
+            return {"state": "resumed"}
+        statuses = supervisor.preflight(args.task, args.worker, backend, connector)
         return {"ready": all(s["available"] and s["verified"] for s in statuses), "checks": statuses}
-    if command == "resume":
-        supervisor.resume(args.task, args.worker, args.model, cleanup_verified=args.cleanup_verified)
-        return {"state": "resumed"}
     if command == "export":
         return supervisor.export(args.task)
     from .provenance import Provenance
@@ -289,7 +303,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2 if isinstance(result, dict) and result.get("ready") is False else 0
     except (ValueError, KeyError, OSError, RuntimeError, sqlite3.Error) as error:
         result = {"blocked": True, "reason": str(error)}
-        print(json.dumps(result) if args.json else f"BLOCKED: {error}", file=sys.stderr)
+        # A runtime refusal already says BLOCKED; the JSON reason keeps it as recorded.
+        shown = str(error) if isinstance(error, ProtectionUnavailable) else f"BLOCKED: {error}"
+        print(json.dumps(result) if args.json else shown, file=sys.stderr)
         return 2
     finally:
         if supervisor is not None:

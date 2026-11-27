@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
@@ -304,6 +305,83 @@ class LauncherTests(RuntimeCase):
         return ["recover", task, "worker", "--opencode", str(paths["opencode"]),
                 "--fuse-helper", str(paths["fuse_helper"]), "--runs", str(self.runs)]
 
+    def interrupt(self, ready: str, *, presses: int = 1, settle: float = 0) -> tuple[dict, bool]:
+        """Send the run's owner SIGINT once a file matching ``ready`` appears in its run storage.
+
+        A terminal's Ctrl-C signals the whole foreground process group; this
+        signals only the owner. Asserts what every stop must leave behind and
+        returns the run's result and whether the worker was running when pressed.
+        """
+        task = self.approved_task()
+        marker = f"planner-interrupt-{os.getpid()}-{time.monotonic_ns()}"
+        script = ("import time; from pathlib import Path\n"
+                  "Path('/workspace/src/app.py').write_text('VALUE = 2\\n')\n"
+                  "Path('/workspace/src/started.txt').write_text('1')\n"
+                  f"time.sleep(120)  # {marker}\n")
+        with ScriptedProvider([shell(script)]) as provider:
+            owner = subprocess.Popen([sys.executable, "-m", "planner", "--json", "--state", str(self.state),
+                                      *self.run_args(task, provider)], cwd=Path(__file__).parents[2],
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                deadline = time.monotonic() + STARTUP_SECONDS
+                while not list(self.runs.glob(ready)):
+                    self.assertIsNone(owner.poll(), f"The run ended before {ready} appeared")
+                    self.assertLess(time.monotonic(), deadline, f"{ready} never appeared")
+                    time.sleep(0.05)
+                time.sleep(settle)
+                running = bool(list(self.runs.glob("*/fs/backing/src/started.txt")))
+                for press in range(presses):
+                    if press:
+                        time.sleep(0.5)  # The second press arrives while the first is being handled.
+                    owner.send_signal(signal.SIGINT)
+                # Stopping during startup can wait for the jail's control channel, up to --timeout.
+                stdout, stderr = owner.communicate(timeout=600)
+            finally:
+                if owner.poll() is None:
+                    owner.kill()
+                    owner.communicate()
+        self.assertEqual(owner.returncode, 0, stderr)
+        self.assertNotIn("Traceback", stderr)
+        result = json.loads(stdout)
+        self.assertEqual(result["outcome"], "stopped", result)
+        self.assertTrue(result["stop_requested"])
+        self.assertEqual(result["application"]["state"], "not_applied")
+        self.assertEqual(subprocess.run(["pgrep", "-f", marker], capture_output=True).returncode, 1)
+        mounts = [line.split()[4] for line in Path("/proc/self/mountinfo").read_text().splitlines()]
+        self.assertEqual([mount for mount in mounts if mount.startswith(str(self.runs))], [])
+        self.unchanged("src/app.py")  # An interrupted run applies none of its edits.
+        # Every record is closed: nothing for recover to resolve, and the worker can run again.
+        self.assertEqual([attempt["state"] for attempt in self.cli("attempts", task)], [result["attempt_state"]])
+        self.assertEqual(self.cli("worker", task, "worker")["state"], "active")
+        steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"})]
+        with ScriptedProvider(steps) as again:
+            self.assertEqual(self.cli(*self.run_args(task, again))["application"]["state"], "applied")
+        return result, running
+
+    def test_ctrl_c_stops_the_worker_records_the_attempt_and_applies_nothing(self) -> None:
+        result, _ = self.interrupt("*/fs/backing/src/started.txt")
+        self.assertEqual(result["attempt_state"], "failed")
+        self.assertTrue(result["cleanup_verified"])
+
+    def test_a_second_ctrl_c_cannot_interrupt_the_cleanup(self) -> None:
+        result, _ = self.interrupt("*/fs/backing/src/started.txt", presses=2)
+        self.assertEqual(result["attempt_state"], "failed")
+        self.assertTrue(result["cleanup_verified"])
+
+    def test_ctrl_c_while_mounting_withdraws_the_attempt(self) -> None:
+        result, running = self.interrupt("*/fs/mount")
+        self.assertFalse(running)
+        # Withdrawn before the attempt starts ("blocked"), or "failed" if the signal landed just after.
+        self.assertIn(result["attempt_state"], ("blocked", "failed"))
+
+    def test_ctrl_c_while_the_jail_starts_stops_it_and_closes_the_attempt(self) -> None:
+        # The connector's runtime directory appears just before the jail process starts; startup
+        # then takes far longer than the second waited here.
+        result, running = self.interrupt("*/opencode-*", presses=2, settle=1)
+        self.assertFalse(running)
+        self.assertEqual(result["attempt_state"], "failed")
+        self.assertTrue(result["cleanup_verified"])
+
     def test_owner_death_stops_worker_and_recovery_verifies_before_reuse(self) -> None:
         task = self.approved_task()
         self.kill_owner_mid_run(task)
@@ -560,6 +638,35 @@ class ReviewRuntimeTests(RuntimeCase):
         self.assertEqual(self.cli("worker", task, "worker")["state"], "suspended")
         self.assertLess(provider._issued, len(steps), "Worker kept retrying after the limit")
         self.assertNotIn("DUMMY_SECRET", provider.tool_results())
+
+    def test_suspended_worker_runs_again_only_after_resume_verifies_the_runtime(self) -> None:
+        task = self.approved_task()
+        steps = [shell("print(open('/workspace/.env').read())") for _ in range(5)]
+        with ScriptedProvider(steps) as provider:
+            result = self.cli(*self.run_args(task, provider))
+        self.assertEqual((result["outcome"], result["attempt_state"]), ("authority_lost", "cancelled"))
+        self.assertEqual(self.cli("worker", task, "worker")["state"], "suspended")
+        paths = runtime_paths()
+        runtime = ["--opencode", str(paths["opencode"]), "--fuse-helper", str(paths["fuse_helper"])]
+        with ScriptedProvider([]) as idle:
+            self.assertEqual(self.cli(*self.run_args(task, idle), check=False)["returncode"], 2)
+            self.assertEqual(idle.bodies, [])
+        self.assertEqual(self.cli("preflight", task, "worker", *runtime, check=False)["returncode"], 2)
+        missing = self.cli("resume", task, "worker", "--opencode", str(paths["opencode"]),
+                           "--fuse-helper", str(self.base / "missing-helper"), check=False)
+        self.assertEqual(missing["returncode"], 2)
+        self.assertIn("FUSE bridge helper unavailable", missing["stderr"])
+        self.assertEqual(self.cli("worker", task, "worker")["state"], "suspended")
+        self.assertEqual(self.cli("resume", task, "worker", *runtime), {"state": "resumed"})
+        self.assertEqual(self.cli("history", task)[-1]["operation"], "resume")
+        self.assertTrue(self.cli("preflight", task, "worker", *runtime)["ready"])
+        steps = [("write", {"path": "/workspace/src/app.py", "content": "VALUE = 2\n"})]
+        with ScriptedProvider(steps) as provider:
+            result = self.cli(*self.run_args(task, provider))
+        self.assertEqual((result["outcome"], result["attempt_state"]), ("completed", "finished"), result)
+        self.assertEqual(result["application"]["state"], "applied")
+        self.assertEqual((self.project / "src/app.py").read_text(), "VALUE = 2\n")
+        self.unchanged(".env", "tests/test_app.py")
 
     def test_cancellation_between_verification_and_dispatch_closes_cleanly(self) -> None:
         from unittest.mock import patch

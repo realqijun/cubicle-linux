@@ -21,7 +21,7 @@ package's `__main__.py`.
 planner/               Git repository root
   README.md
   pyproject.toml
-  docs/                Guides and architecture
+  docs/                Guides, architecture and the course report PDF
   evidence/            Sanitized recorded outcomes and source hashes
   artifact/            Pinned evaluation inputs
   scripts/             Ubuntu install and guided demo
@@ -55,6 +55,8 @@ The architecture page/assets and original planner plan were brought into
 scenarios, task, preparation script, and pinned upstream skills with license
 and origin metadata. Source files were copied from source commit `057f54c`;
 local runs, raw sessions, caches, and service configuration were excluded.
+The one exception is the Qwen 3.5 9B documentation-injection runs cited in the course report.
+They are kept with their raw sessions in `evidence/qwen35-documentation-injection/`.
 The intentionally failing workload is an evaluation input, not the planner test
 suite. See the [fixture README](../artifact/README.md).
 

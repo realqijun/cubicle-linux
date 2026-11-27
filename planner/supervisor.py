@@ -16,8 +16,7 @@ from uuid import uuid4
 
 from .policy import Policy, canonical_path
 from .records import Action, Decision, Grant, Operation, ProtectionStatus
-from .connector import Connector, ConnectorConfig
-from .enforcement import Backend, ProtectionUnavailable
+from .enforcement import ProtectionUnavailable
 
 
 def _decode_grant(encoded: str) -> Grant:
@@ -44,7 +43,7 @@ class Supervisor:
             CREATE TABLE IF NOT EXISTS workers (
                 task TEXT NOT NULL REFERENCES tasks(id), id TEXT NOT NULL,
                 grant_json TEXT NOT NULL, state TEXT NOT NULL, revision INTEGER NOT NULL,
-                template TEXT,
+                template TEXT, resumed_after INTEGER,
                 PRIMARY KEY(task,id));
             CREATE TABLE IF NOT EXISTS delegation_templates (
                 task TEXT NOT NULL REFERENCES tasks(id), name TEXT NOT NULL,
@@ -92,6 +91,8 @@ class Supervisor:
             columns = {row["name"] for row in self.db.execute("PRAGMA table_info(workers)")}
             if "template" not in columns:
                 self.db.execute("ALTER TABLE workers ADD COLUMN template TEXT")
+            if "resumed_after" not in columns:
+                self.db.execute("ALTER TABLE workers ADD COLUMN resumed_after INTEGER")
             columns = {row["name"] for row in self.db.execute("PRAGMA table_info(approvals)")}
             if "attempt" not in columns:
                 self.db.execute("ALTER TABLE approvals ADD COLUMN attempt TEXT")
@@ -218,7 +219,7 @@ class Supervisor:
         self.policy(grant.task_id).validate_grant(grant, parent)
         if not grant.worker_id or grant.parent_id == grant.worker_id:
             raise ValueError("Invalid worker identity")
-        self.db.execute("INSERT INTO workers VALUES (?,?,?,'active',?,?)",
+        self.db.execute("INSERT INTO workers VALUES (?,?,?,'active',?,?,NULL)",
                         (grant.task_id, grant.worker_id, json.dumps(asdict(grant)),
                          self.status(grant.task_id)["revision"], template))
 
@@ -395,8 +396,7 @@ class Supervisor:
                     worker = self.worker_status(item["task"], item["worker"])
                     if worker["state"] != "revoked":
                         self.db.execute("SAVEPOINT recovery")
-                        self.db.execute("UPDATE workers SET state='active' WHERE task=? AND id=?",
-                                        (item["task"], item["worker"]))
+                        self._reactivate(item["task"], item["worker"])
                         try:
                             self._attempt_authority(item)
                             recovered = True
@@ -688,9 +688,10 @@ class Supervisor:
         self.db.execute("INSERT INTO access_requests VALUES (NULL,?,?,?,?,?)",
                         (task, worker, resources, allowed, self.clock()))
         if not allowed:
-            last = self.db.execute("""SELECT resources,allowed FROM access_requests
-                WHERE task=? AND worker=? ORDER BY id DESC LIMIT ?""",
-                (task, worker, self.denial_limit)).fetchall()
+            # A reactivated worker starts a new sequence; earlier refusals stay recorded.
+            last = self.db.execute("""SELECT resources,allowed FROM access_requests WHERE task=? AND worker=?
+                AND id>COALESCE((SELECT resumed_after FROM workers WHERE task=? AND id=?),0)
+                ORDER BY id DESC LIMIT ?""", (task, worker, task, worker, self.denial_limit)).fetchall()
             if len(last) == self.denial_limit and all(
                 not row["allowed"] and row["resources"] == resources for row in last
             ):
@@ -799,41 +800,58 @@ class Supervisor:
             self.db.execute("UPDATE delegation_templates SET state='revoked' WHERE task=?", (task_id,))
             self._stop_attempts(task_id, None, "task_cancelled")
 
-    def preflight(self, task_id: str, worker_id: str, model: str) -> list[dict[str, Any]]:
-        grant = self.check_worker(task_id, worker_id)
-        return [asdict(Backend().check(self.policy(task_id), grant)),
-                asdict(Connector(ConnectorConfig(model)).check())]
+    def preflight(self, task_id: str, worker_id: str, backend: ProtectionStatus,
+                  connector: ProtectionStatus) -> list[dict[str, Any]]:
+        """Report the trusted caller's runtime checks for a worker that may run now."""
+        self.check_worker(task_id, worker_id)
+        return [asdict(backend), asdict(connector)]
 
-    def resume(self, task_id: str, worker_id: str, model: str, *, cleanup_verified: bool = False) -> None:
-        """Recovery cannot re-enable work without verifying every protection."""
-        self._active(task_id)
-        row = self.db.execute("SELECT grant_json,state FROM workers WHERE task=? AND id=?",
-                              (task_id, worker_id)).fetchone()
-        if row is None or row["state"] == "revoked":
-            raise ValueError("Worker grant was revoked or is missing")
-        grant = _decode_grant(row["grant_json"])
-        policy = self.policy(task_id)
-        backend, connector = Backend().check(policy, grant), Connector(ConnectorConfig(model)).check()
+    def _reactivate(self, task_id: str, worker_id: str) -> None:
+        """Restore a suspended worker's unchanged grant; identical-denial counting restarts."""
+        last = self.db.execute("SELECT COALESCE(MAX(id),0) FROM access_requests").fetchone()[0]
+        self.db.execute("UPDATE workers SET state='active',resumed_after=? WHERE task=? AND id=?",
+                        (last, task_id, worker_id))
+
+    def _record_resume(self, task_id: str, worker_id: str) -> None:
+        self.check_worker(task_id, worker_id)
+        self.db.execute("INSERT INTO decisions VALUES (NULL,?,?,'resume',?,'operator',1,?,NULL,?,?)",
+                        (task_id, worker_id, worker_id, "Operator resumed the worker after verified protection checks",
+                         self.clock(), self.worker_status(task_id, worker_id)["revision"]))
+
+    def resume(self, task_id: str, worker_id: str, backend: ProtectionStatus, connector: ProtectionStatus,
+               *, cleanup_verified: bool = False) -> None:
+        """Reactivate a suspended worker after the trusted caller verified the runtime.
+
+        Starts no worker and changes no scope. Revoked, expired or superseded
+        authority is never revived; an interrupted attempt first needs verified cleanup.
+        """
         for status in (backend, connector):
             if not status.available or not status.verified:
                 raise ProtectionUnavailable(status)
-        pending = [item for item in self.attempts(task_id) if item["worker"] == worker_id and
-                   item["state"] in ("prepared", "verified", "running", "stopping", "interrupted")]
-        if any(item["state"] != "interrupted" for item in pending):
-            raise ValueError("Reconcile unresolved execution attempts before resuming")
-        for item in pending:
-            recovered = self.recover_attempt(item["id"], backend, connector, cleanup_verified=cleanup_verified)
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            self._active(task_id)
+            worker = self.worker_status(task_id, worker_id)
+            if worker["state"] == "revoked" or worker["revision"] != self.status(task_id)["revision"]:
+                raise ValueError("Worker grant was revoked or its revision changed")
+            if worker["state"] != "suspended":
+                raise ValueError("Only a suspended worker can be resumed")
+            pending = self.db.execute("""SELECT id,state FROM attempts WHERE task=? AND worker=?
+                AND state IN ('prepared','verified','running','stopping','interrupted') ORDER BY rowid""",
+                (task_id, worker_id)).fetchall()
+            if any(row["state"] != "interrupted" for row in pending):
+                raise ValueError("Reconcile unresolved execution attempts before resuming")
+            if not pending:
+                self._reactivate(task_id, worker_id)
+                self._record_resume(task_id, worker_id)
+                return
+        for row in pending:
+            recovered = self.recover_attempt(row["id"], backend, connector, cleanup_verified=cleanup_verified)
             if recovered["state"] != "reconciled":
                 raise ValueError(f"Recovery blocked: {recovered['reason']}")
-        if not pending:
-            with self.db:
-                self.db.execute("BEGIN IMMEDIATE")
-                self._active(task_id)
-                current = self.worker_status(task_id, worker_id)
-                if current["state"] == "revoked" or current["revision"] != self.status(task_id)["revision"]:
-                    raise ValueError("Worker grant was revoked or its revision changed")
-                self.db.execute("UPDATE workers SET state='active' WHERE task=? AND id=?", (task_id, worker_id))
-                self.check_worker(task_id, worker_id)
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            self._record_resume(task_id, worker_id)
 
     def export(self, task_id: str) -> dict[str, Any]:
         return {"tasks": [self.status(task_id)],

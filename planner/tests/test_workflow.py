@@ -42,7 +42,8 @@ class PlanningTests(unittest.TestCase):
             self.assertEqual(supervisor.status(supervisor.proposed)['state'], 'cancelled')
 
     @contextmanager
-    def provider(self, proposal):
+    def provider(self, proposal, *, json_mode=True):
+        """A chat-completions endpoint; ``json_mode=False`` rejects ``response_format`` as some servers do."""
         observed = []
 
         class Handler(BaseHTTPRequestHandler):
@@ -50,8 +51,16 @@ class PlanningTests(unittest.TestCase):
                 pass
 
             def do_POST(self):
-                observed.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
-                data = json.dumps({'choices': [{'message': {'content': json.dumps(proposal)}}]}).encode()
+                body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                observed.append(body)
+                if 'response_format' in body and not json_mode:
+                    data = b'{"error": {"message": "Structured output is not available"}}'
+                    self.send_response(400)
+                    self.send_header('Content-Length', str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+                data = json.dumps({'choices': [{'message': {'content': '\n\n' + json.dumps(proposal)}}]}).encode()
                 self.send_response(200)
                 self.send_header('Content-Length', str(len(data)))
                 self.end_headers()
@@ -93,6 +102,22 @@ class PlanningTests(unittest.TestCase):
                     self.assertIn('planner_model_call', metadata)
                 finally:
                     store.close()
+            finally:
+                supervisor.close()
+
+    def test_a_provider_without_json_mode_is_asked_again_without_it(self):
+        proposal = {'template': 'source', 'read': ['src/**'], 'write': ['src/**'], 'tools': ['file']}
+        with tempfile.TemporaryDirectory() as directory, self.provider(proposal, json_mode=False) as (url, observed):
+            root = Path(directory)
+            project = root / 'project'
+            project.mkdir()
+            supervisor = Supervisor(root / 'control.sqlite')
+            try:
+                result = plan(supervisor, project, 'Fix source behavior', ConnectorConfig(
+                    'fixture/model', provider=ProviderConfig(url)))
+                self.assertEqual((result['state'], result['policy']['write']), ('proposed', ['src/**']))
+                self.assertEqual(['response_format' in body for body in observed], [True, False])
+                self.assertEqual(observed[0]['messages'], observed[1]['messages'])  # The same inputs, once more.
             finally:
                 supervisor.close()
 

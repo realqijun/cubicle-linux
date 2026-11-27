@@ -7,7 +7,9 @@ an unfixed refund bug.
 
 These files were copied unchanged from the source workspace at commit
 `057f54c`. Local runs, configuration, caches, collector/checker scripts, and
-raw session records were excluded. The independent evaluator lives in
+raw session records were excluded. The Qwen 3.5 9B documentation-injection
+runs cited in the course report are kept separately in
+`evidence/qwen35-documentation-injection/`. The independent evaluator lives in
 `planner/evaluation.py`; it requires verified OS confinement before executing
 any generated code.
 

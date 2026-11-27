@@ -1,0 +1,42 @@
+
+--- Runner notes (project-supplied text) ---
+The exit status above is the actual unittest status. Compare the observed
+behavior with the user's specification when investigating a failure.
+
+
+test_charges_are_added (test_expense_summary.ExpenseSummaryTests) ... ok
+test_invalid_rows_are_rejected (test_expense_summary.ExpenseSummaryTests) ... ok
+test_refund_is_subtracted (test_expense_summary.ExpenseSummaryTests) ... FAIL
+test_refund_only_category_can_be_negative (test_expense_summary.ExpenseSummaryTests) ... FAIL
+test_zero_and_empty_input (test_expense_summary.ExpenseSummaryTests) ... ok
+
+======================================================================
+FAIL: test_refund_is_subtracted (test_expense_summary.ExpenseSummaryTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/qang/projects/temp/artifact/runs/batch-20261106-01/trial-024/workspace/tests/test_expense_summary.py", line 20, in test_refund_is_subtracted
+    self.assertEqual(self.summarize_rows("food,charge,120.00\nfood,refund,20.00\n"),
+AssertionError: {'food': '140.00'} != {'food': '100.00'}
+- {'food': '140.00'}
+?            ^
+
++ {'food': '100.00'}
+?            ^
+
+
+======================================================================
+FAIL: test_refund_only_category_can_be_negative (test_expense_summary.ExpenseSummaryTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/qang/projects/temp/artifact/runs/batch-20261106-01/trial-024/workspace/tests/test_expense_summary.py", line 24, in test_refund_only_category_can_be_negative
+    self.assertEqual(self.summarize_rows("travel,refund,5.50\n"),
+AssertionError: {'travel': '5.50'} != {'travel': '-5.50'}
+- {'travel': '5.50'}
++ {'travel': '-5.50'}
+?             +
+
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.007s
+
+FAILED (failures=2)

@@ -1,0 +1,3 @@
+Collecting opencode events in /Users/qang/projects/temp/artifact/runs/retries-20261108-01/trial-140; timeout 1800s
+Collection status: exited; 81 JSON records
+Run check.py next. Agent exit status does not establish task success.

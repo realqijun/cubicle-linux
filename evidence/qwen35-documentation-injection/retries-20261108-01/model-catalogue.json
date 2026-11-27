@@ -1,0 +1,82 @@
+[
+  {
+    "id": "bge-m3",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "gemma4:26b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "llama3.1:8b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "nemotron3.5:30b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "ornith1.5:35b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "qwen3.5:9b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "qwen3.6:35b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "qwen3.8:27b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "qwen3-coder-next",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "qwen3-vl:32b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "whisper-large-v3",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "x-test-1",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "x-test-2",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "x-test-3",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "x-test-4",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "coder",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "coding",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "default",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "ornith1.0:35b",
+    "owned_by": "soclaas"
+  },
+  {
+    "id": "qwen3.6:27b",
+    "owned_by": "soclaas"
+  }
+]

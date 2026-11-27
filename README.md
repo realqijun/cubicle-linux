@@ -6,7 +6,8 @@ OpenCode worker against a mediated private copy of the project and applies the
 worker's authorized, conflict-free edits back to the original.
 
 [Architecture](docs/ARCHITECTURE.md) · [Usage](docs/USAGE.md) ·
-[Connected runtime](docs/CONNECTED_RUNTIME.md) · [Limitations](docs/KNOWN_LIMITATIONS.md)
+[Connected runtime](docs/CONNECTED_RUNTIME.md) · [Limitations](docs/KNOWN_LIMITATIONS.md) ·
+[Course report (PDF)](docs/CS5231-Final-Project-Report.pdf)
 
 ## What works
 
@@ -29,6 +30,10 @@ task. Results and source hashes are in [evidence](evidence/completion-progress.j
 Two scripts install the runtime and run a guided demo. Its `alarm` scenario
 needs no model or API key and shows the live warning for a refused operation;
 `scripts/demo.sh log` shows what happened in the latest run.
+
+**Your own project:** `scripts/run.sh ~/code/myapp "Fix the failing test"` asks
+you to approve the worker's permissions, runs it, and then asks about each
+blocked request; `scripts/run.sh log` shows what happened.
 
 The control-plane commands below need only Python 3.11+. Run commands from this
 repository root. Keep the trusted state database outside the target project and

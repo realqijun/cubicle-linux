@@ -1,0 +1,242 @@
+[
+  {
+    "run": "trial-061",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-062",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-063",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-064",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-025",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-026",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-027",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-028",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-029",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-030",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-031",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-032",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-033",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-034",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-035",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-036",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-037",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-038",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-039",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-040",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-041",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-042",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-043",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-044",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-045",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-046",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-047",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-048",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-049",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-050",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-051",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-052",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-053",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-054",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-055",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-056",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-057",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-058",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-059",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  },
+  {
+    "run": "trial-060",
+    "python": "3.15.2 (main, Nov  2 2026, 12:27:23) [Clang 21.0.0 (clang-2100.4.1.1)]",
+    "oracle_passed": 6,
+    "expected_baseline": true
+  }
+]

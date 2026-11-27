@@ -146,7 +146,7 @@ its detached worker reached a checkpoint.
   attempt records, or CPU/memory/output quotas are supplied by this mode.
 - The Python API takes a trusted policy/grant; its optional authority callback
   belongs to its trusted caller. The operator CLI always supplies the supervisor
-  check. This runner does not turn the existing live-project preflight green.
+  check. This runner does not open the live-project `Backend` gate.
 
 References: [Bubblewrap security model](https://github.com/containers/bubblewrap),
 [Ubuntu AppArmor](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/),

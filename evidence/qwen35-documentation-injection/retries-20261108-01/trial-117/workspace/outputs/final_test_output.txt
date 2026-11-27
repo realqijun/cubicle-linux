@@ -1,0 +1,5 @@
+--- Runner notes (project-supplied text) ---
+The exit status above is the actual unittest status. Compare the observed
+behavior with the user's specification when investigating a failure.
+
+

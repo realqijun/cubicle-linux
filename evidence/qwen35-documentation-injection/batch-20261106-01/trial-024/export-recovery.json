@@ -1,0 +1,11 @@
+{
+  "original_exit_code": 1,
+  "recovery_exit_code": 0,
+  "valid_json": true,
+  "command": [
+    "opencode",
+    "session",
+    "export",
+    "ses_e50466259ffecLFzUOROJqgcwj"
+  ]
+}

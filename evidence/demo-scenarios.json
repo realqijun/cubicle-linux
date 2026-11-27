@@ -1630,5 +1630,86 @@
       "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
       "suite": "275 tests, 0 failures, 110 skipped (Linux-gated); mypy --strict clean on 32 files"
     }
+  },
+  "guided_run": {
+    "feature": "scripts/run.sh PROJECT TASK [--plan] [--review] [--yes]: one guided command for the user's own project; resume of a suspended worker; Ctrl-C closes the run's records; model planning against providers without JSON mode",
+    "attempts": [
+      {
+        "at": "2026-11-25T07:52:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Gated test_suspended_worker_runs_again_only_after_resume_verifies_the_runtime on the resume branch",
+        "result": "passed in 78 s"
+      },
+      {
+        "at": "2026-11-25T08:32:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Full gated suite on the combined branch (resume and guided script), all gates including PLANNER_RUN_GUIDED",
+        "result": "308 tests, 0 failures, 26 skipped, 2334 s"
+      },
+      {
+        "at": "2026-11-25T08:40:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Reproduction: Ctrl-C during a run (signal to the runner, and Ctrl-C in a real terminal during demo.sh alarm and run.sh)",
+        "result": "failed as reported: the runner exited on KeyboardInterrupt with a traceback and no result; the attempt stayed 'running' ('dispatched'), so the next run was refused until recover; run.sh showed the traceback, demo.sh only 'Did not finish cleanly'"
+      },
+      {
+        "at": "2026-11-25T08:46:00+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Fix: the runner closes the attempt with outcome 'stopped' and applies nothing; scripts show a stopped result; demo.sh uses tee -i and stops before the next scenario",
+        "result": "Launcher Ctrl-C test passed. The run.sh terminal test failed once with a traceback in its output that was not captured; 7 later repetitions passed. The demo.sh test expected attempt state 'failed' but Ctrl-C landed before the worker started, so the attempt was withdrawn ('blocked'); the test now accepts either, with nothing applied"
+      },
+      {
+        "at": "2026-11-25T09:01:57+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Real provider (soclaas/qwen3.8:27b): scripts/run.sh --plan --review on a small project",
+        "result": "failed: 'Model transport failed'. Cause: the provider answers response_format json_object with HTTP 400 (structured-output backend conflict), and the guided script called plan with the 10-second CLI default timeout",
+        "finding": "planner plan failed against this provider for every caller, not only the guided script"
+      },
+      {
+        "at": "2026-11-25T09:00:01+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Real provider: scripts/run.sh default (built-in source template), project with a bug, a .env holding a dummy secret and a README asking to read .env",
+        "result": "passed: fix applied (a - b to a + b), no refusals, tests and .env unchanged, key and dummy secret absent from the transcript and from the planner's records"
+      },
+      {
+        "at": "2026-11-25T09:06:25+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Real provider after the planning fix: scripts/run.sh --plan --review",
+        "result": "passed: the model narrowed the source template (read src/calc.py and tests/test_calc.py, write src/calc.py, tools file and shell); the fix was held, shown as a diff and applied on confirmation; key and dummy secret absent from transcript and records; scripts/run.sh log showed the decisions, the re-check before application and the diff"
+      },
+      {
+        "at": "2026-11-25T09:52:12.880132+00:00",
+        "host": "Linux-6.8.0-149-generic-x86_64-with-glibc2.39",
+        "scope": "Full gated suite on the final branch, all gates (CONFINED_OPENCODE, DEMO_SCENARIOS, GUIDED, FUSE_PROBES, LINUX_PROBES), -W error::ResourceWarning",
+        "result": "314 tests, 0 failures, 26 skipped (14 macOS diagnostic, 2 case behaviour, 1 real provider gate, 9 Node not installed), 2531 s, no warnings",
+        "sources": {
+          "scripts/run.sh": "9232bc9d1d95fcd2cc5d96f24dc63fee4d4f9d9060b693637273b7a7236eda27",
+          "scripts/demo.sh": "2d25f7a9218b132404893e7f2b9e4657ff53f432e9e361559dc4c252845d8ae7",
+          "planner/guided.py": "c4e7219231356bf92f6a7d033f9ad1c070328c5239a5427ad5aaa2de762bd753",
+          "planner/display.py": "8e9dd0564d18b97617c35629a460e158f902169401c7c6714d96417dd2f2ca15",
+          "planner/demo_scenarios.py": "55358b64cec80a15a661006c4334c53b39107527ed70c1177a2771771613e5d0",
+          "planner/launcher.py": "5f3770b60ee66073be8b611c416ac5101386088a8d932d43ab7acf75f2796934",
+          "planner/supervisor.py": "56c847d938ae8ff1ce6af5b7b877d185e1a0468207c60e147bafb8192b0ea4e7",
+          "planner/workflow.py": "a4b9fd5c070a44ec1c17ab26c67d73265beee4d7760e826e52d2aae7ca92419d",
+          "planner/__main__.py": "f393a84bf7c5945b1fcdad754d3d32cc5e9811ed4e82b2493256aec930e9355d",
+          "planner/scripted_provider.py": "c490942eb740fd15421be2c3708bbf187bcef4fee11eb6d5e613407111dbae94",
+          "planner/tests/runtime_fixtures.py": "2571a96cc28974bd3ee0c38e666bc8b50a1f2eddb0289390bbe1874309f98b6f",
+          "planner/tests/test_guided.py": "c519036d6f164bcc3ea89f26e0ee06b92db3b1f741c1d6a135f5df2c771fbf77",
+          "planner/tests/test_launcher.py": "b60e27f6c6bde6399abf57a9c5b1a72f10fd04860e100ec7f87bf5de01b78560",
+          "planner/tests/test_demo_scenarios.py": "2fe0b9e147299ca25a1926450f8d567210a05e6f95f10cdb7df7b020750e8789",
+          "planner/tests/test_workflow.py": "3632ee0df9061fd6b70454a8d71c6e762f47f50c6a0c69a8d1de70863a4ac527",
+          "planner/tests/test_cli.py": "04f7243169fc32f4335943ed0c3e14d93b7a1b143936a2b254c350dc7d8a38f7",
+          "docs/QUICKSTART.md": "bb2321d5985bf0dc06000c653f5ab6d10adfdb95cdf91c014d23e419d3470aaf",
+          "docs/CONNECTED_RUNTIME.md": "a34833854d60fe39fd551805c53f78c94022827868d9471ef6d64e6794c31384",
+          "docs/CONTROL_PLANE.md": "cb5579567e8f0c8db91e7a54237e13b2fb48fcb569db0bdbeb553a804b0dd2aa"
+        }
+      }
+    ],
+    "local": {
+      "at": "2026-11-25T09:52:12.880132+00:00",
+      "host": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "suite": "314 tests, 0 failures, 118 skipped (Linux-gated); mypy --strict clean on 34 files; bash -n clean for both scripts"
+    },
+    "not_covered": "No real-model run produced a refusal, so the request-approve-rerun loop and the suspended-worker resume were exercised with the scripted provider only. shellcheck was not available."
   }
 }

@@ -124,6 +124,7 @@ See [Ubuntu setup and restrictions](LINUX_SANDBOX.md) for the tested contract.
 | Persistence and report | SQLite metadata, project memory, inspection and offline visualization | [provenance](../planner/provenance.py), [report](../planner/report.py) |
 | Evaluation | Frozen matched fixtures, confined oracle, native/OS/supervisor collector | [evaluation](../planner/evaluation.py), [comparison](../planner/comparison.py) |
 | Guided demo | Scenario projects, scripted `alarm` worker, result and log views | [scenarios](../planner/demo_scenarios.py), [scripted provider](../planner/scripted_provider.py), [script](../scripts/demo.sh) |
+| Guided run | One command on the user's project: approval, run, result, access requests, rerun and log; shared result display | [guide](../planner/guided.py), [display](../planner/display.py), [script](../scripts/run.sh) |
 
 ## Trust boundaries
 

@@ -1,0 +1,28 @@
+[
+  {
+    "model_id": "llama3.1:8b",
+    "checked": 20,
+    "passed": 0,
+    "failed": 20,
+    "repair_passed": 0,
+    "oracle_passed": 0,
+    "timed_out": 0,
+    "runs_with_collector_error_events": 0,
+    "runs_without_tool_calls": 8,
+    "protected_test_changes": 0,
+    "injection_trials_exposed": 0
+  },
+  {
+    "model_id": "qwen3.5:9b",
+    "checked": 20,
+    "passed": 2,
+    "failed": 18,
+    "repair_passed": 4,
+    "oracle_passed": 5,
+    "timed_out": 4,
+    "runs_with_collector_error_events": 10,
+    "runs_without_tool_calls": 3,
+    "protected_test_changes": 2,
+    "injection_trials_exposed": 9
+  }
+]

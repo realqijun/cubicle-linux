@@ -1,8 +1,6 @@
 """Trusted fixtures, inspection and plain-language output for scripts/demo.sh."""
 
 import argparse
-from datetime import datetime
-import difflib
 import json
 import os
 from pathlib import Path
@@ -14,8 +12,9 @@ from typing import Any
 
 from artifact.scripts.prepare import snapshot
 
-from .alerts import companion, describe, printable
+from .alerts import companion, printable
 from .connector import PINNED_VERSION
+from .display import STOPPED, decision_lines, diff_lines, operator_lines, show_policy, shown, style, wait
 from .evaluation import BENCHMARK, prepare_run
 from .policy import Policy
 from .scripted_provider import ScriptedProvider
@@ -128,48 +127,6 @@ def scripted_run(arguments: list[str]) -> int:
         return wait(subprocess.Popen(command, env={**os.environ, SCRIPTED_KEY_ENV: "scripted-demo"}))
 
 
-def wait(process: subprocess.Popen[bytes]) -> int:
-    """Wait for the planner, including after Ctrl-C, which reaches it too.
-
-    ``subprocess.run`` would kill it 0.25 seconds after an interrupt, before
-    it has stopped the worker, unmounted the workspace and closed its records.
-    """
-    while True:
-        try:
-            return process.wait()
-        except KeyboardInterrupt:
-            print("Still waiting for the planner to stop the worker and clean up...", file=sys.stderr)
-
-
-def _style(text: str, code: str) -> str:
-    return text if os.environ.get("NO_COLOR") else f"\033[{code}m{text}\033[0m"
-
-
-def show_policy(proposal: dict[str, Any]) -> str:
-    """The exact proposed permissions, one line per kind of access."""
-    policy = proposal["policy"]
-
-    def patterns(key: str) -> str:
-        return ", ".join(printable(pattern) for pattern in policy[key]) or "nothing"
-
-    lines = ["Permissions for the worker, in " + printable(policy["root"]) + ":",
-             f"  read   {patterns('read')}" + (f"  except {patterns('deny_read')}" if policy["deny_read"] else ""),
-             f"  write  {patterns('write')}" + (f"  except {patterns('deny_write')}" if policy["deny_write"] else ""),
-             f"  tools  {patterns('tools')}"]
-    if policy.get("external_inputs"):
-        lines.append(f"  also read outside the project: {patterns('external_inputs')}")
-    return "\n".join(lines)
-
-
-def application_check(row: dict[str, Any]) -> bool:
-    """A check the changeset applier made before writing to the project, not a worker action.
-
-    In a demo run only the applier records ``shell`` writes: the broker records no
-    decision for shell commands, and the mediated filesystem records ``filesystem``.
-    """
-    return bool(row["tool"] == "shell" and row["operation"] == "write")
-
-
 def _records(directory: Path) -> tuple[dict[str, Any], dict[str, Any] | None, list[dict[str, Any]]]:
     """The scenario, its run result if the worker ran, and the supervisor's decisions."""
     config = json.loads((directory / "scenario.json").read_text())
@@ -187,41 +144,18 @@ def _records(directory: Path) -> tuple[dict[str, Any], dict[str, Any] | None, li
     return config, result, history
 
 
-def _shown(path: str, root: Path) -> str:
-    candidate = Path(path)
-    return printable(candidate.relative_to(root).as_posix() if candidate.is_relative_to(root) else path)
-
-
-def _diff(directory: Path, config: dict[str, Any], paths: list[str]) -> list[str]:
-    original, project = directory / "original", Path(config["project"])
-    lines: list[str] = []
-    for name in paths:
-        before, after = original / name, project / name
-        try:
-            old = before.read_text().splitlines() if before.is_file() else []
-            new = after.read_text().splitlines() if after.is_file() else []
-        except UnicodeDecodeError:
-            lines.append(f"(binary file {printable(name)} changed)")
-            continue
-        for line in difflib.unified_diff(old, new, f"{name} (before)", f"{name} (after)", lineterm=""):
-            line = printable(line, limit=200)
-            if line.startswith("+") and not line.startswith("+++"):
-                line = _style(line, "32")
-            elif line.startswith("-") and not line.startswith("---"):
-                line = _style(line, "31")
-            lines.append(line)
-    return lines
-
-
 def _result(directory: Path, config: dict[str, Any], result: dict[str, Any], history: list[dict[str, Any]],
-            inspection: dict[str, Any], diff_lines: int | None) -> tuple[list[str], list[str]]:
+            inspection: dict[str, Any], limit: int | None) -> tuple[list[str], list[str]]:
     """Plain-language result lines, and the problems that make the run a failure."""
     root = Path(config["project"])
     application = result.get("application", {})
     changes = [str(change["path"]) for change in application.get("changes", [])]
     refused = [row for row in history if not row["allowed"] and not companion(row)]
     problems = []
-    if result.get("outcome") != "completed":
+    stopped = result.get("outcome") == "stopped"
+    if stopped:
+        pass  # Stopping on purpose is not a failure; the result says so.
+    elif result.get("outcome") != "completed":
         cause = printable(str(result.get("error") or result.get("reason") or ""))
         problems.append(f"The worker did not finish: {printable(str(result.get('outcome')))} {cause}".rstrip())
     elif not result.get("cleanup_verified"):
@@ -236,19 +170,20 @@ def _result(directory: Path, config: dict[str, Any], result: dict[str, Any], his
     if inspection["dummy_secret_in_records"]:
         problems.append("The dummy secret was found in the supervisor's records.")
     if refused:
-        blocked = _style(f"{len(refused)} attempt{'' if len(refused) == 1 else 's'} outside the permissions", "1;33")
+        blocked = style(f"{len(refused)} attempt{'' if len(refused) == 1 else 's'} outside the permissions", "1;33")
     else:
         blocked = "nothing - the model stayed within its permissions this time"
-    lines = ["  changed    " + (", ".join(_shown(path, root) for path in changes) or "nothing"),
-             "  blocked    " + blocked]
+    lines = [STOPPED] if stopped else []
+    lines += ["  changed    " + (", ".join(shown(path, root) for path in changes) or "nothing"),
+              "  blocked    " + blocked]
     if not inspection["protected_paths_changed"]:
         lines.append("  untouched  " + ", ".join(config["protected_examples"]))
-    diff = _diff(directory, config, changes)
+    diff = diff_lines(directory / "original", root, changes)
     if diff:
-        shown = diff if diff_lines is None else diff[:diff_lines]
-        lines += [""] + ["  " + line for line in shown]
-        if len(shown) < len(diff):
-            lines.append(f"  ... {len(diff) - len(shown)} more lines in the log")
+        visible = diff if limit is None else diff[:limit]
+        lines += [""] + ["  " + line for line in visible]
+        if len(visible) < len(diff):
+            lines.append(f"  ... {len(diff) - len(visible)} more lines in the log")
     return lines, problems
 
 
@@ -261,7 +196,7 @@ def summary(directory: Path) -> int:
     inspection = inspect_demo(directory)
     (directory / "inspection.json").write_text(json.dumps(inspection, indent=2) + "\n")
     lines, problems = _result(directory, config, result, history, inspection, DIFF_LINES)
-    print(_style("Result", "1"))
+    print(style("Result", "1"))
     print("\n".join(lines))
     for problem in problems:
         print("ERROR: " + problem, file=sys.stderr)
@@ -282,40 +217,25 @@ def latest(home: Path, name: str | None) -> Path:
     return max(runs, key=lambda run: (run / "scenario.json").stat().st_mtime_ns)  # Written once, at creation.
 
 
-def _decision(row: dict[str, Any], root: Path) -> str:
-    at = datetime.fromtimestamp(row["created"]).strftime("%H:%M:%S")
-    attempted, reason = describe(row, root)
-    if row["allowed"]:
-        return f"  {at}  allowed  {attempted}"
-    return f"  {at}  {_style('BLOCKED', '1;31')}  {attempted}  ({reason})"
-
-
 def show_log(directory: Path) -> None:
     """Everything worth knowing about one run, from its saved files."""
     config, result, history = _records(directory)
     root = Path(config["project"])
-    print(_style(config["name"], "1") + " - " + config["description"])
+    print(style(config["name"], "1") + " - " + config["description"])
     print("Files: " + str(directory))
     print()
-    print(_style("Prompt", "1"))
+    print(style("Prompt", "1"))
     print("\n".join("  " + printable(line, limit=500) for line in (directory / "prompt.txt").read_text().splitlines()))
     print()
-    print(_style("File access decisions recorded by the supervisor", "1"))
-    rows = [row for row in history if not companion(row)]
-    worker = [row for row in rows if not application_check(row)]
-    # The applier checks each change twice (validate, then apply); one line says the same.
-    applying = list({(row["operation"], row["resource"], row["allowed"]): row
-                     for row in rows if application_check(row)}.values())
-    for row in worker:
-        print(_decision(row, root))
-    if not worker:
-        print("  none")
-    if applying:
-        print("  The worker stopped. Before copying its changes into your project, the supervisor checked again:")
-        for row in applying:
-            print(_decision(row, root))
+    print(style("File access decisions recorded by the supervisor", "1"))
+    print("\n".join(decision_lines(history, root)))
+    actions = operator_lines(history)
+    if actions:
+        print()
+        print(style("Your actions", "1"))
+        print("\n".join(actions))
     print()
-    print(_style("Result", "1"))
+    print(style("Result", "1"))
     if result is None:
         print("  The worker did not run: the permissions were not approved, or the run was blocked before it started.")
     else:
@@ -324,14 +244,14 @@ def show_log(directory: Path) -> None:
         requests = result.get("requests", [])
         if requests:
             print()
-            print(_style("Access requests", "1"))
+            print(style("Access requests", "1"))
             print("  Each blocked attempt became a request that stays inactive unless you approve it.")
             print("  Approving a .env read would send that file's contents to the model provider.")
             for request in requests:
-                print(f"  {printable(str(request['operation']))} {_shown(str(request['resource']), root)}"
+                print(f"  {printable(str(request['operation']))} {shown(str(request['resource']), root)}"
                       f"  (id {printable(str(request['id']))})")
     print()
-    print(_style("Saved files", "1"))
+    print(style("Saved files", "1"))
     for name, meaning in (("console.log", "everything the demo printed"),
                           ("report.html", "provenance report; open it in a browser"),
                           ("audit.json", "complete permission records")):

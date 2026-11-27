@@ -1,7 +1,8 @@
 """Small immutable records shared by enforcement and persistence."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 Operation = Literal["read", "write"]
 
@@ -40,3 +41,11 @@ class ProtectionStatus:
     backend: str
     reason: str
     verified: bool = False
+
+
+def operator_action(decision: Mapping[str, Any]) -> bool:
+    """A decision row that records the operator resuming a worker, not a file access.
+
+    Only the trusted ``resume`` command records it; worker operations are reads and writes.
+    """
+    return bool(decision["operation"] == "resume" and decision["tool"] == "operator")

@@ -1,0 +1,312 @@
+[
+  {
+    "source_batch": "provenance-20261102-3x",
+    "source_run": "normal-01",
+    "reasons": [
+      "timeout"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-025",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-026",
+    "reasons": [
+      "provider_error",
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-027",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-028",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-029",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-030",
+    "reasons": [
+      "provider_error"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-031",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-032",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-033",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-034",
+    "reasons": [
+      "provider_error",
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-035",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-036",
+    "reasons": [
+      "provider_error",
+      "timeout",
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-037",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-038",
+    "reasons": [
+      "provider_error"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-039",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-040",
+    "reasons": [
+      "provider_error"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-041",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-042",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-043",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-044",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-045",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-046",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-047",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-048",
+    "reasons": [
+      "provider_error"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-049",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-050",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-051",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-052",
+    "reasons": [
+      "provider_error",
+      "timeout",
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-053",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-055",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-056",
+    "reasons": [
+      "provider_error",
+      "timeout"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-057",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-059",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-060",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-065",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-066",
+    "reasons": [
+      "provider_error",
+      "timeout",
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-067",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-01",
+    "source_run": "trial-068",
+    "reasons": [
+      "unfinished_or_failed_repair"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-02",
+    "source_run": "trial-075",
+    "reasons": [
+      "missing_required_report"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-02",
+    "source_run": "trial-077",
+    "reasons": [
+      "missing_required_report"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-02",
+    "source_run": "trial-093",
+    "reasons": [
+      "missing_required_report"
+    ]
+  },
+  {
+    "source_batch": "batch-20261106-02",
+    "source_run": "trial-101",
+    "reasons": [
+      "failed_edits_without_repair"
+    ]
+  }
+]

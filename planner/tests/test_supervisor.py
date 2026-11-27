@@ -167,6 +167,28 @@ class SupervisorTests(unittest.TestCase):
         self.assertTrue(restored.authorize(Action(task, "worker", "read", "README.md")).allowed)
         self.assertEqual(restored.history(task)[0]["grant_revision"], 1)
 
+    def test_earlier_worker_storage_can_be_suspended_and_resumed_after_restart(self):
+        import sqlite3
+        from contextlib import closing
+        from planner.records import ProtectionStatus
+
+        path = self.supervisor.path.with_name("earlier-workers.sqlite")
+        with closing(sqlite3.connect(path)) as legacy:
+            legacy.execute("""CREATE TABLE workers (
+                task TEXT NOT NULL, id TEXT NOT NULL, grant_json TEXT NOT NULL, state TEXT NOT NULL,
+                revision INTEGER NOT NULL, template TEXT, PRIMARY KEY(task,id))""")
+        restored = Supervisor(path)
+        self.addCleanup(restored.close)
+        task = restored.propose(self.policy)
+        restored.approve_task(task)
+        restored.approve_worker(Grant(task, "worker", read=("**",)))
+        for _ in range(3):
+            restored.authorize(Action(task, "worker", "read", ".env"))
+        self.assertEqual(restored.worker_status(task, "worker")["state"], "suspended")
+        verified = ProtectionStatus(True, "fixture", "metadata-only fixture", verified=True)
+        restored.resume(task, "worker", verified, verified)
+        self.assertTrue(restored.authorize(Action(task, "worker", "read", "README.md")).allowed)
+
 
 if __name__ == "__main__":
     unittest.main()
